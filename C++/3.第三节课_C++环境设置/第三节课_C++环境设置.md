@@ -25,7 +25,7 @@
     - 微软的IDE，面向.NET和C++开发人员的综合性Windows版IDE，可用于构建Web、云、桌面、移动应用、服务和游戏等；
     - [官网](https://visualstudio.microsoft.com/zh-hans/downloads/)；
 
-  ![Visual Studio界面](images/Visual Studio界面.png)
+  ![Visual Studio界面](images/Visual_Studio界面.png)
 
   - **Vim和Emacs**：这两个是传统的文本编辑器，它们有强大的编辑功能和高度的可定制性，有很多插件和配置可以让它们支持C/C++的开发；
     - [Vim官网](https://www.vim.org/)；
