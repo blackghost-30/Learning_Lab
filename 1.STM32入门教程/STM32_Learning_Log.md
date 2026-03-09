@@ -7639,43 +7639,94 @@ int main(void)
 # 第三十九节课：11-4_SPI通信外设
 
 ## 1.SPI外设简介
-- STM32内部集成了硬件SPI收发电路，可以由硬件自动执行时钟生成、数据收发等功能，减轻CPU的负担；
-- 可配置8位/16位数据帧、高位先行/低位先行，最常见的就是8位数据帧，高位先行；
-- 时钟频率：fpclk/（2，4，8，16，32，64，128，256），就是SPI的时钟由PCLK分频得来，PCLK即外设时钟，APB2的PCLK为72MHz，APB1的PCLK是36MHz，SPI1是APB2的外设，所以最高是36MHz；
+- STM32内部集成了硬件SPI收发电路，可以由硬件自动执行**时钟生成、数据收发**等功能，减轻CPU的负担；
+- 可配置**8位**/16位数据帧、**高位先行**/低位先行，最常见的就是**8位数据帧，高位先行**；
+- 时钟频率：
+  - fpclk/（2，4，8，16，32，64，128，256），就是SPI的时钟由PCLK分频得来；
+  - PCLK即外设时钟，APB2的PCLK为72MHz，APB1的PCLK是36MHz；
+  - SPI1是APB2的外设，所以最高是36MHz；
 - 支持多主机模型、主或从操作
-- 可精简为半双工/单工通信，支持DMA，兼容I2S协议；
-- C8T6有SPI1（APB2，72MHz）、SPI2（APB1，36MHz）；
+- 可精简为半双工/单工通信；
+- **支持DMA，兼容I2S协议**；
+  - **I2S是一种数字音频信号传输协议，注意不要和I2C混淆**；
+- STM32F103C8T6有**SPI1（APB2，72MHz）、SPI2（APB1，36MHz）**；
 
 
 
 ## 2.SPI框图
 
-- 接收缓冲区、几位寄存器、发送缓冲区；LSBFIRST可控制低位先行还是高位先行，给0是高位先行，给1是低位先行；发送数据寄存器就是发送缓冲区、接收数据寄存器就是接收缓冲区，两个寄存器占用同一个地址，统一叫做DR；
-- 写入数据时，当移位寄存器没有数据移位时，TDR的数据会哩课转入移位寄存器，开始移位，转入时刻会置TXE为1，表示发送寄存器空，当检查到空时下一个数据就可以提前写入TDR里了；在移位寄存器移出的过程中，MISO的数据也会移入，一旦数据移出完成，数据移入也完成，这时移入的数据就会整体从移位寄存器转入接收缓冲区RDR，此时会置状态寄存器的RXNE为1，表接收寄存器非空，检查非空后就需要尽快把数据从RDR读出来；
-- 控制逻辑位：波特率发生器，用于产生SCK时钟，CR1寄存器的三个位BR0、BR1、BR2用于决定分频系数；SPE，SPI使能，就是Cmd函数配置的位；
-- SS引脚需要用任意一个GPIO口来模拟；
+- **接收缓冲区、移位寄存器、发送缓冲区：**
+  - 移位寄存器在时钟的驱动下，右边的低位通过MOSI输出，左边的数据通过MISO输入，整个移位寄存器不断**右移**，这是低位先行的情况；
+  - **LSBFIRST可控制低位先行还是高位先行**，给0是高位先行，给1是低位先行，图中是低位先行；
+  - 引脚的MOSI和MISO内部做了交叉，**可选择SPI的主从模式变换**；
+  - 发送数据寄存器就是发送缓冲区、接收数据寄存器就是接收缓冲区，两个寄存器占用同一个地址，统一叫做DR；
+  - **两个寄存器占用同一个地址，但是不是同一个寄存器，只是为了软件的方便而已；**
+- **发送与接收数据时序：**
+  - 当移位寄存器没有数据移位时，TDR的数据会立刻转入移位寄存器，开始移位；转入时刻会置**TXE为1，表示发送寄存器空**；
+  - 当检查到发送寄存器空时下一个数据就可以提前写入TDR里了；
+  - 在移位寄存器移出的过程中，MISO的数据也会移入，一旦数据移出完成，数据移入也完成；
+  - 这时移入的数据就会整体从移位寄存器转入接收缓冲区RDR，此时会置状态寄存器的**RXNE为1，表接收寄存器非空**；
+  - 当检查到接受寄存器非空后就需要尽快把数据从RDR读出来，在下一个数据接收前读走就可实现连续读取了；
+  - **三种协议的对比：**
+    - SPI是同步的全双工协议，移位寄存器是公用的，但发送数据寄存器和接受数据寄存器是分开的；
+    - I2C是同步的半双工协议，所以移位寄存器和发送数据寄存器以及接受数据寄存器都是公用的；
+    - 串口是异步的全双工协议，所以移位寄存器和发送数据寄存器以及接受数据寄存器都是分开的；
+- **波特率发生器**
+  - 用于产生SCK时钟，其内部就是一个分频器；
+  - 波特率发生器的输入是PCLK时钟，经过内部分频器分频得到SPI的速度；
+- **控制寄存器控制位**
+  - **分频系数由CR1寄存器的三个位BR0、BR1、BR2用于决定**；
+  - **SPE位是SPI使能位，就是Cmd()函数配置的位；**
+  - MSTR位用于配置主从模式，1是主模式，0是从模式；
+  - **CPOL和CPHA两位用于选择SPI的4种模式；**
+- **状态寄存器：**
+  - 即SPI_SR寄存器；
+  - **状态寄存器中的TXE和RXNE两个标志位是重要的；**
+- **NSS引脚：**
+  - 这里的NSS引脚主要是用来实现多主机模式的，一般不用这个脚做片选引脚；
+  - **片选引脚需要用任意一个GPIO口来模拟；**
+
+![SPI框图](images/39.第三十九节课_SPI通信外设/SPI数据手册框图.png)
 
 
 
 ## 3.SPI基本结构
 
-- TDR、RDR、TXE、RXNE；
-- 数据控制器；
-- SS引脚用GPIO口来模拟；
+- **TDR发送数据寄存器、RDR接受数据寄存器、TXE发送数据寄存器空、RXNE接受数据寄存器非空**；
+- 数据控制器：控制数据的发送和接收；
+- **SS引脚用GPIO口来模拟；**
+- 开关控制：即Cmd()函数使能SPI；
+
+![SPI基本结构框图总结](images/39.第三十九节课_SPI通信外设/SPI基本结构框图总结.png)
 
 
 
-## 4.主模式全双工连续传输
+## 4.两种传输模式的时许图
 
-- 速度快但操作复杂，一般少用；
-- 一旦TXE为1就将下一个数据写到TDR里面候着；
+### 4.1 主模式全双工连续传输
 
+- 多字节数据流前仆后继的模式，速度快但操作复杂，**一般少用**，这里使用的是SPI模式3讲解的；
+- **一旦TXE为1就将下一个数据写到TDR里面候着；**
+- **由于数据之间的时序是错开的，所以不好封装代码；**
 
+![主模式全双工连续传输时序图](images/39.第三十九节课_SPI通信外设/主模式全双工连续传输时序图.png)
 
-## 5.非连续传输
+### 4.2 非连续传输（一般用这个）
 
 - 丢掉一点性能，但是操作简单；
-- TXE等于1后不着急将下一个数据写进去，而是等第一个字节结束之后且RXNE为1后再写入下一个数据
+- **TXE等于1后不着急将下一个数据写进去，等第一个字节结束之后且RXNE为1后再写入下一个数据；**
+- **字节间存在间断，但是数据的发送时序非常工整，代码封装简单；**
+
+![非连续传输模式的时序图](images/39.第三十九节课_SPI通信外设/非连续传输的时序图.png)
+
+
+
+## 5.软硬件时序对比
+
+- 上面是软件波形，下面是硬件波形；
+- 两者的主要对比就是数据的变化和时钟边沿的对齐问题；
+
+![软硬件SPI的时序波形对比](images/39.第三十九节课_SPI通信外设/软硬件SPI的时序图对比.png)
 
 ---
 
@@ -7683,23 +7734,237 @@ int main(void)
 
 # 第四十节课：11-5_硬件SPI读写W25Q64
 
-## 1.引脚
-- NSS可以通过普通GPIO口模拟
+## 1.接线图
+
+- 使用SPI1，根据引脚映射表，SCK接PA5，MISO接PA6，MOSI接PA7；
+- NSS可以通过普通GPIO口模拟；
+
+![接线图](images/40.第四十节课_硬件SPI读写W25Q64/11-2_硬件SPI读写W25Q64.jpg)
 
 
 
-## 2.任务
+## 2.SPI初始化步骤以及库函数API
 
-- 修改底层的MySPI文件即可，将软件SPI换成硬件SPI，这样基于通信层的驱动代码就不用改了；
-
-
-
-## 3.初始化的步骤
+### 2.1 SPI初始化步骤
 
 - 第一步：开启SPI和GPIO口的时钟；
-- 第二步：初始化GPIO，其中SCK和MOSI是由硬件外设控制的输出信号，配置为复用推挽输出；MISO是输入信号，可以配置为上拉输入；SS引脚配置为通用推挽输出；
-- 第三步：配置SPI外设；
-- 第四步：使能SPI，即Cmd；
+- 第二步：初始化GPIO：
+  - 其中SCK和MOSI是由硬件外设控制的输出信号，配置为**复用推挽输出**；
+  - MISO是输入信号，可以配置为**上拉输入**；
+  - SS引脚配置为**通用推挽输出**；
+- 第三步：利用结构体配置SPI外设；
+- 第四步：使能SPI，即Cmd()函数；
+
+### 2.2 SPI库函数API——stm32f10x_spi.h
+
+- 初始化相关函数：
+  - SPI_I2S_DeInit()：恢复缺省配置；
+  - **SPI_Init()**：初始化；
+  - SPI_StructInit()：为结构体赋默认值
+  - **SPI_Cmd()**：使能SPI外设；
+- 外设使能相关函数：
+  - SPI_I2S_ITConfig()：使能中断；
+  - SPI_I2S_DMACmd()：使能DMA；
+- 发送接收数据函数：
+  - SPI_I2S_SendData()：发送数据到发送数据寄存器
+  - uin16_t SPI_I2S_ReceiveData()：从接受数据寄存器中读数据
+- 标志位相关函数：
+  - FlagStatus SPI_I2S_GetFlagStatus()：获取标志位；
+  - void SPI_I2S_ClearFlag()：清除标志位;
+  - ITStatus SPI_I2S_GetITStatus()：获得中断标志位；
+  - void SPI_I2S_ClearITPendingBit()：清除中断标志位；
+
+![SPI相关库函数API](images/40.第四十节课_硬件SPI读写W25Q64/SPI库函数相关API.png)
+
+
+
+## 3.项目编程
+
+- 在上一个工程的基础上进行修改，修改底层的MySPI文件即可，**将软件SPI换成硬件SPI，这样基于通信层的驱动代码就不用改了**；
+- MySPI.c文件修改
+
+```c
+#include "stm32f10x.h"                  // Device header
+
+/**
+  * @brief  片选引脚输出函数，引脚为PA4，软件模拟
+  * @param  BitValue 片选引脚输出电平
+  * @retval 无
+  */
+void MySPI_W_SS(uint8_t BitValue)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_4, (BitAction)BitValue);    //在SS对应的引脚输出高低电平，表示从机选择
+}
+
+/**
+  * @brief  SPI初始化函数
+  * @param  无
+  * @retval 无
+  */
+void MySPI_Init(void)
+{
+	// 第一步：开启时钟
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);	// 使能GPIOA端口时钟
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);	// 开启SPI的时钟
+	
+	// 第二步：初始化GPIO
+	// 初始化SS引脚，即PA4
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;		// 输出引脚配置为推挽输出
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;				// 选中4号引脚
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		// 定义速度为50MHz
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	// 初始化MISO引脚
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;			// 输入引脚配置为上拉输入模式
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;				// 选中6号引脚
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		// 定义速度为50MHz
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	// 初始化MOSI和SCK引脚
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;			// 输出引脚配置为复用推挽输出
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_7;	// 选中5号引脚和7号引脚
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		// 定义速度为50MHz
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	// 第三步：初始化SPI
+	SPI_InitTypeDef SPI_InitStructure;
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_128;	// 决定SCK时钟的频率，500多KHz
+	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;							// 与CPOL指定工作模式0
+	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;								// 与CPHA指定工作模式0
+	SPI_InitStructure.SPI_CRCPolynomial = 7;								// CRC校验的多项式，不用理它给个默认值即可
+	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;						// 8位数据帧
+	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;		// 对应的就是SPI的引脚裁剪功能，这里选择的就是双线全双工
+	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;						// 高位先行
+	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;							// 决定是主机还是从机
+	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;								// 利用引脚模拟NSS引脚，所以选择软件方式
+	SPI_Init(SPI1, &SPI_InitStructure);
+	
+	// 第四步：使能SPI
+	SPI_Cmd(SPI1, ENABLE);
+	
+	// 第五步：默认给SS输出高电平，默认不选择从机
+	MySPI_W_SS(1);
+}
+
+/**
+  * @brief  起始信号
+  * @param  无
+  * @retval 无
+  */
+void MySPI_Start(void)
+{
+	MySPI_W_SS(0);		//起始条件为SS置低电平
+}
+
+/**
+  * @brief  终止信号
+  * @param  无
+  * @retval 无
+  */
+void MySPI_Stop(void)
+{
+	MySPI_W_SS(1);		//终止条件为SS置高电平
+}
+
+/**
+  * @brief  交换一个字节时序，基于模式0
+  * @param  ByteSend 要发送的字节
+  * @retval ByteReceive 接收到的字节
+  */
+uint8_t MySPI_SwapByte(uint8_t ByteSend)
+{
+	// 先判断TXE是否置位，即判断是发送缓冲区是否为空，写入数据会自动清除标志位
+	while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) != SET);
+	
+	// 写入要发送的数据，这里是写入TDR，即发送缓存器
+	SPI_I2S_SendData(SPI1, ByteSend);
+	
+	// 等待RXNE，读数据会清除此标志位
+	while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) != SET);
+	
+	// 读取DR寄存器的值
+	return SPI_I2S_ReceiveData(SPI1);
+}
+
+```
+
+- MySPI.h文件修改
+
+```c
+#ifndef __MYSPI_H
+#define __MYSPI_H
+
+void MySPI_Init(void);
+void MySPI_Start(void);
+void MySPI_Stop(void);
+uint8_t MySPI_SwapByte(uint8_t ByteSend);
+
+#endif
+
+```
+
+- main.c应用层文件修改
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "W25Q64.h"
+
+/**
+  ******************************************************************************
+  * @project      : STM32F103C8T6的硬件SPI读写W25Q64工程
+  * @brief        : 基于硬件I2C进行W25Q64的读写
+  * @hardware     : STM32103C8T6 + OLED + W25Q64，采用硬件SPI读写
+  * @software     : Keil MDK + 标准外设库，通信层(硬件SPI)、硬件驱动层和应用层三部分
+  * @author       : blackghost
+  * @date         : 2026-03-09
+  * @version      : V1
+  ******************************************************************************
+  */
+
+uint8_t MID;
+uint16_t DID;
+
+uint8_t ArrayWrite[] = {0x01, 0x02, 0x03, 0x04};	// 写入的数组
+uint8_t ArrayRead[4];		// 读出的数组
+
+int main(void)
+{
+	OLED_Init();
+	W25Q64_Init();
+	
+	OLED_ShowString(1, 1, "MID:   DID:");
+	OLED_ShowString(2, 1, "W:");
+	OLED_ShowString(3, 1, "R:");
+	
+	W25Q64_ReadID(&MID, &DID);
+	OLED_ShowHexNum(1, 5, MID, 2);
+	OLED_ShowHexNum(1, 12, DID, 4);
+	
+	W25Q64_SectorErase(0x000000);
+	W25Q64_PageProgram(0x000000, ArrayWrite, 4);
+	W25Q64_ReadData(0x000000, ArrayRead, 4);
+	
+	
+	OLED_ShowHexNum(2, 3, ArrayWrite[0], 2);
+	OLED_ShowHexNum(2, 6, ArrayWrite[1], 2);
+	OLED_ShowHexNum(2, 9, ArrayWrite[2], 2);
+	OLED_ShowHexNum(2, 12, ArrayWrite[3], 2);
+	
+	OLED_ShowHexNum(3, 3, ArrayRead[0], 2);
+	OLED_ShowHexNum(3, 6, ArrayRead[1], 2);
+	OLED_ShowHexNum(3, 9, ArrayRead[2], 2);
+	OLED_ShowHexNum(3, 12, ArrayRead[3], 2);
+	
+	while (1)
+	{
+		
+	}
+}
+
+```
 
 ---
 
