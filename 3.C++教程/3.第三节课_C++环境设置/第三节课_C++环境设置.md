@@ -2,13 +2,13 @@
 
 ## 1.环境设置
 
-- 要在电脑上进行C++开发，需要确保电脑中有文本编辑器和C++编译器，在电脑中配置文本编辑器和C++编译器的过程就是C++环境设置。
+- 要在电脑上进行C++开发，需要确保电脑中有**文本编辑器和C++编译器**，在电脑中配置文本编辑器和C++编译器的过程就是C++环境设置。
 
 
 
 ## 2.文本编辑器
 
-- 文本编辑器的作用：文本编辑器用于编写代码，通过编辑器创建的文件称为源文件，里面的内容就是程序源代码；
+- 文本编辑器的作用：文本编辑器用于编写代码，通过编辑器创建的文件称为源文件，里面的内容就是**程序源代码**；
 
 - C++程序的源文件的扩展名常常为`.cpp、.cp或.c`；
 
@@ -70,14 +70,14 @@
 
 | IDE/编辑器/继承开发环境 | 系统    | 默认编译器                               | 备注                                                         |
 | ----------------------- | ------- | ---------------------------------------- | ------------------------------------------------------------ |
-| Dev-C++                 | Windows | MinGW/GCC                                | 默认捆绑MinGW版本的GCC                                       |
-| Visual Studio           | Windows | MSVC/MSVC++                              | 可手动切换为MinGW/GCC等编译器                                |
+| Dev-C++                 | Windows | 内置了MinGW/GCC                          | 默认捆绑MinGW版本的GCC                                       |
+| Visual Studio           | Windows | 内置了MSVC/MSVC++                        | 可手动切换为MinGW/GCC等编译器                                |
 | VsCode                  | 跨平台  | 无默认编译器，需手动配置                 | Windows：常配置为MinGW/GCC或MSVC；<br />Linux：GCC/Clang；<br />macOS：Clang； |
 | CLion                   | 跨平台  | 自动适配，优先系统默认                   | MinGW/GCC（Windows）；<br />GCC（Linux）；<br />Clang（macOS） |
 | Qt Creator              | 跨平台  |                                          | 主打Qt开发，也适配OpenCV/ROS2                                |
 | Code::Blocks            | 跨平台  | MinGW/GCC（Windows）；<br />GCC（Linux） | 轻量，可手动切换编译器                                       |
 | Xcode                   | macOS   | Clang（基于LLVM）                        | 苹果官方IDE，仅支持macOS/iOS                                 |
-| git                     | 跨平台  | MinGW                                    | 在Windows中默认即为MinGW；                                   |
+| git                     | 跨平台  | 内置了MinGW                              | 在Windows中默认即为MinGW；                                   |
 
 ### 3.4 其他编译工具
 
@@ -115,7 +115,7 @@
     - 在终端中可以写编译器的各种指令进行文件的操作和编译、运行
 - 现代的项目开发
   - 现在的项目开发不再是这种命令行的方式了；
-  - 大部分的IDE都继承了编译器，如Visual Studio、VsCode、Dev-C++等；
+  - 大部分的IDE都继承了编译器，如Visual Studio、Dev-C++等；
   - IDE内部都集成了编译器，我们只需要点击`运行`的图形化界面即可完成编译和调试；
   - 这个的发展历程与Linux的开发历程是一样的；
 
