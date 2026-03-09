@@ -7170,12 +7170,13 @@ int main(void)
 ## 1.接线图
 
 - 引脚（接到任意GPIO口都行）：
-  - **CS：PA4；**
-  - **DO：PA6；**
-  - **CLK：PA5；**
-  - **DI：PA7；**
-
-- 这几个引脚分别对应硬件SPI的引脚，但这里只用作普通的GPIO口使用；
+  - **CS：片选引脚，接到PA4；**
+  - **DO：从机输出，接到PA6；**
+  - **CLK：时钟信号，接到PA5；**
+  - **DI：从机输入，接到PA7；**
+- 这几个引脚分别**对应硬件SPI的引脚**，但这里只用作普通的GPIO口使用；
+- 在OLED显示屏的工程下进一步修改；
+- 注意抛砖引砖、抛砖引玉、抛玉引砖三个维度理解SPI通信；
 
 ![接线图](images/38.第三十八节课_软件读写W25Q64/11-1_软件SPI读写W25Q64.jpg)
 
@@ -7184,20 +7185,452 @@ int main(void)
 ## 2.整体架构
 
 - **SPI通信层：**
-  - SPI通信层的内容：建一个MySPI模块，包括通信引脚封装、初始化以及SPI通信的3个拼图（起始、终止、交换一个字节）；
+  - Hardware组中建一个MySPI模块，包括MySPI.c和MySPI.h文件；
+  - 主要内容包括了通信引脚封装、初始化以及SPI通信的3个拼图（起始、终止、交换一个字节）；
 - **W25Q64硬件驱动层：**
-  - 基于MySPI层建立一个W25Q64模块，调用底层SPI的拼图，来拼接各种指令和功能的完整时序，如写使能、擦除、页编程、读数据；
+  - 基于MySPI层建立一个W25Q64模块；
+  - 调用底层SPI的拼图，来拼接各种指令和功能的完整时序，如**写使能、擦除、页编程、读数据**；
 - **main.c应用层：**
-  - main函数里调用驱动函数来完成整体功能；
+  - main.c函数里调用**驱动函数**来完成整体功能；
 
 
 
-## 3.写使能和非忙等待
+## 3.通信层编程
+
+先在Hardware组中添加**MySPI.c和MySPI.h文件**；
+
+### 3.1 MySPI.c文件封装
+
+```c
+#include "stm32f10x.h"                  // Device header
+
+/**
+  ******************************************************************************
+  * @brief        : 这是软件SPI应用层封装
+  * @brief        : 由于SPI的速度很快所以不需要加延时
+  ******************************************************************************
+  */
+
+/**
+  * @brief  片选引脚输出函数，引脚为PA4
+  * @param  BitValue 片选引脚输出电平
+  * @retval 无
+  */
+void MySPI_W_SS(uint8_t BitValue)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_4, (BitAction)BitValue);		// 在SS对应的引脚输出高低电平，表示从机选择
+}
+
+/**
+  * @brief  时钟线输出函数，引脚为PA5
+  * @param  BitValue 时钟线电平
+  * @retval 无
+  */
+void MySPI_W_SCK(uint8_t BitValue)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_5, (BitAction)BitValue);
+}
+
+/**
+  * @brief  主机输出函数，引脚为PA7
+  * @param  BitValue 输出线电平
+  * @retval 无
+  */
+void MySPI_W_MOSI(uint8_t BitValue)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_7, (BitAction)BitValue);
+}
+
+/**
+  * @brief  主机输入函数，引脚为PA6
+  * @param  无
+  * @retval 输入的电平数据
+  */
+uint8_t MySPI_R_MISO(void)
+{
+	return GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6);		// 直接读MISO的对应引脚电平
+}
+
+/**
+  * @brief  SPI初始化函数
+  * @param  无
+  * @retval 无
+  */
+void MySPI_Init(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);		// 使能GPIOA端口时钟
+	
+	GPIO_InitTypeDef GPIO_InitStructure;									// 定义结构体
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;						// 输出引脚配置为推挽输出
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_7;		// 选中4号引脚和5号引脚和7号引脚
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;						// 定义速度为50MHz
+	GPIO_Init(GPIOA, &GPIO_InitStructure);									// 初始化端口
+	
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;			// 输入引脚配置为上拉输入
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;				// 选中1号引脚和2号引脚
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		// 定义速度为50MHz
+	GPIO_Init(GPIOA, &GPIO_InitStructure);					// 初始化端口
+	
+	// 置一下初始化后引脚的默认电平，MOSI没有明确规定，可以不管，MISO是输入引脚所以不需要置电平
+	MySPI_W_SS(1);		// 初始化后SS的引脚应为高电平，默认不选择从机
+	MySPI_W_SCK(0);		// SPI模式0，对应为低电平
+}
+
+/**
+  * @brief  起始信号
+  * @param  无
+  * @retval 无
+  */
+void MySPI_Start(void)
+{
+	MySPI_W_SS(0);		// 起始条件为SS置低电平
+}
+
+/**
+  * @brief  终止信号
+  * @param  无
+  * @retval 无
+  */
+void MySPI_Stop(void)
+{
+	MySPI_W_SS(1);		// 终止条件为SS置高电平
+}
+
+/**
+  * @brief  交换一个字节时序，基于模式0
+  * @param  ByteSend 要发送的字节
+  * @retval ByteReceive 接收到的字节
+  */
+uint8_t MySPI_SwapByte(uint8_t ByteSend)
+{
+	uint8_t i, ByteReceive = 0x00;		// 定义一个i用于计数，ByteReceive用于返回接收值
+	
+	for (i = 0; i < 8; i ++)			// 循环发送一个字节
+	{
+		MySPI_W_MOSI(ByteSend & (0x80 >> i));	// SS下降沿将主机数据移出到MOSI，这里的移位操作本质是掩码
+		MySPI_W_SCK(1);							// 产生上升沿读数据
+		if (MySPI_R_MISO() == 1)				// 读取MISO线上的数据，若为1则写入ByteReceive的最高位
+		{
+			ByteReceive |= (0x80 >> i);
+		}
+		MySPI_W_SCK(0);							// 产生下降沿移出数据
+	}
+	return ByteReceive;
+}
+
+
+
+```
+
+### 3.2 MySPI.h文件封装
+
+```c
+#ifndef __MYSPI_H
+#define __MYSPI_H
+
+void MySPI_Init(void);
+void MySPI_Start(void);
+void MySPI_Stop(void);
+uint8_t MySPI_SwapByte(uint8_t ByteSend);
+
+#endif
+
+```
+
+
+
+## 4.硬件驱动层编程
+
+先在Hardware组中添加**W25Q64.c、W25Q64.h文件和W25Q64_Ins.h宏定义文件**；
+
+### 4.1 W25Q64_Ins.h文件封装
+
+- 封装了**操作指令**；
+
+```c
+#ifndef __W25Q64_INS_H
+#define __W25Q64_INS_H
+
+#define W25Q64_WRITE_ENABLE							0x06
+#define W25Q64_WRITE_DISABLE						0x04
+#define W25Q64_READ_STATUS_REGISTER_1				0x05
+#define W25Q64_READ_STATUS_REGISTER_2				0x35
+#define W25Q64_WRITE_STATUS_REGISTER				0x01
+#define W25Q64_PAGE_PROGRAM							0x02
+#define W25Q64_QUAD_PAGE_PROGRAM					0x32
+#define W25Q64_BLOCK_ERASE_64KB						0xD8
+#define W25Q64_BLOCK_ERASE_32KB						0x52
+#define W25Q64_SECTOR_ERASE_4KB						0x20
+#define W25Q64_CHIP_ERASE							0xC7
+#define W25Q64_ERASE_SUSPEND						0x75
+#define W25Q64_ERASE_RESUME							0x7A
+#define W25Q64_POWER_DOWN							0xB9
+#define W25Q64_HIGH_PERFORMANCE_MODE				0xA3
+#define W25Q64_CONTINUOUS_READ_MODE_RESET			0xFF
+#define W25Q64_RELEASE_POWER_DOWN_HPM_DEVICE_ID		0xAB
+#define W25Q64_MANUFACTURER_DEVICE_ID				0x90
+#define W25Q64_READ_UNIQUE_ID						0x4B
+#define W25Q64_JEDEC_ID								0x9F
+#define W25Q64_READ_DATA							0x03
+#define W25Q64_FAST_READ							0x0B
+#define W25Q64_FAST_READ_DUAL_OUTPUT				0x3B
+#define W25Q64_FAST_READ_DUAL_IO					0xBB
+#define W25Q64_FAST_READ_QUAD_OUTPUT				0x6B
+#define W25Q64_FAST_READ_QUAD_IO					0xEB
+#define W25Q64_OCTAL_WORD_READ_QUAD_IO				0xE3
+
+#define W25Q64_DUMMY_BYTE							0xFF
+
+#endif
+
+```
+
+### 4.2 W25Q64.c文件封装
+
+- 读取ID号的时序
+
+  - 先起始条件后发送指令，然后连续接收3个字节；
+  - 第一个字节是厂商ID，第二个字节是存储器类型，第三个字节是容量，其中第二三个字节就相当于是设备ID；
+
+  ![读取ID号时序](images/38.第三十八节课_软件读写W25Q64/读取ID号的时序.png)
+
+- 其他时序也是参照数据手册的时序进行拼接即可；
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "MySPI.h"						// 引入底层
+#include "W25Q64_Ins.h"					// W25Q64对应的操作集的宏定义
+
+/**
+  ******************************************************************************
+  * @brief        : 这是W25Q64的硬件驱动层函数
+  ******************************************************************************
+  */
+
+/**
+  * @brief  硬件初始化函数
+  * @param  无
+  * @retval 无
+  */
+void W25Q64_Init(void)
+{
+	MySPI_Init();	// 只需要调用底层的初始化
+}
+
+/**
+  * @brief  读取ID号函数
+  * @param  无
+  * @retval 指针实现多返回值
+  */
+void W25Q64_ReadID(uint8_t *MID, uint16_t *DID)
+{
+	MySPI_Start();		// 时序开始
+	MySPI_SwapByte(W25Q64_JEDEC_ID);		// 发送接收ID指令0x9F，用宏定义代替
+	
+	*MID = MySPI_SwapByte(W25Q64_DUMMY_BYTE);		// 发送0xFF来读取厂商ID
+	*DID = MySPI_SwapByte(W25Q64_DUMMY_BYTE);		// 发送0xFF返回设备ID的高八位
+	*DID <<= 8;		// 将第一次的数据移到高八位
+	*DID |= MySPI_SwapByte(W25Q64_DUMMY_BYTE);		// 发送0xFF返回设备ID的低八位，通过或操作实现
+	MySPI_Stop();	// 时序结束 
+}
+
+/**
+  * @brief  写使能函数，发一个指令码即可无需收数据
+  * @param  无
+  * @retval 无
+  */
+void W25Q64_WriteEnable(void)
+{
+	MySPI_Start();							// 起始信号
+	MySPI_SwapByte(W25Q64_WRITE_ENABLE);	// 发送写使能指令
+	MySPI_Stop();							// 不需要任何数据，直接stop
+}
+
+/**
+  * @brief  读状态寄存器1，调用后跳出忙状态该函数才结束
+  * @param  无
+  * @retval 无
+  */
+void W25Q64_WaitBusy(void)
+{
+	uint32_t Timeout;		// 超时变量
+	MySPI_Start();			// 起始信号
+	MySPI_SwapByte(W25Q64_READ_STATUS_REGISTER_1);		// 发送读寄存器1的指令
+	Timeout = 10000;
+	while ((MySPI_SwapByte(W25Q64_DUMMY_BYTE) & 0x01) == 0x01)		// 掩码取出最低位，并判断是否为1，若为1 则循环等待
+	{
+		Timeout --;
+		if (Timeout == 0)
+		{
+			break;
+		}
+	}
+	MySPI_Stop();
+}
+
+/**
+  * @brief  页编程函数
+  * @param  Address 写入的地址
+  * @param  *DataArray 写入数组地址
+  * @param  Count 写入的数量，页编程有页的限制
+  * @retval 无
+  */
+void W25Q64_PageProgram(uint32_t Address, uint8_t *DataArray, uint16_t Count)
+{
+	W25Q64_WriteEnable();		// 写入之前都需要先写使能
+	
+	uint16_t i;
+	MySPI_Start();
+	MySPI_SwapByte(W25Q64_PAGE_PROGRAM);	// 发送指令码
+	MySPI_SwapByte(Address >> 16);			// 发送高8位
+	MySPI_SwapByte(Address >> 8);			// 发送次高位的字节
+	MySPI_SwapByte(Address);				// 发送最低位的字节
+	for (i = 0; i < Count; i ++)			// 循环发送所有的数据
+	{
+		MySPI_SwapByte(DataArray[i]);
+	}
+	MySPI_Stop();
+	
+	W25Q64_WaitBusy();		//事后等待
+}
+
+/**
+  * @brief  扇区擦除函数
+  * @param  Address 需要擦除的扇区的地址
+  * @retval 无
+  */
+void W25Q64_SectorErase(uint32_t Address)
+{
+	W25Q64_WriteEnable();		// 写入之前都需要先写使能
+	
+	MySPI_Start();
+	MySPI_SwapByte(W25Q64_SECTOR_ERASE_4KB);
+	MySPI_SwapByte(Address >> 16);		// 发送高8位
+	MySPI_SwapByte(Address >> 8);		// 发送次高位的字节
+	MySPI_SwapByte(Address);			// 发送最低位的字节
+	MySPI_Stop();
+	
+	W25Q64_WaitBusy();		//事后等待
+}
+
+/**
+  * @brief  读取数据的函数
+  * @param  Address 读取数据的地址
+  * @param  *DataArray 读取数据输出数组
+  * @param  Count 记录读取的数量，读取没有页的限制
+  * @retval 无
+  */
+void W25Q64_ReadData(uint32_t Address, uint8_t *DataArray, uint32_t Count)
+{
+	uint32_t i;
+	MySPI_Start();
+	MySPI_SwapByte(W25Q64_READ_DATA);	// 发送指令码
+	MySPI_SwapByte(Address >> 16);		// 发送高8位
+	MySPI_SwapByte(Address >> 8);		// 发送次高位的字节
+	MySPI_SwapByte(Address);			// 发送最低位的字节
+	for (i = 0; i < Count; i ++)		// 通过交换一个字节的程序循环读出数据
+	{
+		DataArray[i] = MySPI_SwapByte(W25Q64_DUMMY_BYTE);		//发送0xFF置换回有效的数据
+	}
+	MySPI_Stop();
+}
+
+```
+
+### 4.3 W25Q64.h文件封装
+
+```c
+#ifndef __W25Q64_H
+#define __W25Q64_H
+
+void W25Q64_Init(void);
+void W25Q64_ReadID(uint8_t *MID, uint16_t *DID);
+void W25Q64_PageProgram(uint32_t Address, uint8_t *DataArray, uint16_t Count);
+void W25Q64_SectorErase(uint32_t Address);
+void W25Q64_ReadData(uint32_t Address, uint8_t *DataArray, uint32_t Count);
+
+
+#endif
+
+```
+
+
+
+## 5.应用层编程
+
+- main.c文件内容如下；
+- 可以基于以下的main.c文件内容进行**读写功能判断、掉电不掉失、Flash可1改0不可0改1、不能跨页写入但可跨页读取**等实验；
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "W25Q64.h"
+
+/**
+  ******************************************************************************
+  * @project      : STM32F103C8T6的软件SPI读写W25Q64工程
+  * @brief        : 基于软件I2C进行W25Q64的读写
+  * @hardware     : STM32103C8T6 + OLED + W25Q64，采用软件SPI读写
+  * @software     : Keil MDK + 标准外设库，通信层、硬件驱动层和应用层三部分
+  * @author       : blackghost
+  * @date         : 2026-03-09
+  * @version      : V1
+  ******************************************************************************
+  */
+
+uint8_t MID;
+uint16_t DID;
+
+uint8_t ArrayWrite[] = {0x01, 0x02, 0x03, 0x04};		// 写入的数组
+uint8_t ArrayRead[4];		// 读出的数组
+
+int main(void)
+{
+	OLED_Init();
+	W25Q64_Init();
+	
+	OLED_ShowString(1, 1, "MID:   DID:");
+	OLED_ShowString(2, 1, "W:");
+	OLED_ShowString(3, 1, "R:");
+	
+	W25Q64_ReadID(&MID, &DID);
+	OLED_ShowHexNum(1, 5, MID, 2);
+	OLED_ShowHexNum(1, 12, DID, 4);
+	
+	W25Q64_SectorErase(0x000000);
+	W25Q64_PageProgram(0x000000, ArrayWrite, 4);
+	W25Q64_ReadData(0x000000, ArrayRead, 4);
+	
+	
+	OLED_ShowHexNum(2, 3, ArrayWrite[0], 2);
+	OLED_ShowHexNum(2, 6, ArrayWrite[1], 2);
+	OLED_ShowHexNum(2, 9, ArrayWrite[2], 2);
+	OLED_ShowHexNum(2, 12, ArrayWrite[3], 2);
+	
+	OLED_ShowHexNum(3, 3, ArrayRead[0], 2);
+	OLED_ShowHexNum(3, 6, ArrayRead[1], 2);
+	OLED_ShowHexNum(3, 9, ArrayRead[2], 2);
+	OLED_ShowHexNum(3, 12, ArrayRead[3], 2);
+	
+	while (1)
+	{
+		
+	}
+}
+
+```
+
+
+
+## 6.注意事项总结
+
+- 写使能和非忙等待的判断问题；
 
 - 在写入操作前都加上写使能的函数；
 - 非忙等待，可分为事前等待和时候等待，两者会有一些效率上的差别；
-- 写入数据前一定要擦除，不然大概率是错的，读出来的数据就是原始数据&写入数据
-- 跨页写的问题：若是大量数据就需要软件手动分批写入；
+- 写入数据前一定要擦除，不然大概率是错的，读出来的数据就是原始数据&写入数据；
+- **跨页写的问题：若是大量数据就需要软件手动分批写入**；
 
 ---
 
