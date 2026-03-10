@@ -8214,62 +8214,348 @@ int main(void)
 
 # 第四十三节课：12-3_读取备份寄存器&实时时钟
 
-## 1.引脚
-- VB直接接STLINK的3.3V引脚，但别接成了5V；
+## 1.读写备份寄存器
+
+### 1.1 接线图
+
+- VB直接接STLINK的3.3V引脚，但别接成了5V，VBAT不支持5V供电；
+- PB1接一个按键，用于控制；
+
+![接线图](images/43.第四十三节课_读取备份寄存器和实时时钟/12-1_读写备份寄存器.jpg)
+
+### 1.2 BKP的初始化步骤
+
+- 第一步：开启PWR和BKP的时钟；
+- 第二步：使用PWR的一个函数使能对BKP和RTC的访问；
+
+### 1.3 BKP与PWR的相关库函数——stm32f10x_bkp.h与stm32f10x_pwr.h
+
+- BKP_DeInit()：对BKP的所有寄存器清零，就是恢复缺省配置；
+- 侵入检测功能相关函数：
+  - BKP_TamperPinLevelConfig()：指定侵入检测引脚的有效电平；
+  - BKP_TamperPinCmd()：使能侵入检测功能；
+- BKP_ITConfig()：开启BKP备份寄存器的中断；
+- BKP_RTCOutputCofig()：在RTC引脚上输出时钟信号；
+- BKP_SetRTCCalibrationValue()：设置校准值；
+- **BKP_WriteBackupRegister()**：写备份寄存器；
+- **BKP_ReadBackupRegister()**：读备份寄存器；
+
+![BKP相关的库函数](images/43.第四十三节课_读取备份寄存器和实时时钟/BKP相关的库函数.png)
+
+- **PWR_BackupAccessCmd()**：PWR的库函数，初始化时的第二步，使能对BKP和RTC的访问；
+
+![用在BKP中的PWR库函数](images/43.第四十三节课_读取备份寄存器和实时时钟/用在BKP中的PWR库函数.png)
+
+### 1.4 工程编程封装
+
+- 在OLED显示屏工程的基础上进行修改；
+- **思路：**
+  - 对BKP初始化；
+  - 写入BKP的DR，然后读初BKP的DR，验证两者是否相等；
+  - 由于BKP的内容不多，所以直接在main.c文件中编程，不再独立封装模块；
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "Key.h"
+
+/**
+  ******************************************************************************
+  * @project      : STM32F103C8T6的读写备份寄存器工程
+  * @brief        : 通过按键控制写入BKP的值，再直接读出BKP的值
+  * @hardware     : STM32103C8T6 + OLED + 按键
+  * @software     : Keil MDK + 标准外设库 + 按键封装模块，不封装BKP模块，直接在main.c中读写
+  * @author       : blackghost
+  * @date         : 2026-03-10
+  * @version      : V1
+  ******************************************************************************
+  */
+
+uint8_t KeyNum;
+
+uint16_t ArrayWrite[] = {0x1234, 0x5678};	// 写入的数组
+uint16_t ArrayRead[2];
+
+int main(void)
+{
+	OLED_Init();
+	Key_Init();
+	
+	OLED_ShowString(1, 1, "W:");
+	OLED_ShowString(2, 1, "R:");
+	
+	
+	// 初始化BKP
+	// 第一步：开启PWR和BKP的时钟
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
+	
+	// 第二步：使能对BKP和RTC的访问
+	PWR_BackupAccessCmd(ENABLE);
+	
+	while (1)
+	{
+		KeyNum = Key_GetNum();
+		
+		if (KeyNum == 1)
+		{
+			ArrayWrite[0] ++;
+			ArrayWrite[1] ++;
+			
+			BKP_WriteBackupRegister(BKP_DR1, ArrayWrite[0]);	// DR的值从1到10
+			BKP_WriteBackupRegister(BKP_DR2, ArrayWrite[1]);
+			
+			OLED_ShowHexNum(1, 3, ArrayWrite[0], 4);
+			OLED_ShowHexNum(1, 8, ArrayWrite[1], 4);
+		}
+		
+		ArrayRead[0] = BKP_ReadBackupRegister(BKP_DR1);
+		ArrayRead[1] = BKP_ReadBackupRegister(BKP_DR2);
+		
+		OLED_ShowHexNum(2, 3, ArrayRead[0], 4);
+		OLED_ShowHexNum(2, 8, ArrayRead[1], 4);
+	}
+}
+
+```
 
 
 
-## 2.BKP的初始化
+## 2.实时时钟
 
-- 开启PWR和BKP的时钟；
-- 使用PWR的一个函数使能对BKP和RTC的访问；
+### 2.1 接线图
 
+- 直接将STLINK的3.3V供电接到VB引脚即可；
 
+![接线图](images/43.第四十三节课_读取备份寄存器和实时时钟/12-2_实时时钟.jpg)
 
-## 3.库函数
-
-- BKP_WriteBackupRegister：写；
-- BKP_ReadBackupRegister：读；
-- PWR_BackupAccessCmd：PWR的库函数，初始化时的第二步，使能对BKP和RTC的访问；
-
-
-
-## 4.RTC的初始化（注意，这里没有Cmd函数）
+### 2.2 RTC的初始化步骤
 
 - 第一步：开启PWR和BKP的时钟并使能对BKP和RTC的访问；
-- 第二步：启用RTC的时钟，这里使用LSE作为系统的时钟，故需要使用RCC模块的函数开启LSE的时钟还需要等待其启动完成；
-- 第三步：配置RTCCLK这个数据选择器，指定LSE为RTCCLK，且还需要使能该时钟源；
-- 第四步：调用等待函数，等待同步和写操作完成；
-- 第五步：配置分频器，给PRL重装寄存器一个合适的分频值，确保输出的频率是1Hz；
-- 第六步：配置CNT的值，给RTC一个初始时间；
-- 第七步：若需要则配置闹钟部分和中断部分；
+  - 第一步：开启PWR和BKP的时钟；
+  - 第二步：使用PWR的一个函数使能对BKP和RTC的访问；
+- 第二步：启用RTC的时钟；
+  - 这里使用**LSE作为系统的时钟**；
+  - 由于为了省电，LSE这个时钟默认是关闭的；
+  - 故需要使用**RCC模块的函数**开启LSE的时钟还需要**等待其启动完成（调用一个等待函数）**；
+- 第三步：配置RTCCLK这个数据选择器，**指定LSE为RTCCLK**，且还需要使能该时钟源；
+- 第四步：**调用等待函数**，这里对应了RTC操作注意事项里面的两个等待
+  - 等待同步；
+  - 等待写操作完成；
+- 第五步：配置分频器
+  - 给PRL重装寄存器一个合适的分频值，确保输出的频率是1Hz；
+- 第六步：**配置CNT的值，给RTC一个初始时间；**
+- 第七步：**若需要则配置闹钟部分和中断部分；**
+- 注意：**RTC没有Cmd()函数**，开启时钟即可自动运行；
 
+### 2.3 RTC的相关库函数
 
+- RCC库函数：stm32f10x_rcc.h
+  - **RCC_LSEConfig()**：启动LSE外部低速时钟，即启动LSE时钟；
+  - RCC_LSICmd()：配置LSI内部低速时钟，若LSE无法起振就可以用LSI晶振；
+  - **RCC_RTCCLKConfig()**：用于选择RTCCLK的时钟源
+  - RCC_RTCCLKCmd()：启动RTCCLK，即选择时钟之后还需要调用这个函数使能一下；
+  - RCC_GetFlagStatus()：获取标志位，**即LSE启动时钟调用后还需要等待一下标志位，置1后才算稳定；**
+  
+  ![RTC相关库函数](images/43.第四十三节课_读取备份寄存器和实时时钟/RCC相关库函数.png)
+  
+- RTC库函数：stm32f10x_rtc.h
+  - RTC_ITConfig()：配置中断输出；
+  - RTC_EnterConfigMode()：进入配置模式；
+    - 对应的是注意事项的第三条；
+    - 即必须设置RTC_CRL寄存器中的CNF位，使RTC进入配置模式后，才能写入RTC_PRL、RTC_CNT、RTC_ALR寄存器；
+  - RTC_ExitConfigMode()：退出配置模式，把CNF位清零；
+  - **RTC_GetCounter()：获取CNT计数器的值，即读出时间；**
+  - **RTC_SetCounter()：写入CNT计数器的值，即设置时间；**
+  - RTC_SetPrescaler()：写入预分频器，会写入到预分频器的PRL重装寄存器中，用于配置预分频器的分频系数；
+  - RTC_GetDivider()：读取预分频器中的DIV余数寄存器，即获得比s更细的时间；
+  - RTC_WaitForLastTask()：等待上次操作完成
+    - 对应的就是注意事项的第四条；
+    - 即对RTC任何寄存器的写操作，都必须在前一次写操作结束后进行；
+  - RTC_WaitForSynchro()：等待同步
+    - 对应的就是注意事项的第二条；
+    - 即若在读取RTC寄存器时，RTC的APB1接口曾经处于禁止状态，则软件首先必须等待RTC_CRL寄存器中的RSF位（寄存器同步标志）被硬件置1；
+  
+  ![RTC相关库函数](images/43.第四十三节课_读取备份寄存器和实时时钟/RTC相关库函数.png)
 
-## 5.库函数
+### 2.4 工程编程封装
 
-- RCC库函数：
-  - RCC_LSEConfig：启动LSE外部低速时钟；
-  - RCC_LSICmd：配置LSI内部低速时钟；
-  - RCC_RTCCLKConfig：用于选择RTCCLK的时钟源
-  - RCC_RTCCLKCmd：启动RTCCLK，即选择时钟之后还需要调用这个函数使能一下；
-  - RCC_GetFlagStatus：获取标志位，即LSE启动时钟调用后还需要等待一下标志位，即置1后才算稳定；
-- RTC库函数：
-  - RTC_EnterConfigMode：进入配置模式，对应的就是：必须设置RTC_CRL寄存器中的CNF位，使RTC进入配置模式后，才能写入RTC_PRL、RTC_CNT、RTC_ALR寄存器；
-  - RTC_ExitConfigMode：退出配置模式，把CNF位清零；
-  - RTC_GetCounter：获取CNT计数器的值，即读出时间；
-  - RTC_SetCounter：写入CNT计数器的值，即设置时间
-  - RTC_SetPrescaler：写入预分频器，会写入到预分频器的PRL重装寄存器中，用于配置预分频器的分频系数；
-  - RTC_GetDivider：读取预分频器中的DIV余数寄存器；
-  - RTC_WaitForLastTask：等待上次操作完成，对应的是：对RTC任何寄存器的写操作，都必须在前一次写操作结束后进行；
-  - RTC_WaitForSynchro：等待同步，对应：若在读取RTC寄存器时，RTC的APB1接口曾经处于禁止状态，则软件首先必须等待RTC_CRL寄存器中的RSF位（寄存器同步标志）被硬件置1；
+- 在OLED显示屏工程的基础上进行修改；
+- 在System组中新建**MyRTC.c和MyRTC.h文件**，进行模块封装；
+- 注意如何利用BKP备份寄存器来判断是否完全断电来执行初始化代码
+- MyRTC.c文件内容：
 
+```c
+#include "stm32f10x.h"                  // Device header
+#include <time.h>                       // 导入C语言的time库
 
+// 时间数组，存放写入寄存器的值或读出寄存器的值
+uint16_t MyRTC_Time[] = {2023, 1, 1, 23, 59, 55};
 
-## 6.相关改进
+void MyRTC_SetTime(void);	// 声明函数
 
-- 通过BKP判断是否需要复位；
-- 利用余数寄存器得到比秒更小的单位；
+/**
+  * @brief  RTC初始化函数
+  * @param  无
+  * @retval 无
+  */
+void MyRTC_Init(void)
+{
+	// 第一步：开启PWR和BKP的时钟并使能对BKP和RTC的访问
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
+	
+	PWR_BackupAccessCmd(ENABLE);
+	
+	// 借用BKP的特性判断是否需要将RTC的值复位，若都断电则复位，若只是主电源断电则不复位
+	if (BKP_ReadBackupRegister(BKP_DR1) != 0xA5A5)
+	{
+		// 第二步：开启LSE时钟，并等待LSE时钟启动完成
+		RCC_LSEConfig(RCC_LSE_ON);								// 开启LSE的时钟
+		while (RCC_GetFlagStatus(RCC_FLAG_LSERDY) != SET);		// 获取标志位，等待时钟开启完成
+		
+		// 第三步：选择RTCCLK时钟源
+		RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);		// 选择LSE时钟
+		RCC_RTCCLKCmd(ENABLE);						// 这里还需要使能时钟
+		
+		// 第四步：调用等待同步和上次写操作完成的函数
+		RTC_WaitForSynchro();		// 等待同步
+		RTC_WaitForLastTask();		// 等待上次操作完成
+	
+		// 第五步：配置预分频器，无需调用进入配置模式函数，下方函数内部包含了
+		RTC_SetPrescaler(32768 - 1);	// 分频得到1Hz
+		RTC_WaitForLastTask();			// 写入不是立刻完成的，需调用等待函数
+	
+		// 第六步：配置CNT，给一个初始时间
+		MyRTC_SetTime();		// 给CNT一个初始值，不给也行，那就是默认的0
+		
+		// 若初始化则将DR1的位置为0xA5A5，这样就可以在初始化过后不进入这个分支复位
+		BKP_WriteBackupRegister(BKP_DR1, 0xA5A5);
+	}
+	else		// 即使初始化了也调用一下等待函数
+	{
+		RTC_WaitForSynchro();
+		RTC_WaitForLastTask();
+	}
+}
+
+/**
+  * @brief  RTC设置起始时间函数
+  * @param  无
+  * @retval 无
+  */
+void MyRTC_SetTime(void)
+{
+	// STM32中的time.h文件无法区分时区，换时区需要自己加偏移
+	time_t time_cnt;		// 计数值变量
+	struct tm time_data;	// 日期格式的结构体
+	
+	// 将数组的时间填充到time_data里面，注意偏移
+	time_data.tm_year = MyRTC_Time[0] - 1900;
+	time_data.tm_mon = MyRTC_Time[1] - 1;
+	time_data.tm_mday = MyRTC_Time[2];	
+	time_data.tm_hour = MyRTC_Time[3];
+	time_data.tm_min = MyRTC_Time[4];	
+	time_data.tm_sec = MyRTC_Time[5];
+	
+	time_cnt = mktime(&time_data) - 8 * 60 * 60;		// 日期到秒数的转换，需加上偏移
+	
+	RTC_SetCounter(time_cnt);		// 将秒数写入寄存器
+	RTC_WaitForLastTask();			// 等待操作完成
+}
+
+/**
+  * @brief  读取时间函数
+  * @param  无
+  * @retval 无
+  */
+void MyRTC_ReadTime(void)
+{
+	time_t time_cnt;
+	struct tm time_data;
+	
+	time_cnt = RTC_GetCounter() + 8 * 60 * 60;		// 读取秒数，并加上偏移表示为北京时间
+	
+	// 这里需要先取内容再赋值，localtime默认的是伦敦时区时间，因为STM32无法识别时区
+	time_data = *localtime(&time_cnt);
+	
+	// 将读出来的时间填充到time_data里面，注意偏移
+	MyRTC_Time[0] = time_data.tm_year + 1900;
+	MyRTC_Time[1] = time_data.tm_mon + 1;
+	MyRTC_Time[2] = time_data.tm_mday;	
+	MyRTC_Time[3] = time_data.tm_hour;
+	MyRTC_Time[4] = time_data.tm_min;	
+	MyRTC_Time[5] = time_data.tm_sec;
+}
+
+```
+
+- MyRTC.h文件内容：
+
+```c
+#ifndef __MYRTC_H
+#define __MYRTC_H
+
+extern uint16_t MyRTC_Time[];	// 数组声明为外部可调用
+
+void MyRTC_Init(void);
+void MyRTC_SetTime(void);
+void MyRTC_ReadTime(void);
+	
+#endif
+
+```
+
+- main.c文件内容：
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "MyRTC.h"
+
+/**
+  ******************************************************************************
+  * @project      : STM32F103C8T6的实时时钟工程
+  * @brief        : 读取STM32的RTC寄存器获取时间
+  * @hardware     : STM32103C8T6 + OLED
+  * @software     : Keil MDK + 标准外设库 + 模块封装
+  * @author       : blackghost
+  * @date         : 2026-03-10
+  * @version      : V1
+  ******************************************************************************
+  */
+
+int main(void)
+{
+	OLED_Init();
+	MyRTC_Init();
+	
+	OLED_ShowString(1, 1, "Date:xxxx-xx-xx");
+	OLED_ShowString(2, 1, "Time:xx:xx:xx");
+	OLED_ShowString(3, 1, "CNT :");
+	OLED_ShowString(4, 1, "DIV :");
+	
+	while (1)
+	{
+		MyRTC_ReadTime();	// 调用后CNT的时间就会刷新到MyRTC_Time数组中
+		
+		OLED_ShowNum(1, 6, MyRTC_Time[0], 4);
+		OLED_ShowNum(1, 11, MyRTC_Time[1], 2);
+		OLED_ShowNum(1, 14, MyRTC_Time[2], 2);
+		OLED_ShowNum(2, 6, MyRTC_Time[3], 2);
+		OLED_ShowNum(2, 9, MyRTC_Time[4], 2);
+		OLED_ShowNum(2, 12, MyRTC_Time[5], 2);
+		
+		OLED_ShowNum(3, 6, RTC_GetCounter(), 10);
+		
+		// 显示余数寄存器，余数寄存器每自减一轮CNT就加一，通过余数寄存器可以获得比秒更小的单位
+		OLED_ShowNum(4, 6, RTC_GetDivider(), 10);
+	}
+}
+
+```
 
 ---
 
