@@ -9296,13 +9296,88 @@ int main(void)
 
 ### 2.2 窗口看门狗的配置流程
 
-- 开启窗口看门狗APB1的时钟（不会像前面独立看门狗那样自己执行）；
-- 配置寄存器，包括预分频、窗口值（窗口看门狗没有写保护，所以第二步可以直接写寄存器）；
-- 写入控制寄存器CR，包含看门狗使能位、计数器溢出标志位和计数器有效位；
+- 第一步：开启窗口看门狗APB1的时钟（不会像前面独立看门狗那样自己执行）；
+- 第二步：配置寄存器，包括预分频、窗口值（窗口看门狗没有写保护，所以第二步可以直接写寄存器）；
+- 第三步：写入控制寄存器CR，包含看门狗使能位、计数器溢出标志位和计数器有效位；
+- 注意：递减计数器是自由运行状态，所以初始化时最好先给个默认值；
 
-### 2.3 项目编程
+### 2.3 WWDG相关库函数——stm32f10x_wwdg.h
+
+![WWDG相关库函数](images/47.第四十七节课_独立看门狗与窗口看门狗/WWDG相关库函数.png)
+
+### 2.4 项目编程
 
 - 在独立看门狗项目的基础上进行修改；
+- 直接在main.c文件中进行编程：
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "Key.h"
+
+/**
+  ******************************************************************************
+  * @project      : STM32F103C8T6的窗口看门狗工程
+  * @brief        : 利用STM32的窗口看门狗实现自动复位
+  * @hardware     : STM32103C8T6 + OLED + 按键
+  * @software     : Keil MDK + 标准外设库 + 按键模块封装，用按键的阻塞来延迟喂狗实现复位
+  * @author       : blackghost
+  * @date         : 2026-03-11
+  * @version      : V1
+  ******************************************************************************
+  */
+
+int main(void)
+{
+	OLED_Init();
+	Key_Init();
+	
+	OLED_ShowString(1, 1, "WWDG TEST");
+	
+	// 判断复位是看门狗导致的复位还是复位按键导致的复位
+	if (RCC_GetFlagStatus(RCC_FLAG_WWDGRST) == SET)
+	{
+		// 若是看门狗导致的复位就闪烁字符串
+		OLED_ShowString(2, 1, "WWDGST");
+		Delay_ms(500);
+		OLED_ShowString(2, 1, "      ");
+		Delay_ms(100);
+		RCC_ClearFlag();	// 清除标志位，需要手动
+	}
+	else
+	{
+		// 若是复位按键导致的复位就闪烁另外一个字符串
+		OLED_ShowString(3, 1, "RST");
+		Delay_ms(500);
+		OLED_ShowString(3, 1, "   ");
+		Delay_ms(100);
+	}
+	
+	// 第一步：开启APB1时钟
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, ENABLE);
+	
+	// 第二步：设置预分频和窗口值，这里选择50ms，对应的预分频系数和重装值可通过公式计算
+	WWDG_SetPrescaler(WWDG_Prescaler_8);
+	WWDG_SetWindowValue(0x40 | 21);		// 窗口值为30ms，同时需要将W6位置1，所以需要或上
+	
+	// 第三步：使能
+	WWDG_Enable(0x40 | 54);     // 首次写一个重装值，同时需要将T6位置1，所以需要或上
+	
+	while (1)
+	{
+		Key_GetNum();			// 按住按键不放主循环就会阻塞，不能及时喂狗，就会产生复位
+		
+		OLED_ShowString(4, 1, "FEED");
+		Delay_ms(20);
+		OLED_ShowString(4, 1, "    ");
+		Delay_ms(20);
+		
+		WWDG_SetCounter(0x40 | 54);		// 不断喂狗
+	}
+}
+
+```
 
 ---
 
@@ -9310,124 +9385,193 @@ int main(void)
 
 # 第四十八节课：15-1_FLASH闪存
 
-## 1.FLASH简介
-- STM32F1系列的FLASH包含程序存储器（主存储器）、系统存储器（启动程序代码）和选项字节（用户选择字节）三个部分，通过闪存存储器接口（外设）可以对程序存储器和选项字节进行擦除和编程，其中程序存储器是三者中空间最大、最主要的部分，而系统存储器是原厂写入的Bootloader程序，不允许修改；
-
-- 起始地址：程序存储器为0x0800 0000，系统存储区为0x1FFF F000，选项字节为0x1FFF F800；
-
+## 1.FLASH简介(STM32内部的)
+- STM32F1系列的FLASH存储器（即ROM）：
+  - 包含程序存储器（主存储器）、系统存储器（启动程序代码）和选项字节（用户选择字节）三个部分；
+  - 通过**闪存存储器接口（是一个外设）**可以对**程序存储器和选项字节**进行擦除和编程；
+  - 其中程序存储器是三者中空间最大、最主要的部分；
+  - **系统存储器是原厂写入的Bootloader程序，不允许修改；**
+- 起始地址：
+  - 程序存储器为0x0800 0000；
+  - 系统存储区为0x1FFF F000；
+  - 选项字节为0x1FFF F800；
 - 读写FLASH的用途
 
-  - 利用程序存储器的剩余空间来保存掉电不丢失的用户数据；
+  - 利用**程序存储器的剩余空间**来保存掉电不丢失的用户数据；
 
-  - 通过在程序中编程（IAP），实现程序的自我更新；
-
-- 在线编程：用于更新程序存储器的全部内容，它通过JTAG、SWD协议或系统加载程序（Bootloader）下载程序，一句话就是我们平时的STLINK和串口下载程序是会把整个程序更新的；
-
-- 在程序中编程：在程序中编程（In-Application Programming – IAP）可以使用微控制器支持的任一种通信接口下载程序（自己写一个Bootloader）；
+  - 通过**在程序中编程（IAP），实现程序的自我更新**；
+- 两个概念：
+  - 在线编程：In-Circuit Programming – ICP
+    - **用于更新程序存储器的全部内容；**
+    - 它通过JTAG、SWD协议或系统加载程序（Bootloader）下载程序；
+    - 一句话就是我们平时的STLINK和串口下载程序是会把整个程序更新的；
+  - 在程序中编程：In-Application Programming – IAP
+    - 可以使用微控制器支持的任一种通信接口下载程序；
+    - **IAP操作的原理过程：**
+      - 首先自己写一个Bootloader，并存储在程序更新时不会覆盖的地方；
+      - 需要更新程序时，我们控制程序跳转到这个自己写的BootLoader中；
+      - 在自己写的BootLoader中可以接收任意一种通信接口传来的数据，即待更新的数据；
+      - 然后控制FLASH读写，把收到的程序写到程序正常运行的地方；
+      - 写完后再控制跳转到正常运行的地方即可完成更新；
 
 
 
 ## 2.闪存模块组织
 
-- 主存储器：程序存储器；
-- 信息块：包括系统存储器和选项字节；
-- 闪存存储器接口寄存器：FLASH的管理员，但本身不属于闪存；
+- **注意关于闪存的描述是在闪存编程参考手册中，不是在之前的手册中的；**
+- 在W25Q64中，FLASH是分很多层次的，但是STM32内部的FLASH中只有页这个单位；
+- 平常所说的STM32的容量，都只是指主存储器的大小而已，不包括信息块；
+
+- 主存储器：程序存储器，存放程序；
+- 信息块：包括**系统存储器和选项字节**；
+- **闪存存储器接口寄存器：**
+  - FLASH的管理员，但本身不属于闪存；
+  - 本身就是一个外设，因为它们的地址和GPIO这些外设是相同的；
+
+![闪存模块组织方式](images/48.第四十八节课_FLASH闪存/闪存模块的组织方式.png)
 
 
 
 ## 3.FLASH基本结构
 
-- FPEC：闪存存储器接口；
-- 选项字节可写入配置来对程序存储器进行读写保护；
+- **FPEC：即闪存存储器接口，是FLASH的管理员；**
+- 选项字节可写入配置来对**程序存储器进行读写保护**；
+
+![FLASH基本结构框图](images/48.第四十八节课_FLASH闪存/FLASH的基本结构框图总结.png)
 
 
 
-## 4.控制FPEC对程序存储器和选项字节进行擦除和编程
+## 4.控制FPEC对程序存储器和选项字节进行擦除和编程(重要)
 
-- FLASH解锁（本质就是写使能）
-
-  - 通过在键寄存器写入指定的键值来实现解锁；
-
+- **FLASH解锁（本质就是写使能）**
+  - 通过在**键寄存器**写入指定的键值来实现解锁，这降低了误操作的概率；
   - FPEC有三个键值：
-
-  - RDPRT键 = 0x000000A5（解除读写保护的密钥）；
-
-  - KEY1 = 0x45670123；
-
-  - KEY2 = 0xCDEF89AB；
-
-- 解锁
-
-  - 复位后，FPEC被保护，不能写入FLASH_CR（即复位后FLASH默认是锁着的）
-
-  - 在FLASH_KEYR先写入KEY1，再写入KEY2，解锁
-
-  - 错误的操作序列会在下次复位前锁死FPEC和FLASH_CR
-
-- 加锁（操作完成后需要及时加锁）
-
-  - 设置FLASH_CR中的LOCK位锁住FPEC和FLASH_CR；
+    - RDPRT键 = 0x000000A5（解除读保护的密钥）；
+    - KEY1 = 0x45670123；
+    - KEY2 = 0xCDEF89AB；
+- **解锁流程**
+- 复位后，FPEC被保护，不能写入FLASH_CR（**即复位后FLASH默认是锁着的**）；
+  
+- 在FLASH_KEYR先写入KEY1，再写入KEY2，解锁；
+  
+- 错误的操作序列会在下次复位前**锁死FPEC和FLASH_CR**；
+- **加锁（操作完成后需要及时加锁）**
+- 设置**FLASH_CR**中的**LOCK位**锁住FPEC和FLASH_CR；
 
 
 
-## 5.使用指针访问存储器
+## 5.实际FLASH编程的操作
 
-- 使用指针读指定地址下的存储器（读取不需要解锁，因为读取只看寄存器，不对寄存器进行更改）：
-  - uint16_t Data = *((__IO uint16_t *)(0x08000000));
-- 使用指针写指定地址下的存储器（需要提前解锁）：
-  - IO uint16_t *)(0x08000000)) = 0x1234；
-  - 其中：#define    __IO    volatile，防止编译器优化；
+### 5.1 使用指针访问存储器
+
+- 由于STM32内部的存储器是直接挂在总线上的，所以可以直接用指针访问存储器；
+
+- 使用指针读指定地址下的存储器
+
+  - 读取不需要解锁，因为读取只看寄存器，不对寄存器进行更改；
+
+  ```c
+  // 0x08000000是指定地址
+  // __IO uint16_t *是强制类型转换，想以什么类型读出就需要强制转换为什么类型
+  // *是取出对应地址下的数据
+  
+  uint16_t Data = *((__IO uint16_t *)(0x08000000));
+  ```
+
+- 使用指针写指定地址下的存储器
+  
+  - 需要提前解锁；
+  
+  ```c
+  *((__IO uint16_t *)(0x08000000)) = 0x1234;
+  ```
+  
+- 其中：
+  
+  ```c
+  #define		__IO	volatile        // 防止编译器优化
+  ```
+
+### 5.2 流程图
+
+- **程序存储器全擦除：**
+  - 先读取寄存器，查看是否上锁了；
+  - 若上锁了则先解锁，否则直接操作；
+  - 然后置START位和MER位，开启擦除；
+  - 再对BUSY位进行判断，判断是否擦除完成；
+
+![FLASH全擦除流程图](images/48.第四十八节课_FLASH闪存/FLASH全擦除流程图.png)
+
+- **程序存储器页擦除：**
+  - 先读取寄存器，查看是否上锁了；
+  - 若上锁了则先解锁，否则直接操作；
+  - 然后置PER、AR、START位，开始擦除；
+  - 再对BUSY位进行判断，判断是否擦除完成；
+
+![FLASH页擦除流程图](images/48.第四十八节课_FLASH闪存/FLASH页擦除流程图.png)
+
+- **程序存储器编程：**
+  - 先读取寄存器，查看是否上锁了；
+  - 若上锁了则先解锁，否则直接操作；
+  - 然后置FLASH_CR的PG位为1，表示即将写入数据；
+  - 在指定地址写入**半字（16位）**；
+  - 最后判断BUSY；
+
+![FLASH编程流程图](images/48.第四十八节课_FLASH闪存/FLASH编程流程图.png)
 
 
 
-## 6.流程
+## 6.选项字节
 
-- 程序存储器全擦除：先解锁，然后置START位和MER位，再对BUSY位进行判断；
-- 程序存储器页擦除：先解锁，然后置PER、AR、START位，再对BUSY位进行判断；
-- 程序存储器编程：先解锁，然后置FLASH_CR的PG位为1，在指定地址写入半字（16位），最后判断BUSY；
+### 6.1 选项字节的结构
+
+- 写入：需要在USER和nUSER这样成对的存储器中以反码的形式写入nUSER中，否则不执行；但这个过程是硬件自动完成的，不需要自己操作；
+- 主要组成：除去带n的之后，就只剩8个字节
+  - RDP：写入RDPRT键（0x000000A5）后解除**读保护**；
+  - USER：配置硬件看门狗和进入停机/待机模式是否产生复位；
+  - **Data0/1：用户可自定义使用；**
+  - WRP0/1/2/3：配置写保护，每一个位对应保护4个存储页（中容量）；
+
+![选项字节的结构](images/48.第四十八节课_FLASH闪存/选项字节的结构.png)
+
+### 6.2 选项字节擦除
+
+- 检查FLASH_SR的BSY位，以确认没有其他正在进行的闪存操作；
+- 解锁FLASH_CR的OPTWRE位，即接触选项字节的锁；
+- 设置FLASH_CR的OPTER位为1，表示即将擦除选项字节；
+- 设置FLASH_CR的STRT位为1，触发芯片开始干活；
+- 等待BSY位变为0；
+- 读出被擦除的选择字节并做验证；
+
+### 6.3 选项字节的编程
+
+- 检查FLASH_SR的BSY位，以确认没有其他正在进行的编程操作；
+- 解锁FLASH_CR的OPTWRE位，接触小锁；
+- 设置FLASH_CR的OPTPG位为1，表示即将写入选项字节；
+- 写入要编程的半字到指定的地址；
+- 等待BSY位变为0；
+- 读出写入的地址并验证数据；
 
 
 
-## 7.选项字节
 
-- 反码的写入
+## 7.器件电子签名
 
-- 选项字节擦除
+- 电子签名的介绍：
 
-  - 检查FLASH_SR的BSY位，以确认没有其他正在进行的闪存操作
-  - 解锁FLASH_CR的OPTWRE位
-  - 设置FLASH_CR的OPTER位为1
-  - 设置FLASH_CR的STRT位为1
-  - 等待BSY位变为0
-  - 读出被擦除的选择字节并做验证
+  - 存放在闪存存储器模块的系统存储区域，
+  - 包含的芯片识别信息在出厂时编写，不可更改；
+  - 使用指针读指定地址下的存储器可获取电子签名；
 
-- 选项字节的编程
+- 电子签名在系统存储区域的内容主要分为两部分：
 
-  - 检查FLASH_SR的BSY位，以确认没有其他正在进行的编程操作
-  - 解锁FLASH_CR的OPTWRE位
-  - 设置FLASH_CR的OPTPG位为1
-  - 写入要编程的半字到指定的地址
-  - 等待BSY位变为0
-  - 读出写入的地址并验证数据
+  - **第一部分：闪存容量寄存器**
+    - 基地址：0x1FFF F7E0；
+    - 大小：16位
 
-
-
-
-## 8.器件电子签名
-
-- 电子签名存放在闪存存储器模块的系统存储区域，包含的芯片识别信息在出厂时编写，不可更改，使用指针读指定地址下的存储器可获取电子签名；
-
-- （2）闪存容量寄存器：
-
-  - 基地址：0x1FFF F7E0
-
-  - 大小：16位
-
-- （3）产品唯一身份标识寄存器：
-
-  - 基地址： 0x1FFF F7E8
-
-  - 大小：96位
+  - **第二部分：产品唯一身份标识寄存器**
+    - 基地址： 0x1FFF F7E8；
+    - 大小：96位；
 
 ---
 
@@ -9435,28 +9579,392 @@ int main(void)
 
 # 第四十九节课：15-2_读写内部FLASH&读取芯片ID
 
-## 1.整体架构
-- 最低层：MyFLASH，实现闪存最基本的3个功能即读取、擦除和编程
-- 在最底层之上的store：主要实现参数数据的读写和存储管理，定义一个SRAM数据，需要掉电不丢失的数据就写入到这个SRAM数组中；
-- 应用层部分：即main.c文件
-- 闪存不需要初始化，直接操作即可
+## 1.读写内部FLASH
+
+### 1.1 接线图
+
+![接线图](E:\Learning_Lab\1.STM32入门教程\images\49.第四十九节课_读写内部FLASH_读取芯片ID\15-1_读写内部FLASH.jpg)
+
+### 1.2 整体架构
+
+- **最低层的MyFLASH：**
+
+  - MyFLASH.c和MyFLASH.h文件，实现闪存最基本的3个功能即读取、擦除和编程
+
+- **在最底层之上的Store：**
+
+  - 主要实现参数数据的**读写和存储管理**；
+  - 定义一个SRAM数据，需要掉电不丢失的数据就写入到这个SRAM数组中；
+  - 然后调用保存的函数将SRAM数组写入到闪存中，上电后Store初始化会自动将FLASH中的数组读回；
+
+- **应用层部分：**
+
+  - 即main.c文件
+
+- 注意事项：
+
+  - **本节利用STLINK Utility进行FLASH数据验证，且可以在软件中直接进行数据的改写；**
+    - STLINK Utility中是以一行一列为4字节即32位来显示的；
+    - 在下载程序时需要先断开与STLINK Utility的连接；
+
+  ![STLINK Utility的字节显示](images/49.第四十九节课_读写内部FLASH_读取芯片ID/STLINK Utility的字节显示.png)
+
+  - 闪存不需要初始化，直接操作即可；
+
+### 1.3 库函数——stm32f10x_flash.h
+
+- FLASH_Unlock()：解锁；
+- FLASH_Lock()：加锁操作；
+- FLASH_ErasePage()：页擦除；
+- FLASH_EraseAllPages()：擦除所有页；
+- FLASH_EraseOptionBytes()：擦除选项字节；
+- FLASH_ProgramWord()：写入字；
+- FLASH_ProgramHalfWord()：写入半字；
+- **上面的函数内部都已经调用等待忙的函数了，所以在程序中不需要再调用等待忙的函数；**
+
+![FLASH相关库函数](images/49.第四十九节课_读写内部FLASH_读取芯片ID/FLASH相关库函数.png)
+
+### 1.4 项目编程
+
+- 在OLED显示屏项目的基础上进行修改；
+
+- **最底层编程：**
+
+  - 在System组下添加"MyFLASH.c和MyFLASH.h文件"；
+  - **注意在写入时，必须先擦除再写入；**
+  - MyFLASH.c文件编程：
+
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  
+  /*******************************************************************************
+  	FLASH不需要初始化，所以直接开始写操作函数
+  *******************************************************************************/
+  
+  /**
+    * @brief  以32位的形式读取某个地址下的值
+    * @param  Address 指定的地址
+    * @retval 地址下的数据
+    */
+  uint32_t MyFLASH_ReadWord(uint32_t Address) 
+  {
+  	return *((__IO uint32_t *)(Address));	// 以32位直接访问特定地址的内容 
+  }
+  
+  /**
+    * @brief  以半字的形式读取某个地址的值
+    * @param  Address 指定的地址
+    * @retval 地址下的数据
+    */
+  uint16_t MyFLASH_ReadHalfWord(uint32_t Address) 
+  {
+  	return *((__IO uint16_t *)(Address));	// 以16位直接访问特定地址的内容 
+  }
+  
+  /**
+    * @brief  以字节的形式读取某个地址的值
+    * @param  Address 指定的地址
+    * @retval 地址下的数据
+    */
+  uint8_t MyFLASH_ReadByte(uint32_t Address) 
+  {
+  	return *((__IO uint8_t *)(Address));	// 以8位直接访问特定地址的内容 
+  }
+  
+  /**
+    * @brief  全擦除函数
+    * @param  无
+    * @retval 无
+    */
+  void MyFLASH_EraseAllPages(void)
+  {
+  	FLASH_Unlock();				// 先进行解锁
+  	FLASH_EraseAllPages();		// 擦除所有的页
+  	FLASH_Lock();				// 重新再锁上
+  }
+  
+  /**
+    * @brief  页擦除函数
+    * @param  无
+    * @retval 无
+    */
+  void MyFLASH_ErasePage(uint32_t PageAddress)
+  {
+  	FLASH_Unlock();					// 先进行解锁
+  	FLASH_ErasePage(PageAddress);	// 传入地址进行页擦除
+  	FLASH_Lock();					// 重新再锁上
+  }
+  
+  /**
+    * @brief  编程一个字的函数
+    * @param  Address 要写入的地址
+    * @param  Data 要写入的全字
+    * @retval 无
+    */
+  void MyFLASH_ProgramWord(uint32_t Address, uint32_t Data)
+  {
+  	FLASH_Unlock();						// 先进行解锁
+  	FLASH_ProgramWord(Address, Data);	// 传入地址进行页擦除
+  	FLASH_Lock();						// 重新再锁上
+  }
+  
+  /**
+    * @brief  编程半字的函数
+    * @param  Address 要写入的地址
+    * @param  Data 要写入的半字
+    * @retval 无
+    */
+  void MyFLASH_ProgramHalfWord(uint32_t Address, uint16_t Data)
+  {
+  	FLASH_Unlock();							// 先进行解锁
+  	FLASH_ProgramHalfWord(Address, Data);	// 传入地址进行页擦除
+  	FLASH_Lock();							// 重新再锁上
+  }
+  
+  ```
+
+  - MyFLASH.h文件编程
+
+  ```c
+  #ifndef __MYFLASH_H
+  #define __MYFLASH_H
+  
+  uint32_t MyFLASH_ReadWord(uint32_t Address);
+  uint16_t MyFLASH_ReadHalfWord(uint32_t Address);
+  uint8_t MyFLASH_ReadByte(uint32_t Address);
+  
+  void MyFLASH_EraseAllPages(void);
+  void MyFLASH_ErasePage(uint32_t PageAddress);
+  
+  void MyFLASH_ProgramWord(uint32_t Address, uint32_t Data);
+  void MyFLASH_ProgramHalfWord(uint32_t Address, uint16_t Data);
+  
+  #endif
+  
+  ```
+
+- **中间业务层编程：**
+
+  - 在System组中新建“Store.c和Store.h文件”；
+  - 在该模块中，用SRAM缓存数组来管理FLASH的最后一页，实现参数的任意读写和保存；
+  - **这是因为闪存都是必须先擦除再写入，所以想要灵活管理数据就需要靠SRAM数组，需要备份的时候再转移到FLASH中保存；**
+  - Store.c文件编程
+
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  #include "MyFLASH.h"
+  
+  #define STROE_START_ADDRESS       0x0800FC00		// 定义最后一页的起始地址
+  #define STROE_COUNT     512							// 定义SRAM数组的大小
+  
+  // 用SRAM缓存数组管理FLASH的最后一页
+  uint16_t Store_Data[STROE_COUNT];
+  
+  /**
+    * @brief  闪存初始化函数
+    * @param  无
+    * @retval 无
+    */
+  void Store_Init(void)
+  {
+  	// 读取最后一页的第一个半字当标志位，0xA5A5是自己定义的标志位，若不是该值证明是第一次使用
+  	if (MyFLASH_ReadHalfWord(STROE_START_ADDRESS) != 0xA5A5)
+  	{
+  		MyFLASH_ErasePage(STROE_START_ADDRESS);					// 若是第一次使用则将最后一页给擦除
+  		MyFLASH_ProgramHalfWord(STROE_START_ADDRESS, 0xA5A5);	// 手动写入标志位
+  		for (uint16_t i = 1; i < STROE_COUNT; i ++)				// 注意这里的i从1开始，因为第一个位是标志位
+  		{
+  			MyFLASH_ProgramHalfWord(STROE_START_ADDRESS + i * 2, 0x0000);	// 将最后一页剩下的全部数据写为0
+  		}
+  	}
+  	
+  	// 上电时将闪存备份数据恢复到SRAM数组，标志位也一块传过去
+  	for (uint16_t i = 0; i < STROE_COUNT; i ++)
+  	{
+  		Store_Data[i] = MyFLASH_ReadHalfWord(STROE_START_ADDRESS + i * 2);	// 这里乘2是因为半字对应两个字节
+  	}
+  }
+  
+  /**
+    * @brief  SRAM数组备份函数
+    * @param  无
+    * @retval 无
+    */
+  void Store_Save(void)
+  {
+  	MyFLASH_ErasePage(STROE_START_ADDRESS);
+  	for (uint16_t i = 0; i < STROE_COUNT; i ++)
+  	{
+  		MyFLASH_ProgramHalfWord(STROE_START_ADDRESS + i * 2, Store_Data[i]);
+  	}
+  }
+  
+  /**
+    * @brief  闪存清零函数
+    * @param  无
+    * @retval 无
+    */
+  void Store_Clear(void)
+  {
+  	for (uint16_t i = 1; i < STROE_COUNT; i ++)    // 注意别把标志位给清零了
+  	{
+  		Store_Data[i] = 0x0000;
+  	}
+  	Store_Save();		// 把SRAM数组数据更新到闪存
+  }
+  
+  ```
+
+  - Store.h文件编程
+
+  ```c
+  #ifndef __STORE_H
+  #define __STORE_H
+  
+  extern uint16_t Store_Data[];
+  
+  void Store_Init(void);
+  void Store_Save(void);
+  void Store_Clear(void);
+  
+  #endif
+  
+  ```
+
+- **应用层编程**
+
+  - 在main.c文件中直接调用Store中间业务层即可完成操作；
+
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  #include "Delay.h"
+  #include "OLED.h"
+  #include "Store.h"
+  #include "Key.h"
+  
+  /**
+    ******************************************************************************
+    * @project      : STM32F103C8T6的读取内部FLASH工程
+    * @brief        : 利用SRAM数组和FLASH的掉电不丢失实现数据备份
+    * @hardware     : STM32103C8T6 + OLED + 按键
+    * @software     : Keil MDK + 标准外设库 + 模块封装，采用底层 + 中间业务层 + 应用层的框架
+    * @author       : blackghost
+    * @date         : 2026-03-11
+    * @version      : V1
+    ******************************************************************************
+    */
+  
+  uint8_t KeyNum;
+  
+  int main(void)
+  {
+  	OLED_Init();
+  	Key_Init();
+  	Store_Init();	// 初始化，将闪存备份的数据加载回SRAM数组
+  	
+  	OLED_ShowString(1, 1, "Flag:");
+  	OLED_ShowString(2, 1, "Data:");
+  	
+  	while (1)
+  	{
+  		KeyNum = Key_GetNum();
+  		
+  		if (KeyNum == 1)			// 按下按键1就保存参数数据
+  		{
+  			Store_Data[1] ++;		// 记住不要使用第0位，是标志位
+  			Store_Data[2] += 2;
+  			Store_Data[3] += 3;
+  			Store_Data[4] += 4;
+  			Store_Save();			// 将SRAM数组备份回去给闪存
+  		}
+  		
+  		if (KeyNum == 2)			// 按键2按下则全部清零
+  		{
+  			Store_Clear();
+  		}
+  		
+  		OLED_ShowHexNum(1, 6, Store_Data[0], 4);	// 显示标志位
+  		OLED_ShowHexNum(3, 1, Store_Data[1], 4);
+  		OLED_ShowHexNum(3, 6, Store_Data[2], 4);
+  		OLED_ShowHexNum(4, 1, Store_Data[3], 4);
+  		OLED_ShowHexNum(4, 6, Store_Data[4], 4);
+  	}
+  }
+  
+  ```
+
+### 1.5 大小冲突问题
+
+- 程序文件存在FLASH前面的字节，现在最后一个页用来存放参数，如果程序很大可能会出现Bug；
+- **可以在工程选项中选择程序的大小，若程序大于这个大小就会报错；**
+
+![程序大小限制](images/49.第四十九节课_读写内部FLASH_读取芯片ID/设置程序大小报错.png)
+
+- **Debug选项问题：**
+
+  - 在Debug中需要选择扇区擦除，若选第一个每次上电都全擦除就无法实现掉电不丢失了；
+
+  ![Debug选项的擦除问题](images/49.第四十九节课_读写内部FLASH_读取芯片ID/Debug的擦除选项.png)
+
+- **工程文件的大小问题：**
+
+  - 工程的大小可以有两个地方查看：
+
+    - 全部编译后在编译窗口查看，前三个数相加是程序占用闪存的大小，后两个数相加是SRAM大小；
+
+    ![程序大小1](images/49.第四十九节课_读写内部FLASH_读取芯片ID/程序大小1.png)
+
+    - 双击Target1，在跳出的文件中拉到最后，即可看到；
+
+    ![程序大小2](images/49.第四十九节课_读写内部FLASH_读取芯片ID/程序大小2.png)
 
 
 
-## 2.库函数
+## 2.读取芯片ID
 
-- FLASH_Unlock：解锁
-- FLASH_Lock：加锁操作
-- FLASH_ErasePage：页擦除；
-- FLASH_EraseAllPages：擦除所有页
-- FLASH_EraseOptionBytes：擦除选项字节；
-- FLASH_ProgramWord：写入字
-- FLASH_ProgramHalfWord：写入半字
-- 上面的函数内部都已经调用等待忙的函数了，所以在程序中不需要再调用等待忙的函数；
+### 2.1 接线图
 
+![接线图](images/49.第四十九节课_读写内部FLASH_读取芯片ID/15-2_读取芯片ID.jpg)
 
+### 2.2 项目编程
 
-## 3.大小冲突
+- 在OLED显示屏工程的基础上修改；
+- main.c完整文件内容如下：
 
-- 程序文件是存在前面的字节的，我们打算用最后一个字节来存放参数，如果程序很大可能会出现Bug，这里可以在工程选项中选择程序的大小，若程序大于这个大小就会报错；
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
 
+/**
+  ******************************************************************************
+  * @project      : STM32F103C8T6读取芯片ID工程
+  * @brief        : 直接根据基地址读取芯片内部的ID号
+  * @hardware     : STM32103C8T6 + OLED
+  * @software     : Keil MDK + 标准外设库，直接读取地址内容
+  * @author       : blackghost
+  * @date         : 2026-03-11
+  * @version      : V1
+  ******************************************************************************
+  */
+
+int main(void)
+{
+	OLED_Init();
+	
+	OLED_ShowString(1, 1, "F_SIZE:");
+	OLED_ShowHexNum(1, 8, *((__IO uint16_t *)(0x1FFFF7E0)), 4);		// 闪存容量寄存器的基地址
+	
+	OLED_ShowString(2, 1, "U_ID:");
+	OLED_ShowHexNum(2, 6, *((__IO uint16_t *)(0x1FFFF7E8)), 4);
+	OLED_ShowHexNum(2, 11, *((__IO uint16_t *)(0x1FFFF7E8 + 0x02)), 4);
+	OLED_ShowHexNum(3, 1, *((__IO uint32_t *)(0x1FFFF7E8 + 0x04)), 8);
+	OLED_ShowHexNum(4, 1, *((__IO uint32_t *)(0x1FFFF7E8 + 0x08)), 8);	// 加偏移显示不同的U_ID
+	
+	while (1)
+	{
+		
+	}
+}
+
+```
