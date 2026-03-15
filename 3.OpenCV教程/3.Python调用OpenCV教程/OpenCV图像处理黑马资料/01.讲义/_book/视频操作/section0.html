@@ -1,0 +1,742 @@
+
+<!DOCTYPE HTML>
+<html lang="zh-hans" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>5.1 视频读写 · opencv</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-code/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-splitter/splitter.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-katex/katex.min.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="section1.html" />
+    
+    
+    <link rel="prev" href="ReadMe.html" />
+    
+
+    <script src="../gitbook/gitbook-plugin-graph/d3.min.js"></script>
+    <script src="../gitbook/gitbook-plugin-graph/function-plot.js"></script>    
+
+    
+    <link rel="stylesheet" href="../gitbook/gitbook-plugin-chart/c3/c3.min.css">
+    <script src="../gitbook/gitbook-plugin-chart/c3/d3.min.js"></script>
+    <script src="../gitbook/gitbook-plugin-chart/c3/c3.min.js"></script>
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="输入并搜索" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="../OpenCV简介/ReadMe.html">
+            
+                <a href="../OpenCV简介/ReadMe.html">
+            
+                    
+                    1. OpenCV简介
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="../OpenCV简介/section0.html">
+            
+                <a href="../OpenCV简介/section0.html">
+            
+                    
+                    1.1 图像处理简介
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="../OpenCV简介/section1.html">
+            
+                <a href="../OpenCV简介/section1.html">
+            
+                    
+                    1.2 OpenCV简介及安装方法
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="../OpenCV简介/section2.html">
+            
+                <a href="../OpenCV简介/section2.html">
+            
+                    
+                    1.3 OpenCV的模块
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="../OpenCV基本操作/ReadMe.html">
+            
+                <a href="../OpenCV基本操作/ReadMe.html">
+            
+                    
+                    2 OpenCV基本操作
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="../OpenCV基本操作/section0.html">
+            
+                <a href="../OpenCV基本操作/section0.html">
+            
+                    
+                    2.1 图像的基础操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="../OpenCV基本操作/section1.html">
+            
+                <a href="../OpenCV基本操作/section1.html">
+            
+                    
+                    2.2 算数操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="../OpenCV图像处理/ReadMe.html">
+            
+                <a href="../OpenCV图像处理/ReadMe.html">
+            
+                    
+                    3 OpenCV图像处理
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.4.1" data-path="../OpenCV图像处理/section0.html">
+            
+                <a href="../OpenCV图像处理/section0.html">
+            
+                    
+                    3.1 几何变换
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.2" data-path="../OpenCV图像处理/section1.html">
+            
+                <a href="../OpenCV图像处理/section1.html">
+            
+                    
+                    3.2 形态学操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.3" data-path="../OpenCV图像处理/section2.html">
+            
+                <a href="../OpenCV图像处理/section2.html">
+            
+                    
+                    3.3 图像平滑
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.4" data-path="../OpenCV图像处理/section3.html">
+            
+                <a href="../OpenCV图像处理/section3.html">
+            
+                    
+                    3.4 直方图
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.5" data-path="../OpenCV图像处理/section4.html">
+            
+                <a href="../OpenCV图像处理/section4.html">
+            
+                    
+                    3.5 边缘检测
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.6" data-path="../OpenCV图像处理/section5.html">
+            
+                <a href="../OpenCV图像处理/section5.html">
+            
+                    
+                    3.6 模版匹配和霍夫变换
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="../图像特征提取与描述/ReadMe.html">
+            
+                <a href="../图像特征提取与描述/ReadMe.html">
+            
+                    
+                    4 图像特征提取与描述
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.5.1" data-path="../图像特征提取与描述/section0.html">
+            
+                <a href="../图像特征提取与描述/section0.html">
+            
+                    
+                    4.1 角点特征
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5.2" data-path="../图像特征提取与描述/section1.html">
+            
+                <a href="../图像特征提取与描述/section1.html">
+            
+                    
+                    4.2 Harris和Shi-Tomas算法
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5.3" data-path="../图像特征提取与描述/section2.html">
+            
+                <a href="../图像特征提取与描述/section2.html">
+            
+                    
+                    4.3 SIFT/SURF算法
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="ReadMe.html">
+            
+                <a href="ReadMe.html">
+            
+                    
+                    5 视频操作
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter active" data-level="1.6.1" data-path="section0.html">
+            
+                <a href="section0.html">
+            
+                    
+                    5.1 视频读写
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6.2" data-path="section1.html">
+            
+                <a href="section1.html">
+            
+                    
+                    5.2 视频追踪
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="../案例/ReadMe.html">
+            
+                <a href="../案例/ReadMe.html">
+            
+                    
+                    6 案例:人脸案例
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            本书使用 GitBook 发布
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >5.1 视频读写</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="&#x89C6;&#x9891;&#x8BFB;&#x5199;">&#x89C6;&#x9891;&#x8BFB;&#x5199;</h1>
+<p><strong>&#x5B66;&#x4E60;&#x76EE;&#x6807;</strong></p>
+<ul>
+<li>&#x638C;&#x63E1;&#x8BFB;&#x53D6;&#x89C6;&#x9891;&#x6587;&#x4EF6;&#xFF0C;&#x663E;&#x793A;&#x89C6;&#x9891;&#xFF0C;&#x4FDD;&#x5B58;&#x89C6;&#x9891;&#x6587;&#x4EF6;&#x7684;&#x65B9;&#x6CD5;</li>
+</ul>
+<hr>
+<h1 id="1-&#x4ECE;&#x6587;&#x4EF6;&#x4E2D;&#x8BFB;&#x53D6;&#x89C6;&#x9891;&#x5E76;&#x64AD;&#x653E;">1 &#x4ECE;&#x6587;&#x4EF6;&#x4E2D;&#x8BFB;&#x53D6;&#x89C6;&#x9891;&#x5E76;&#x64AD;&#x653E;</h1>
+<p>&#x5728;OpenCV&#x4E2D;&#x6211;&#x4EEC;&#x8981;&#x83B7;&#x53D6;&#x4E00;&#x4E2A;&#x89C6;&#x9891;&#xFF0C;&#x9700;&#x8981;&#x521B;&#x5EFA;&#x4E00;&#x4E2A;VideoCapture&#x5BF9;&#x8C61;&#xFF0C;&#x6307;&#x5B9A;&#x4F60;&#x8981;&#x8BFB;&#x53D6;&#x7684;&#x89C6;&#x9891;&#x6587;&#x4EF6;&#xFF1A;</p>
+<ol>
+<li><p>&#x521B;&#x5EFA;&#x8BFB;&#x53D6;&#x89C6;&#x9891;&#x7684;&#x5BF9;&#x8C61;</p>
+<pre><code class="lang-python">cap = cv.VideoCapture(filepath)
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li>filepath: &#x89C6;&#x9891;&#x6587;&#x4EF6;&#x8DEF;&#x5F84;</li>
+</ul>
+</li>
+<li><p>&#x89C6;&#x9891;&#x7684;&#x5C5E;&#x6027;&#x4FE1;&#x606F;</p>
+<p>2.1.  &#x83B7;&#x53D6;&#x89C6;&#x9891;&#x7684;&#x67D0;&#x4E9B;&#x5C5E;&#x6027;&#xFF0C;</p>
+<pre><code class="lang-python">retval = cap.get(propId)
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li><p>propId: &#x4ECE;0&#x5230;18&#x7684;&#x6570;&#x5B57;&#xFF0C;&#x6BCF;&#x4E2A;&#x6570;&#x5B57;&#x8868;&#x793A;&#x89C6;&#x9891;&#x7684;&#x5C5E;&#x6027;</p>
+<p>&#x5E38;&#x7528;&#x5C5E;&#x6027;&#x6709;&#xFF1A;</p>
+<p><img src="assets/image-20191016164053661.png" alt="image-20191016164053661"></p>
+</li>
+</ul>
+<p>2.2 &#x4FEE;&#x6539;&#x89C6;&#x9891;&#x7684;&#x5C5E;&#x6027;&#x4FE1;&#x606F;</p>
+<pre><code class="lang-python">cap.set(propId&#xFF0C;value)
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li>proid: &#x5C5E;&#x6027;&#x7684;&#x7D22;&#x5F15;&#xFF0C;&#x4E0E;&#x4E0A;&#x9762;&#x7684;&#x8868;&#x683C;&#x76F8;&#x5BF9;&#x5E94;</li>
+<li>value: &#x4FEE;&#x6539;&#x540E;&#x7684;&#x5C5E;&#x6027;&#x503C;</li>
+</ul>
+</li>
+<li><p>&#x5224;&#x65AD;&#x56FE;&#x50CF;&#x662F;&#x5426;&#x8BFB;&#x53D6;&#x6210;&#x529F;</p>
+<pre><code class="lang-python">isornot = cap.isOpened()
+</code></pre>
+<ul>
+<li>&#x82E5;&#x8BFB;&#x53D6;&#x6210;&#x529F;&#x5219;&#x8FD4;&#x56DE;true&#xFF0C;&#x5426;&#x5219;&#x8FD4;&#x56DE;False</li>
+</ul>
+</li>
+<li><p>&#x83B7;&#x53D6;&#x89C6;&#x9891;&#x7684;&#x4E00;&#x5E27;&#x56FE;&#x50CF;</p>
+<pre><code class="lang-python">ret, frame = cap.read()
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li>ret: &#x82E5;&#x83B7;&#x53D6;&#x6210;&#x529F;&#x8FD4;&#x56DE;True&#xFF0C;&#x83B7;&#x53D6;&#x5931;&#x8D25;&#xFF0C;&#x8FD4;&#x56DE;False</li>
+<li>Frame: &#x83B7;&#x53D6;&#x5230;&#x7684;&#x67D0;&#x4E00;&#x5E27;&#x7684;&#x56FE;&#x50CF;</li>
+</ul>
+</li>
+<li><p>&#x8C03;&#x7528;cv.imshow()&#x663E;&#x793A;&#x56FE;&#x50CF;&#xFF0C;&#x5728;&#x663E;&#x793A;&#x56FE;&#x50CF;&#x65F6;&#x4F7F;&#x7528;cv.waitkey()&#x8BBE;&#x7F6E;&#x9002;&#x5F53;&#x7684;&#x6301;&#x7EED;&#x65F6;&#x95F4;&#xFF0C;&#x5982;&#x679C;&#x592A;&#x4F4E;&#x89C6;&#x9891;&#x4F1A;&#x64AD;&#x653E;&#x7684;&#x975E;&#x5E38;&#x5FEB;&#xFF0C;&#x5982;&#x679C;&#x592A;&#x9AD8;&#x5C31;&#x4F1A;&#x64AD;&#x653E;&#x7684;&#x975E;&#x5E38;&#x6162;&#xFF0C;&#x901A;&#x5E38;&#x60C5;&#x51B5;&#x4E0B;&#x6211;&#x4EEC;&#x8BBE;&#x7F6E;25ms&#x5C31;&#x53EF;&#x4EE5;&#x4E86;&#x3002;</p>
+</li>
+<li><p>&#x6700;&#x540E;&#xFF0C;&#x8C03;&#x7528;cap.realease()&#x5C06;&#x89C6;&#x9891;&#x91CA;&#x653E;&#x6389;</p>
+</li>
+</ol>
+<p>&#x793A;&#x4F8B;&#xFF1A;</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">import</span> cv2 <span class="hljs-keyword">as</span> cv
+<span class="hljs-comment"># 1.&#x83B7;&#x53D6;&#x89C6;&#x9891;&#x5BF9;&#x8C61;</span>
+cap = cv.VideoCapture(<span class="hljs-string">&apos;DOG.wmv&apos;</span>)
+<span class="hljs-comment"># 2.&#x5224;&#x65AD;&#x662F;&#x5426;&#x8BFB;&#x53D6;&#x6210;&#x529F;</span>
+<span class="hljs-keyword">while</span>(cap.isOpened()):
+    <span class="hljs-comment"># 3.&#x83B7;&#x53D6;&#x6BCF;&#x4E00;&#x5E27;&#x56FE;&#x50CF;</span>
+    ret, frame = cap.read()
+    <span class="hljs-comment"># 4. &#x83B7;&#x53D6;&#x6210;&#x529F;&#x663E;&#x793A;&#x56FE;&#x50CF;</span>
+    <span class="hljs-keyword">if</span> ret == <span class="hljs-keyword">True</span>:
+        cv.imshow(<span class="hljs-string">&apos;frame&apos;</span>,frame)
+    <span class="hljs-comment"># 5.&#x6BCF;&#x4E00;&#x5E27;&#x95F4;&#x9694;&#x4E3A;25ms</span>
+    <span class="hljs-keyword">if</span> cv.waitKey(<span class="hljs-number">25</span>) &amp; <span class="hljs-number">0xFF</span> == ord(<span class="hljs-string">&apos;q&apos;</span>):
+        <span class="hljs-keyword">break</span>
+<span class="hljs-comment"># 6.&#x91CA;&#x653E;&#x89C6;&#x9891;&#x5BF9;&#x8C61;</span>
+cap.release()
+cv.destoryAllwindows()
+</code></pre>
+<h1 id="2-&#x4FDD;&#x5B58;&#x89C6;&#x9891;">2 &#x4FDD;&#x5B58;&#x89C6;&#x9891;</h1>
+<p>&#x5728;OpenCV&#x4E2D;&#x6211;&#x4EEC;&#x4FDD;&#x5B58;&#x89C6;&#x9891;&#x4F7F;&#x7528;&#x7684;&#x662F;VedioWriter&#x5BF9;&#x8C61;&#xFF0C;&#x5728;&#x5176;&#x4E2D;&#x6307;&#x5B9A;&#x8F93;&#x51FA;&#x6587;&#x4EF6;&#x7684;&#x540D;&#x79F0;&#xFF0C;&#x5982;&#x4E0B;&#x6240;&#x793A;&#xFF1A;</p>
+<ol>
+<li>&#x521B;&#x5EFA;&#x89C6;&#x9891;&#x5199;&#x5165;&#x7684;&#x5BF9;&#x8C61;</li>
+</ol>
+<pre><code class="lang-python">out = cv2.VideoWriter(filename,fourcc, fps, frameSize)
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li>filename&#xFF1A;&#x89C6;&#x9891;&#x4FDD;&#x5B58;&#x7684;&#x4F4D;&#x7F6E;</li>
+<li>fourcc&#xFF1A;&#x6307;&#x5B9A;&#x89C6;&#x9891;&#x7F16;&#x89E3;&#x7801;&#x5668;&#x7684;4&#x5B57;&#x8282;&#x4EE3;&#x7801;  </li>
+<li>fps&#xFF1A;&#x5E27;&#x7387;</li>
+<li><p>frameSize&#xFF1A;&#x5E27;&#x5927;&#x5C0F;</p>
+</li>
+<li><p>&#x8BBE;&#x7F6E;&#x89C6;&#x9891;&#x7684;&#x7F16;&#x89E3;&#x7801;&#x5668;&#xFF0C;&#x5982;&#x4E0B;&#x6240;&#x793A;&#xFF0C;</p>
+<pre><code>retval = cv2.VideoWriter_fourcc( c1, c2, c3, c4 )
+</code></pre><p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li><p>c1,c2,c3,c4: &#x662F;&#x89C6;&#x9891;&#x7F16;&#x89E3;&#x7801;&#x5668;&#x7684;4&#x5B57;&#x8282;&#x4EE3;&#x7801;&#xFF0C;&#x5728;<a href="http://www.fourcc.org/codecs.php" target="_blank">fourcc.org</a>&#x4E2D;&#x627E;&#x5230;&#x53EF;&#x7528;&#x4EE3;&#x7801;&#x5217;&#x8868;&#xFF0C;&#x4E0E;&#x5E73;&#x53F0;&#x7D27;&#x5BC6;&#x76F8;&#x5173;&#xFF0C;&#x5E38;&#x7528;&#x7684;&#x6709;&#xFF1A;</p>
+<h6 id="&#x5728;windows&#x4E2D;&#xFF1A;divx&#xFF08;avi&#xFF09;">&#x5728;Windows&#x4E2D;&#xFF1A;DIVX&#xFF08;.avi&#xFF09;</h6>
+<h6 id="&#x5728;os&#x4E2D;&#xFF1A;mjpg&#xFF08;mp4&#xFF09;&#xFF0C;divx&#xFF08;avi&#xFF09;&#xFF0C;x264&#xFF08;mkv&#xFF09;&#x3002;">&#x5728;OS&#x4E2D;&#xFF1A;MJPG&#xFF08;.mp4&#xFF09;&#xFF0C;DIVX&#xFF08;.avi&#xFF09;&#xFF0C;X264&#xFF08;.mkv&#xFF09;&#x3002;</h6>
+</li>
+</ul>
+</li>
+<li><p>&#x5229;&#x7528;cap.read()&#x83B7;&#x53D6;&#x89C6;&#x9891;&#x4E2D;&#x7684;&#x6BCF;&#x4E00;&#x5E27;&#x56FE;&#x50CF;&#xFF0C;&#x5E76;&#x4F7F;&#x7528;out.write()&#x5C06;&#x67D0;&#x4E00;&#x5E27;&#x56FE;&#x50CF;&#x5199;&#x5165;&#x89C6;&#x9891;&#x4E2D;&#x3002;</p>
+</li>
+<li><p>&#x4F7F;&#x7528;cap.release()&#x548C;out.release()&#x91CA;&#x653E;&#x8D44;&#x6E90;&#x3002;</p>
+</li>
+</ul>
+<p>&#x793A;&#x4F8B;&#xFF1A;</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> cv2 <span class="hljs-keyword">as</span> cv
+<span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+
+<span class="hljs-comment"># 1. &#x8BFB;&#x53D6;&#x89C6;&#x9891;</span>
+cap = cv.VideoCapture(<span class="hljs-string">&quot;DOG.wmv&quot;</span>)
+
+<span class="hljs-comment"># 2. &#x83B7;&#x53D6;&#x56FE;&#x50CF;&#x7684;&#x5C5E;&#x6027;&#xFF08;&#x5BBD;&#x548C;&#x9AD8;&#xFF0C;&#xFF09;,&#x5E76;&#x5C06;&#x5176;&#x8F6C;&#x6362;&#x4E3A;&#x6574;&#x6570;</span>
+frame_width = int(cap.get(<span class="hljs-number">3</span>))
+frame_height = int(cap.get(<span class="hljs-number">4</span>))
+
+<span class="hljs-comment"># 3. &#x521B;&#x5EFA;&#x4FDD;&#x5B58;&#x89C6;&#x9891;&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x8BBE;&#x7F6E;&#x7F16;&#x7801;&#x683C;&#x5F0F;&#xFF0C;&#x5E27;&#x7387;&#xFF0C;&#x56FE;&#x50CF;&#x7684;&#x5BBD;&#x9AD8;&#x7B49;</span>
+out = cv.VideoWriter(<span class="hljs-string">&apos;outpy.avi&apos;</span>,cv.VideoWriter_fourcc(<span class="hljs-string">&apos;M&apos;</span>,<span class="hljs-string">&apos;J&apos;</span>,<span class="hljs-string">&apos;P&apos;</span>,<span class="hljs-string">&apos;G&apos;</span>), <span class="hljs-number">10</span>, (frame_width,frame_height))
+<span class="hljs-keyword">while</span>(<span class="hljs-keyword">True</span>):
+    <span class="hljs-comment"># 4.&#x83B7;&#x53D6;&#x89C6;&#x9891;&#x4E2D;&#x7684;&#x6BCF;&#x4E00;&#x5E27;&#x56FE;&#x50CF;</span>
+    ret, frame = cap.read()
+    <span class="hljs-keyword">if</span> ret == <span class="hljs-keyword">True</span>: 
+        <span class="hljs-comment"># 5.&#x5C06;&#x6BCF;&#x4E00;&#x5E27;&#x56FE;&#x50CF;&#x5199;&#x5165;&#x5230;&#x8F93;&#x51FA;&#x6587;&#x4EF6;&#x4E2D;</span>
+        out.write(frame)
+    <span class="hljs-keyword">else</span>:
+        <span class="hljs-keyword">break</span> 
+
+<span class="hljs-comment"># 6.&#x91CA;&#x653E;&#x8D44;&#x6E90;</span>
+cap.release()
+out.release()
+cv.destroyAllWindows()
+</code></pre>
+<hr>
+<p><strong>&#x603B;&#x7ED3;</strong></p>
+<ol>
+<li><p>&#x8BFB;&#x53D6;&#x89C6;&#x9891;&#xFF1A;</p>
+<ul>
+<li><p>&#x8BFB;&#x53D6;&#x89C6;&#x9891;&#xFF1A;cap =  cv.VideoCapture()</p>
+</li>
+<li><p>&#x5224;&#x65AD;&#x8BFB;&#x53D6;&#x6210;&#x529F;&#xFF1A;cap.isOpened()</p>
+</li>
+<li><p>&#x8BFB;&#x53D6;&#x6BCF;&#x4E00;&#x5E27;&#x56FE;&#x50CF;&#xFF1A;ret,frame = cap.read()</p>
+</li>
+<li><p>&#x83B7;&#x53D6;&#x5C5E;&#x6027;&#xFF1A;cap.get(proid)</p>
+</li>
+<li>&#x8BBE;&#x7F6E;&#x5C5E;&#x6027;&#xFF1A;cap.set(proid,value)</li>
+<li>&#x8D44;&#x6E90;&#x91CA;&#x653E;&#xFF1A;cap.release()</li>
+</ul>
+</li>
+<li><p>&#x4FDD;&#x5B58;&#x89C6;&#x9891;</p>
+<ul>
+<li>&#x4FDD;&#x5B58;&#x89C6;&#x9891;&#xFF1A; out = cv.VideoWrite()</li>
+<li>&#x89C6;&#x9891;&#x5199;&#x5165;&#xFF1A;out.write()</li>
+<li>&#x8D44;&#x6E90;&#x91CA;&#x653E;&#xFF1A;out.release()</li>
+</ul>
+</li>
+</ol>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="ReadMe.html" class="navigation navigation-prev " aria-label="Previous page: 5 视频操作">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="section1.html" class="navigation navigation-next " aria-label="Next page: 5.2 视频追踪">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"5.1 视频读写","level":"1.6.1","depth":2,"next":{"title":"5.2 视频追踪","level":"1.6.2","depth":2,"path":"视频操作/section1.md","ref":"视频操作/section1.md","articles":[]},"previous":{"title":"5 视频操作","level":"1.6","depth":1,"path":"视频操作/ReadMe.md","ref":"视频操作/ReadMe.md","articles":[{"title":"5.1 视频读写","level":"1.6.1","depth":2,"path":"视频操作/section0.md","ref":"视频操作/section0.md","articles":[]},{"title":"5.2 视频追踪","level":"1.6.2","depth":2,"path":"视频操作/section1.md","ref":"视频操作/section1.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["code","splitter","expandable-chapters","chart","graph","katex"],"root":".","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"splitter":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"code":{"copyButtons":true},"graph":{},"katex":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"chart":{"type":"c3"},"expandable-chapters":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"opencv","language":"zh-hans","output.name":"site","gitbook":"3.2.3"},"file":{"path":"视频操作/section0.md","mtime":"2019-10-30T09:33:42.798Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-12-18T03:16:54.606Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-code/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-splitter/splitter.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
