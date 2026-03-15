@@ -1,0 +1,633 @@
+
+<!DOCTYPE HTML>
+<html lang="zh-hans" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>1.1 图像处理简介 · opencv</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-code/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-splitter/splitter.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-katex/katex.min.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="section1.html" />
+    
+    
+    <link rel="prev" href="ReadMe.html" />
+    
+
+    <script src="../gitbook/gitbook-plugin-graph/d3.min.js"></script>
+    <script src="../gitbook/gitbook-plugin-graph/function-plot.js"></script>    
+
+    
+    <link rel="stylesheet" href="../gitbook/gitbook-plugin-chart/c3/c3.min.css">
+    <script src="../gitbook/gitbook-plugin-chart/c3/d3.min.js"></script>
+    <script src="../gitbook/gitbook-plugin-chart/c3/c3.min.js"></script>
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="输入并搜索" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="ReadMe.html">
+            
+                <a href="ReadMe.html">
+            
+                    
+                    1. OpenCV简介
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter active" data-level="1.2.1" data-path="section0.html">
+            
+                <a href="section0.html">
+            
+                    
+                    1.1 图像处理简介
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="section1.html">
+            
+                <a href="section1.html">
+            
+                    
+                    1.2 OpenCV简介及安装方法
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="section2.html">
+            
+                <a href="section2.html">
+            
+                    
+                    1.3 OpenCV的模块
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="../OpenCV基本操作/ReadMe.html">
+            
+                <a href="../OpenCV基本操作/ReadMe.html">
+            
+                    
+                    2 OpenCV基本操作
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="../OpenCV基本操作/section0.html">
+            
+                <a href="../OpenCV基本操作/section0.html">
+            
+                    
+                    2.1 图像的基础操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="../OpenCV基本操作/section1.html">
+            
+                <a href="../OpenCV基本操作/section1.html">
+            
+                    
+                    2.2 算数操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="../OpenCV图像处理/ReadMe.html">
+            
+                <a href="../OpenCV图像处理/ReadMe.html">
+            
+                    
+                    3 OpenCV图像处理
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.4.1" data-path="../OpenCV图像处理/section0.html">
+            
+                <a href="../OpenCV图像处理/section0.html">
+            
+                    
+                    3.1 几何变换
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.2" data-path="../OpenCV图像处理/section1.html">
+            
+                <a href="../OpenCV图像处理/section1.html">
+            
+                    
+                    3.2 形态学操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.3" data-path="../OpenCV图像处理/section2.html">
+            
+                <a href="../OpenCV图像处理/section2.html">
+            
+                    
+                    3.3 图像平滑
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.4" data-path="../OpenCV图像处理/section3.html">
+            
+                <a href="../OpenCV图像处理/section3.html">
+            
+                    
+                    3.4 直方图
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.5" data-path="../OpenCV图像处理/section4.html">
+            
+                <a href="../OpenCV图像处理/section4.html">
+            
+                    
+                    3.5 边缘检测
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.6" data-path="../OpenCV图像处理/section5.html">
+            
+                <a href="../OpenCV图像处理/section5.html">
+            
+                    
+                    3.6 模版匹配和霍夫变换
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="../图像特征提取与描述/ReadMe.html">
+            
+                <a href="../图像特征提取与描述/ReadMe.html">
+            
+                    
+                    4 图像特征提取与描述
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.5.1" data-path="../图像特征提取与描述/section0.html">
+            
+                <a href="../图像特征提取与描述/section0.html">
+            
+                    
+                    4.1 角点特征
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5.2" data-path="../图像特征提取与描述/section1.html">
+            
+                <a href="../图像特征提取与描述/section1.html">
+            
+                    
+                    4.2 Harris和Shi-Tomas算法
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5.3" data-path="../图像特征提取与描述/section2.html">
+            
+                <a href="../图像特征提取与描述/section2.html">
+            
+                    
+                    4.3 SIFT/SURF算法
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="../视频操作/ReadMe.html">
+            
+                <a href="../视频操作/ReadMe.html">
+            
+                    
+                    5 视频操作
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.6.1" data-path="../视频操作/section0.html">
+            
+                <a href="../视频操作/section0.html">
+            
+                    
+                    5.1 视频读写
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6.2" data-path="../视频操作/section1.html">
+            
+                <a href="../视频操作/section1.html">
+            
+                    
+                    5.2 视频追踪
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="../案例/ReadMe.html">
+            
+                <a href="../案例/ReadMe.html">
+            
+                    
+                    6 案例:人脸案例
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            本书使用 GitBook 发布
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >1.1 图像处理简介</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="&#x56FE;&#x50CF;&#x5904;&#x7406;">&#x56FE;&#x50CF;&#x5904;&#x7406;</h1>
+<p><strong>&#x5B66;&#x4E60;&#x76EE;&#x6807;</strong></p>
+<ul>
+<li>&#x4E86;&#x89E3;&#x56FE;&#x50CF;&#x7684;&#x8D77;&#x6E90;</li>
+<li>&#x77E5;&#x9053;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x7684;&#x8868;&#x793A;</li>
+</ul>
+<hr>
+<h1 id="1-&#x56FE;&#x50CF;&#x7684;&#x8D77;&#x6E90;">1 &#x56FE;&#x50CF;&#x7684;&#x8D77;&#x6E90;</h1>
+<h2 id="11--&#x56FE;&#x50CF;&#x662F;&#x4EC0;&#x4E48;">1.1  &#x56FE;&#x50CF;&#x662F;&#x4EC0;&#x4E48;</h2>
+<blockquote>
+<p>&#x56FE;&#x50CF;&#x662F;&#x4EBA;&#x7C7B;&#x89C6;&#x89C9;&#x7684;&#x57FA;&#x7840;&#xFF0C;&#x662F;&#x81EA;&#x7136;&#x666F;&#x7269;&#x7684;&#x5BA2;&#x89C2;&#x53CD;&#x6620;&#xFF0C;&#x662F;&#x4EBA;&#x7C7B;&#x8BA4;&#x8BC6;&#x4E16;&#x754C;&#x548C;&#x4EBA;&#x7C7B;&#x672C;&#x8EAB;&#x7684;&#x91CD;&#x8981;&#x6E90;&#x6CC9;&#x3002;&#x201C;&#x56FE;&#x201D;&#x662F;&#x7269;&#x4F53;&#x53CD;&#x5C04;&#x6216;&#x900F;&#x5C04;&#x5149;&#x7684;&#x5206;&#x5E03;&#xFF0C;&#x201C;&#x50CF;&#x201C;&#x662F;&#x4EBA;&#x7684;&#x89C6;&#x89C9;&#x7CFB;&#x7EDF;&#x6240;&#x63A5;&#x53D7;&#x7684;&#x56FE;&#x5728;&#x4EBA;&#x8111;&#x4E2D;&#x6240;&#x5F62;&#x7248;&#x7684;&#x5370;&#x8C61;&#x6216;&#x8BA4;&#x8BC6;&#xFF0C;&#x7167;&#x7247;&#x3001;&#x7ED8;&#x753B;&#x3001;&#x526A;&#x8D34;&#x753B;&#x3001;&#x5730;&#x56FE;&#x3001;&#x4E66;&#x6CD5;&#x4F5C;&#x54C1;&#x3001;&#x624B;&#x5199;&#x6C49;&#x5B66;&#x3001;&#x4F20;&#x771F;&#x3001;&#x536B;&#x661F;&#x4E91;&#x56FE;&#x3001;&#x5F71;&#x89C6;&#x753B;&#x9762;&#x3001;X&#x5149;&#x7247;&#x3001;&#x8111;&#x7535;&#x56FE;&#x3001;&#x5FC3;&#x7535;&#x56FE;&#x7B49;&#x90FD;&#x662F;&#x56FE;&#x50CF;&#x3002;&#x2014;&#x59DA;&#x654F;. &#x6570;&#x5B57;&#x56FE;&#x50CF;&#x5904;&#x7406;&#xFF1A;&#x673A;&#x68B0;&#x5DE5;&#x4E1A;&#x51FA;&#x7248;&#x793E;&#xFF0C;2014&#x5E74;&#x3002;</p>
+</blockquote>
+<p><img src="assets/image1.jpg" alt="image1"></p>
+<h2 id="12-&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x548C;&#x6570;&#x5B57;&#x56FE;&#x50CF;">1.2 &#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x548C;&#x6570;&#x5B57;&#x56FE;&#x50CF;</h2>
+<h5 id="&#x56FE;&#x50CF;&#x8D77;&#x6E90;&#x4E8E;1826&#x5E74;&#x524D;&#x540E;&#x6CD5;&#x56FD;&#x79D1;&#x5B66;&#x5BB6;joseph-nic&#xE9;phore-ni&#xE9;pce&#x53D1;&#x660E;&#x7684;&#x7B2C;&#x4E00;&#x5F20;&#x53EF;&#x6C38;&#x4E45;&#x4FDD;&#x5B58;&#x7684;&#x7167;&#x7247;&#xFF0C;&#x5C5E;&#x4E8E;&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x3002;&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x53C8;&#x79F0;&#x8FDE;&#x7EED;&#x56FE;&#x50CF;&#xFF0C;&#x5B83;&#x901A;&#x8FC7;&#x67D0;&#x79CD;&#x7269;&#x7406;&#x91CF;&#xFF08;&#x5982;&#x5149;&#x3001;&#x7535;&#x7B49;&#xFF09;&#x7684;&#x5F3A;&#x5F31;&#x53D8;&#x5316;&#x6765;&#x8BB0;&#x5F55;&#x56FE;&#x50CF;&#x4EAE;&#x5EA6;&#x4FE1;&#x606F;&#xFF0C;&#x6240;&#x4EE5;&#x662F;&#x8FDE;&#x7EED;&#x53D8;&#x6362;&#x7684;&#x3002;&#x6A21;&#x62DF;&#x4FE1;&#x53F7;&#x7684;&#x7279;&#x70B9;&#x662F;&#x5BB9;&#x6613;&#x53D7;&#x5E72;&#x6270;&#xFF0C;&#x5982;&#x4ECA;&#x5DF2;&#x7ECF;&#x57FA;&#x672C;&#x5168;&#x9762;&#x88AB;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x66FF;&#x4EE3;&#x3002;">&#x56FE;&#x50CF;&#x8D77;&#x6E90;&#x4E8E;1826&#x5E74;&#x524D;&#x540E;&#x6CD5;&#x56FD;&#x79D1;&#x5B66;&#x5BB6;Joseph Nic&#xE9;phore Ni&#xE9;pce&#x53D1;&#x660E;&#x7684;&#x7B2C;&#x4E00;&#x5F20;&#x53EF;&#x6C38;&#x4E45;&#x4FDD;&#x5B58;&#x7684;&#x7167;&#x7247;&#xFF0C;&#x5C5E;&#x4E8E;&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x3002;&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x53C8;&#x79F0;&#x8FDE;&#x7EED;&#x56FE;&#x50CF;&#xFF0C;&#x5B83;&#x901A;&#x8FC7;&#x67D0;&#x79CD;&#x7269;&#x7406;&#x91CF;&#xFF08;&#x5982;&#x5149;&#x3001;&#x7535;&#x7B49;&#xFF09;&#x7684;&#x5F3A;&#x5F31;&#x53D8;&#x5316;&#x6765;&#x8BB0;&#x5F55;&#x56FE;&#x50CF;&#x4EAE;&#x5EA6;&#x4FE1;&#x606F;&#xFF0C;&#x6240;&#x4EE5;&#x662F;&#x8FDE;&#x7EED;&#x53D8;&#x6362;&#x7684;&#x3002;&#x6A21;&#x62DF;&#x4FE1;&#x53F7;&#x7684;&#x7279;&#x70B9;&#x662F;&#x5BB9;&#x6613;&#x53D7;&#x5E72;&#x6270;&#xFF0C;&#x5982;&#x4ECA;&#x5DF2;&#x7ECF;&#x57FA;&#x672C;&#x5168;&#x9762;&#x88AB;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x66FF;&#x4EE3;&#x3002;</h5>
+<h5 id="&#x5728;&#x7B2C;&#x4E00;&#x6B21;&#x4E16;&#x754C;&#x5927;&#x6218;&#x540E;&#xFF0C;1921&#x5E74;&#x7F8E;&#x56FD;&#x79D1;&#x5B66;&#x5BB6;&#x53D1;&#x660E;&#x4E86;bartlane-system&#xFF0C;&#x5E76;&#x4ECE;&#x4F26;&#x6566;&#x4F20;&#x5230;&#x7EBD;&#x7EA6;&#x4F20;&#x8F93;&#x4E86;&#x7B2C;&#x4E00;&#x5E45;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#xFF0C;&#x5176;&#x4EAE;&#x5EA6;&#x7528;&#x79BB;&#x6563;&#x6570;&#x503C;&#x8868;&#x793A;&#xFF0C;&#x5C06;&#x56FE;&#x7247;&#x7F16;&#x7801;&#x6210;5&#x4E2A;&#x7070;&#x5EA6;&#x7EA7;&#xFF0C;&#x5982;&#x4E0B;&#x56FE;&#x6240;&#x793A;&#xFF0C;&#x901A;&#x8FC7;&#x6D77;&#x5E95;&#x7535;&#x7F06;&#x8FDB;&#x884C;&#x4F20;&#x8F93;&#x3002;&#x5728;&#x53D1;&#x9001;&#x7AEF;&#x56FE;&#x7247;&#x88AB;&#x7F16;&#x7801;&#x5E76;&#x4F7F;&#x7528;&#x6253;&#x5B54;&#x5E26;&#x8BB0;&#x5F55;&#xFF0C;&#x901A;&#x8FC7;&#x7CFB;&#x7EDF;&#x4F20;&#x8F93;&#x540E;&#x5728;&#x63A5;&#x6536;&#x65B9;&#x4F7F;&#x7528;&#x7279;&#x6B8A;&#x7684;&#x6253;&#x5370;&#x673A;&#x6062;&#x590D;&#x6210;&#x56FE;&#x50CF;&#x3002;">&#x5728;&#x7B2C;&#x4E00;&#x6B21;&#x4E16;&#x754C;&#x5927;&#x6218;&#x540E;&#xFF0C;1921&#x5E74;&#x7F8E;&#x56FD;&#x79D1;&#x5B66;&#x5BB6;&#x53D1;&#x660E;&#x4E86;Bartlane System&#xFF0C;&#x5E76;&#x4ECE;<strong>&#x4F26;&#x6566;&#x4F20;&#x5230;&#x7EBD;&#x7EA6;&#x4F20;&#x8F93;&#x4E86;&#x7B2C;&#x4E00;&#x5E45;&#x6570;&#x5B57;&#x56FE;&#x50CF;</strong>&#xFF0C;&#x5176;&#x4EAE;&#x5EA6;&#x7528;&#x79BB;&#x6563;&#x6570;&#x503C;&#x8868;&#x793A;&#xFF0C;&#x5C06;&#x56FE;&#x7247;&#x7F16;&#x7801;&#x6210;5&#x4E2A;&#x7070;&#x5EA6;&#x7EA7;&#xFF0C;&#x5982;&#x4E0B;&#x56FE;&#x6240;&#x793A;&#xFF0C;&#x901A;&#x8FC7;&#x6D77;&#x5E95;&#x7535;&#x7F06;&#x8FDB;&#x884C;&#x4F20;&#x8F93;&#x3002;&#x5728;&#x53D1;&#x9001;&#x7AEF;&#x56FE;&#x7247;&#x88AB;&#x7F16;&#x7801;&#x5E76;&#x4F7F;&#x7528;&#x6253;&#x5B54;&#x5E26;&#x8BB0;&#x5F55;&#xFF0C;&#x901A;&#x8FC7;&#x7CFB;&#x7EDF;&#x4F20;&#x8F93;&#x540E;&#x5728;&#x63A5;&#x6536;&#x65B9;&#x4F7F;&#x7528;&#x7279;&#x6B8A;&#x7684;&#x6253;&#x5370;&#x673A;&#x6062;&#x590D;&#x6210;&#x56FE;&#x50CF;&#x3002;</h5>
+<p><img src="assets/Snipaste_2019-09-24_11-19-33.png" alt="Snipaste_2019-09-24_11-19-33"></p>
+<p>1950&#x5E74;&#x5DE6;&#x53F3;&#xFF0C;&#x8BA1;&#x7B97;&#x673A;&#x88AB;&#x53D1;&#x660E;&#xFF0C;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x5904;&#x7406;&#x5B66;&#x79D1;&#x6B63;&#x5F0F;&#x8BDE;&#x751F;&#x3002;</p>
+<p>&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x548C;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x7684;&#x5BF9;&#x6BD4;&#xFF0C;&#x6211;&#x4EEC;&#x53EF;&#x4EE5;&#x770B;&#x4E00;&#x4E0B;&#xFF1A;</p>
+<p><img src="assets/Snipaste_2019-09-24_11-19-57.png" alt="Snipaste_2019-09-24_11-19-57"></p>
+<h1 id="2-&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x7684;&#x8868;&#x793A;">2 &#x6570;&#x5B57;&#x56FE;&#x50CF;&#x7684;&#x8868;&#x793A;</h1>
+<h2 id="21-&#x4F4D;&#x6570;">2.1 &#x4F4D;&#x6570;</h2>
+<p>&#x8BA1;&#x7B97;&#x673A;&#x91C7;&#x7528;0/1&#x7F16;&#x7801;&#x7684;&#x7CFB;&#x7EDF;&#xFF0C;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x4E5F;&#x662F;&#x5229;&#x7528;0/1&#x6765;&#x8BB0;&#x5F55;&#x4FE1;&#x606F;&#xFF0C;&#x6211;&#x4EEC;&#x5E73;&#x5E38;&#x63A5;&#x89E6;&#x7684;&#x56FE;&#x50CF;&#x90FD;&#x662F;8&#x4F4D;&#x6570;&#x56FE;&#x50CF;&#xFF0C;&#x5305;&#x542B;0&#xFF5E;255&#x7070;&#x5EA6;&#xFF0C;&#x5176;&#x4E2D;0&#xFF0C;&#x4EE3;&#x8868;&#x6700;&#x9ED1;&#xFF0C;1&#xFF0C;&#x8868;&#x793A;&#x6700;&#x767D;&#x3002;</p>
+<p><img src="assets/Snipaste_2019-09-24_11-46-55.png" alt="Snipaste_2019-09-24_11-46-55"></p>
+<p>&#x4EBA;&#x773C;&#x5BF9;&#x7070;&#x5EA6;&#x66F4;&#x654F;&#x611F;&#x4E00;&#x4E9B;&#xFF0C;&#x5728;16&#x4F4D;&#x5230;32&#x4F4D;&#x4E4B;&#x95F4;&#x3002;</p>
+<p><img src="assets/Snipaste_2019-09-24_14-12-27.png" alt="Snipaste_2019-09-24_14-12-27"></p>
+<h2 id="22-&#x56FE;&#x50CF;&#x7684;&#x5206;&#x7C7B;">2.2 &#x56FE;&#x50CF;&#x7684;&#x5206;&#x7C7B;</h2>
+<h5 id="&#x4E8C;&#x503C;&#x56FE;&#x50CF;&#xFF1A;"><strong>&#x4E8C;&#x503C;&#x56FE;&#x50CF;</strong>&#xFF1A;</h5>
+<p>&#x4E00;&#x5E45;&#x4E8C;&#x503C;&#x56FE;&#x50CF;&#x7684;&#x4E8C;&#x7EF4;&#x77E9;&#x9635;&#x4EC5;&#x7531;0&#x3001;1&#x4E24;&#x4E2A;&#x503C;&#x6784;&#x6210;&#xFF0C;&#x201C;0&#x201D;&#x4EE3;&#x8868;&#x9ED1;&#x8272;&#xFF0C;&#x201C;1&#x201D;&#x4EE3;&#x767D;&#x8272;&#x3002;&#x7531;&#x4E8E;&#x6BCF;&#x4E00;&#x50CF;&#x7D20;&#xFF08;&#x77E9;&#x9635;&#x4E2D;&#x6BCF;&#x4E00;&#x5143;&#x7D20;&#xFF09;&#x53D6;&#x503C;&#x4EC5;&#x6709;0&#x3001;1&#x4E24;&#x79CD;&#x53EF;&#x80FD;&#xFF0C;&#x6240;&#x4EE5;&#x8BA1;&#x7B97;&#x673A;&#x4E2D;&#x4E8C;&#x503C;&#x56FE;&#x50CF;&#x7684;&#x6570;&#x636E;&#x7C7B;&#x578B;&#x901A;&#x5E38;&#x4E3A;1&#x4E2A;&#x4E8C;&#x8FDB;&#x5236;&#x4F4D;&#x3002;&#x4E8C;&#x503C;&#x56FE;&#x50CF;&#x901A;&#x5E38;&#x7528;&#x4E8E;&#x6587;&#x5B57;&#x3001;&#x7EBF;&#x6761;&#x56FE;&#x7684;&#x626B;&#x63CF;&#x8BC6;&#x522B;&#xFF08;OCR&#xFF09;&#x548C;&#x63A9;&#x819C;&#x56FE;&#x50CF;&#x7684;&#x5B58;&#x50A8;&#x3002;</p>
+<h5 id="&#x7070;&#x5EA6;&#x56FE;&#xFF1A;"><strong>&#x7070;&#x5EA6;&#x56FE;</strong>&#xFF1A;</h5>
+<p>&#x6BCF;&#x4E2A;&#x50CF;&#x7D20;&#x53EA;&#x6709;&#x4E00;&#x4E2A;&#x91C7;&#x6837;&#x989C;&#x8272;&#x7684;&#x56FE;&#x50CF;&#xFF0C;&#x8FD9;&#x7C7B;&#x56FE;&#x50CF;&#x901A;&#x5E38;&#x663E;&#x793A;&#x4E3A;&#x4ECE;&#x6700;&#x6697;&#x9ED1;&#x8272;&#x5230;&#x6700;&#x4EAE;&#x7684;&#x767D;&#x8272;&#x7684;&#x7070;&#x5EA6;&#xFF0C;&#x5C3D;&#x7BA1;&#x7406;&#x8BBA;&#x4E0A;&#x8FD9;&#x4E2A;&#x91C7;&#x6837;&#x53EF;&#x4EE5;&#x4EFB;&#x4F55;&#x989C;&#x8272;&#x7684;&#x4E0D;&#x540C;&#x6DF1;&#x6D45;&#xFF0C;&#x751A;&#x81F3;&#x53EF;&#x4EE5;&#x662F;&#x4E0D;&#x540C;&#x4EAE;&#x5EA6;&#x4E0A;&#x7684;&#x4E0D;&#x540C;&#x989C;&#x8272;&#x3002;&#x7070;&#x5EA6;&#x56FE;&#x50CF;&#x4E0E;&#x9ED1;&#x767D;&#x56FE;&#x50CF;&#x4E0D;&#x540C;&#xFF0C;&#x5728;&#x8BA1;&#x7B97;&#x673A;&#x56FE;&#x50CF;&#x9886;&#x57DF;&#x4E2D;&#x9ED1;&#x767D;&#x56FE;&#x50CF;&#x53EA;&#x6709;&#x9ED1;&#x8272;&#x4E0E;&#x767D;&#x8272;&#x4E24;&#x79CD;&#x989C;&#x8272;&#xFF1B;&#x4F46;&#x662F;&#xFF0C;&#x7070;&#x5EA6;&#x56FE;&#x50CF;&#x5728;&#x9ED1;&#x8272;&#x4E0E;&#x767D;&#x8272;&#x4E4B;&#x95F4;&#x8FD8;&#x6709;&#x8BB8;&#x591A;&#x7EA7;&#x7684;&#x989C;&#x8272;&#x6DF1;&#x5EA6;&#x3002;&#x7070;&#x5EA6;&#x56FE;&#x50CF;&#x7ECF;&#x5E38;&#x662F;&#x5728;&#x5355;&#x4E2A;&#x7535;&#x78C1;&#x6CE2;&#x9891;&#x8C31;&#x5982;&#x53EF;&#x89C1;&#x5149;&#x5185;&#x6D4B;&#x91CF;&#x6BCF;&#x4E2A;&#x50CF;&#x7D20;&#x7684;&#x4EAE;&#x5EA6;&#x5F97;&#x5230;&#x7684;&#xFF0C;&#x7528;&#x4E8E;&#x663E;&#x793A;&#x7684;&#x7070;&#x5EA6;&#x56FE;&#x50CF;&#x901A;&#x5E38;&#x7528;&#x6BCF;&#x4E2A;&#x91C7;&#x6837;&#x50CF;&#x7D20;8&#x4F4D;&#x7684;&#x975E;&#x7EBF;&#x6027;&#x5C3A;&#x5EA6;&#x6765;&#x4FDD;&#x5B58;&#xFF0C;&#x8FD9;&#x6837;&#x53EF;&#x4EE5;&#x6709;256&#x7EA7;&#x7070;&#x5EA6;&#xFF08;&#x5982;&#x679C;&#x7528;16&#x4F4D;&#xFF0C;&#x5219;&#x6709;65536&#x7EA7;&#xFF09;&#x3002;</p>
+<h5 id="&#x5F69;&#x8272;&#x56FE;&#xFF1A;"><strong>&#x5F69;&#x8272;&#x56FE;</strong>&#xFF1A;</h5>
+<p>&#x6BCF;&#x4E2A;&#x50CF;&#x7D20;&#x901A;&#x5E38;&#x662F;&#x7531;&#x7EA2;&#xFF08;R&#xFF09;&#x3001;&#x7EFF;&#xFF08;G&#xFF09;&#x3001;&#x84DD;&#xFF08;B&#xFF09;&#x4E09;&#x4E2A;&#x5206;&#x91CF;&#x6765;&#x8868;&#x793A;&#x7684;&#xFF0C;&#x5206;&#x91CF;&#x4ECB;&#x4E8E;&#xFF08;0&#xFF0C;255&#xFF09;&#x3002;RGB&#x56FE;&#x50CF;&#x4E0E;&#x7D22;&#x5F15;&#x56FE;&#x50CF;&#x4E00;&#x6837;&#x90FD;&#x53EF;&#x4EE5;&#x7528;&#x6765;&#x8868;&#x793A;&#x5F69;&#x8272;&#x56FE;&#x50CF;&#x3002;&#x4E0E;&#x7D22;&#x5F15;&#x56FE;&#x50CF;&#x4E00;&#x6837;&#xFF0C;&#x5B83;&#x5206;&#x522B;&#x7528;&#x7EA2;&#xFF08;R&#xFF09;&#x3001;&#x7EFF;&#xFF08;G&#xFF09;&#x3001;&#x84DD;&#xFF08;B&#xFF09;&#x4E09;&#x539F;&#x8272;&#x7684;&#x7EC4;&#x5408;&#x6765;&#x8868;&#x793A;&#x6BCF;&#x4E2A;&#x50CF;&#x7D20;&#x7684;&#x989C;&#x8272;&#x3002;&#x4F46;&#x4E0E;&#x7D22;&#x5F15;&#x56FE;&#x50CF;&#x4E0D;&#x540C;&#x7684;&#x662F;&#xFF0C;RGB&#x56FE;&#x50CF;&#x6BCF;&#x4E00;&#x4E2A;&#x50CF;&#x7D20;&#x7684;&#x989C;&#x8272;&#x503C;&#xFF08;&#x7531;RGB&#x4E09;&#x539F;&#x8272;&#x8868;&#x793A;&#xFF09;&#x76F4;&#x63A5;&#x5B58;&#x653E;&#x5728;&#x56FE;&#x50CF;&#x77E9;&#x9635;&#x4E2D;&#xFF0C;&#x7531;&#x4E8E;&#x6BCF;&#x4E00;&#x50CF;&#x7D20;&#x7684;&#x989C;&#x8272;&#x9700;&#x7531;R&#x3001;G&#x3001;B&#x4E09;&#x4E2A;&#x5206;&#x91CF;&#x6765;&#x8868;&#x793A;&#xFF0C;M&#x3001;N&#x5206;&#x522B;&#x8868;&#x793A;&#x56FE;&#x50CF;&#x7684;&#x884C;&#x5217;&#x6570;&#xFF0C;&#x4E09;&#x4E2A;M x N&#x7684;&#x4E8C;&#x7EF4;&#x77E9;&#x9635;&#x5206;&#x522B;&#x8868;&#x793A;&#x5404;&#x4E2A;&#x50CF;&#x7D20;&#x7684;R&#x3001;G&#x3001;B&#x4E09;&#x4E2A;&#x989C;&#x8272;&#x5206;&#x91CF;&#x3002;RGB&#x56FE;&#x50CF;&#x7684;&#x6570;&#x636E;&#x7C7B;&#x578B;&#x4E00;&#x822C;&#x4E3A;8&#x4F4D;&#x65E0;&#x7B26;&#x53F7;&#x6574;&#x5F62;&#xFF0C;&#x901A;&#x5E38;&#x7528;&#x4E8E;&#x8868;&#x793A;&#x548C;&#x5B58;&#x653E;&#x771F;&#x5F69;&#x8272;&#x56FE;&#x50CF;&#x3002;</p>
+<hr>
+<p><strong>&#x603B;&#x7ED3;</strong></p>
+<ol>
+<li><p>&#x56FE;&#x50CF;&#x662F;&#x4EC0;&#x4E48;</p>
+<p>&#x56FE;&#xFF1A;&#x7269;&#x4F53;&#x53CD;&#x5C04;&#x6216;&#x900F;&#x5C04;&#x5149;&#x7684;&#x5206;&#x5E03;</p>
+<p>&#x50CF;&#xFF1A;&#x4EBA;&#x7684;&#x89C6;&#x89C9;&#x7CFB;&#x7EDF;&#x6240;&#x63A5;&#x53D7;&#x7684;&#x56FE;&#x5728;&#x4EBA;&#x8111;&#x4E2D;&#x6240;&#x5F62;&#x7248;&#x7684;&#x5370;&#x8C61;&#x6216;&#x8BA4;&#x8BC6;</p>
+</li>
+<li><p>&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#x548C;&#x6570;&#x5B57;&#x56FE;&#x50CF;</p>
+<p>&#x6A21;&#x62DF;&#x56FE;&#x50CF;&#xFF1A;&#x8FDE;&#x7EED;&#x5B58;&#x50A8;&#x7684;&#x6570;&#x636E;&#xFF0C;</p>
+<p>&#x6570;&#x5B57;&#x56FE;&#x50CF;&#xFF1A;&#x5206;&#x7EA7;&#x5B58;&#x50A8;&#x7684;&#x6570;&#x636E;</p>
+</li>
+<li><p>&#x6570;&#x5B57;&#x56FE;&#x50CF;</p>
+<p>&#x4F4D;&#x6570;&#xFF1A;&#x56FE;&#x50CF;&#x7684;&#x8868;&#x793A;&#xFF0C;&#x5E38;&#x89C1;&#x7684;&#x5C31;&#x662F;8&#x4F4D;</p>
+<p>&#x5206;&#x7C7B;&#xFF1A;&#x4E8C;&#x503C;&#x56FE;&#x50CF;&#xFF0C;&#x7070;&#x5EA6;&#x56FE;&#x50CF;&#x548C;&#x5F69;&#x8272;&#x56FE;&#x50CF;</p>
+</li>
+</ol>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="ReadMe.html" class="navigation navigation-prev " aria-label="Previous page: 1. OpenCV简介">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="section1.html" class="navigation navigation-next " aria-label="Next page: 1.2 OpenCV简介及安装方法">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"1.1 图像处理简介","level":"1.2.1","depth":2,"next":{"title":"1.2 OpenCV简介及安装方法","level":"1.2.2","depth":2,"path":"OpenCV简介/section1.md","ref":"OpenCV简介/section1.md","articles":[]},"previous":{"title":"1. OpenCV简介","level":"1.2","depth":1,"path":"OpenCV简介/ReadMe.md","ref":"OpenCV简介/ReadMe.md","articles":[{"title":"1.1 图像处理简介","level":"1.2.1","depth":2,"path":"OpenCV简介/section0.md","ref":"OpenCV简介/section0.md","articles":[]},{"title":"1.2 OpenCV简介及安装方法","level":"1.2.2","depth":2,"path":"OpenCV简介/section1.md","ref":"OpenCV简介/section1.md","articles":[]},{"title":"1.3 OpenCV的模块","level":"1.2.3","depth":2,"path":"OpenCV简介/section2.md","ref":"OpenCV简介/section2.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["code","splitter","expandable-chapters","chart","graph","katex"],"root":".","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"splitter":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"code":{"copyButtons":true},"graph":{},"katex":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"chart":{"type":"c3"},"expandable-chapters":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"opencv","language":"zh-hans","output.name":"site","gitbook":"3.2.3"},"file":{"path":"OpenCV简介/section0.md","mtime":"2019-10-21T01:55:59.044Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-12-18T03:16:54.606Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-code/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-splitter/splitter.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

@@ -1,0 +1,781 @@
+
+<!DOCTYPE HTML>
+<html lang="zh-hans" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>3.4 直方图 · opencv</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.3">
+        
+        
+        
+    
+    <link rel="stylesheet" href="../gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-code/plugin.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-splitter/splitter.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-katex/katex.min.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="../gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="../gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="section4.html" />
+    
+    
+    <link rel="prev" href="section2.html" />
+    
+
+    <script src="../gitbook/gitbook-plugin-graph/d3.min.js"></script>
+    <script src="../gitbook/gitbook-plugin-graph/function-plot.js"></script>    
+
+    
+    <link rel="stylesheet" href="../gitbook/gitbook-plugin-chart/c3/c3.min.css">
+    <script src="../gitbook/gitbook-plugin-chart/c3/d3.min.js"></script>
+    <script src="../gitbook/gitbook-plugin-chart/c3/c3.min.js"></script>
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="输入并搜索" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="../">
+            
+                <a href="../">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="../OpenCV简介/ReadMe.html">
+            
+                <a href="../OpenCV简介/ReadMe.html">
+            
+                    
+                    1. OpenCV简介
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.2.1" data-path="../OpenCV简介/section0.html">
+            
+                <a href="../OpenCV简介/section0.html">
+            
+                    
+                    1.1 图像处理简介
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.2" data-path="../OpenCV简介/section1.html">
+            
+                <a href="../OpenCV简介/section1.html">
+            
+                    
+                    1.2 OpenCV简介及安装方法
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2.3" data-path="../OpenCV简介/section2.html">
+            
+                <a href="../OpenCV简介/section2.html">
+            
+                    
+                    1.3 OpenCV的模块
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="../OpenCV基本操作/ReadMe.html">
+            
+                <a href="../OpenCV基本操作/ReadMe.html">
+            
+                    
+                    2 OpenCV基本操作
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.3.1" data-path="../OpenCV基本操作/section0.html">
+            
+                <a href="../OpenCV基本操作/section0.html">
+            
+                    
+                    2.1 图像的基础操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3.2" data-path="../OpenCV基本操作/section1.html">
+            
+                <a href="../OpenCV基本操作/section1.html">
+            
+                    
+                    2.2 算数操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="ReadMe.html">
+            
+                <a href="ReadMe.html">
+            
+                    
+                    3 OpenCV图像处理
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.4.1" data-path="section0.html">
+            
+                <a href="section0.html">
+            
+                    
+                    3.1 几何变换
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.2" data-path="section1.html">
+            
+                <a href="section1.html">
+            
+                    
+                    3.2 形态学操作
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.3" data-path="section2.html">
+            
+                <a href="section2.html">
+            
+                    
+                    3.3 图像平滑
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.4.4" data-path="section3.html">
+            
+                <a href="section3.html">
+            
+                    
+                    3.4 直方图
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.5" data-path="section4.html">
+            
+                <a href="section4.html">
+            
+                    
+                    3.5 边缘检测
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.6" data-path="section5.html">
+            
+                <a href="section5.html">
+            
+                    
+                    3.6 模版匹配和霍夫变换
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="../图像特征提取与描述/ReadMe.html">
+            
+                <a href="../图像特征提取与描述/ReadMe.html">
+            
+                    
+                    4 图像特征提取与描述
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.5.1" data-path="../图像特征提取与描述/section0.html">
+            
+                <a href="../图像特征提取与描述/section0.html">
+            
+                    
+                    4.1 角点特征
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5.2" data-path="../图像特征提取与描述/section1.html">
+            
+                <a href="../图像特征提取与描述/section1.html">
+            
+                    
+                    4.2 Harris和Shi-Tomas算法
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5.3" data-path="../图像特征提取与描述/section2.html">
+            
+                <a href="../图像特征提取与描述/section2.html">
+            
+                    
+                    4.3 SIFT/SURF算法
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="../视频操作/ReadMe.html">
+            
+                <a href="../视频操作/ReadMe.html">
+            
+                    
+                    5 视频操作
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.6.1" data-path="../视频操作/section0.html">
+            
+                <a href="../视频操作/section0.html">
+            
+                    
+                    5.1 视频读写
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6.2" data-path="../视频操作/section1.html">
+            
+                <a href="../视频操作/section1.html">
+            
+                    
+                    5.2 视频追踪
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="../案例/ReadMe.html">
+            
+                <a href="../案例/ReadMe.html">
+            
+                    
+                    6 案例:人脸案例
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            本书使用 GitBook 发布
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href=".." >3.4 直方图</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <p>&#x76F4;&#x65B9;&#x56FE;</p>
+<p><strong>&#x5B66;&#x4E60;&#x76EE;&#x6807;</strong></p>
+<ul>
+<li><p>&#x638C;&#x63E1;&#x56FE;&#x50CF;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x8BA1;&#x7B97;&#x548C;&#x663E;&#x793A;</p>
+</li>
+<li><p>&#x4E86;&#x89E3;&#x63A9;&#x819C;&#x7684;&#x5E94;&#x7528;</p>
+</li>
+<li><p>&#x719F;&#x6089;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#xFF0C;&#x4E86;&#x89E3;&#x81EA;&#x9002;&#x5E94;&#x5747;&#x8861;&#x5316;</p>
+</li>
+</ul>
+<hr>
+<h1 id="1-&#x7070;&#x5EA6;&#x76F4;&#x65B9;&#x56FE;">1 &#x7070;&#x5EA6;&#x76F4;&#x65B9;&#x56FE;</h1>
+<h2 id="11-&#x539F;&#x7406;">1.1 &#x539F;&#x7406;</h2>
+<p>&#x76F4;&#x65B9;&#x56FE;&#x662F;&#x5BF9;&#x6570;&#x636E;&#x8FDB;&#x884C;&#x7EDF;&#x8BA1;&#x7684;&#x4E00;&#x79CD;&#x65B9;&#x6CD5;&#xFF0C;&#x5E76;&#x4E14;&#x5C06;&#x7EDF;&#x8BA1;&#x503C;&#x7EC4;&#x7EC7;&#x5230;&#x4E00;&#x7CFB;&#x5217;&#x5B9E;&#x73B0;&#x5B9A;&#x4E49;&#x597D;&#x7684; bin &#x5F53;&#x4E2D;&#x3002;&#x5176;&#x4E2D;&#xFF0C; bin &#x4E3A;&#x76F4;&#x65B9;&#x56FE;&#x4E2D;&#x7ECF;&#x5E38;&#x7528;&#x5230;&#x7684;&#x4E00;&#x4E2A;&#x6982;&#x5FF5;&#xFF0C;&#x53EF;&#x4EE5;&#x8BD1;&#x4E3A; &#x201C;&#x76F4;&#x6761;&#x201D; &#x6216; &#x201C;&#x7EC4;&#x8DDD;&#x201D;&#xFF0C;&#x5176;&#x6570;&#x503C;&#x662F;&#x4ECE;&#x6570;&#x636E;&#x4E2D;&#x8BA1;&#x7B97;&#x51FA;&#x7684;&#x7279;&#x5F81;&#x7EDF;&#x8BA1;&#x91CF;&#xFF0C;&#x8FD9;&#x4E9B;&#x6570;&#x636E;&#x53EF;&#x4EE5;&#x662F;&#x8BF8;&#x5982;&#x68AF;&#x5EA6;&#x3001;&#x65B9;&#x5411;&#x3001;&#x8272;&#x5F69;&#x6216;&#x4EFB;&#x4F55;&#x5176;&#x4ED6;&#x7279;&#x5F81;&#x3002;</p>
+<p>&#x2003;&#x2003;&#x56FE;&#x50CF;&#x76F4;&#x65B9;&#x56FE;&#xFF08;Image Histogram&#xFF09;&#x662F;&#x7528;&#x4EE5;&#x8868;&#x793A;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x4E2D;&#x4EAE;&#x5EA6;&#x5206;&#x5E03;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#xFF0C;&#x6807;&#x7ED8;&#x4E86;&#x56FE;&#x50CF;&#x4E2D;&#x6BCF;&#x4E2A;&#x4EAE;&#x5EA6;&#x503C;&#x7684;&#x50CF;&#x7D20;&#x4E2A;&#x6570;&#x3002;&#x8FD9;&#x79CD;&#x76F4;&#x65B9;&#x56FE;&#x4E2D;&#xFF0C;&#x6A2A;&#x5750;&#x6807;&#x7684;&#x5DE6;&#x4FA7;&#x4E3A;&#x8F83;&#x6697;&#x7684;&#x533A;&#x57DF;&#xFF0C;&#x800C;&#x53F3;&#x4FA7;&#x4E3A;&#x8F83;&#x4EAE;&#x7684;&#x533A;&#x57DF;&#x3002;&#x56E0;&#x6B64;&#x4E00;&#x5F20;&#x8F83;&#x6697;&#x56FE;&#x7247;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x4E2D;&#x7684;&#x6570;&#x636E;&#x591A;&#x96C6;&#x4E2D;&#x4E8E;&#x5DE6;&#x4FA7;&#x548C;&#x4E2D;&#x95F4;&#x90E8;&#x5206;&#xFF0C;&#x800C;&#x6574;&#x4F53;&#x660E;&#x4EAE;&#x3001;&#x53EA;&#x6709;&#x5C11;&#x91CF;&#x9634;&#x5F71;&#x7684;&#x56FE;&#x50CF;&#x5219;&#x76F8;&#x53CD;&#x3002;</p>
+<p><img src="assets/image-20190928144352467.png" alt="image-20190928144352467"></p>
+<p>&#x6CE8;&#x610F;&#xFF1A;&#x76F4;&#x65B9;&#x56FE;&#x662F;&#x6839;&#x636E;&#x7070;&#x5EA6;&#x56FE;&#x8FDB;&#x884C;&#x7ED8;&#x5236;&#x7684;&#xFF0C;&#x800C;&#x4E0D;&#x662F;&#x5F69;&#x8272;&#x56FE;&#x50CF;&#x3002;
+&#x2003;&#x2003;&#x5047;&#x8BBE;&#x6709;&#x4E00;&#x5F20;&#x56FE;&#x50CF;&#x7684;&#x4FE1;&#x606F;&#xFF08;&#x7070;&#x5EA6;&#x503C; 0 - 255&#xFF0C;&#x5DF2;&#x77E5;&#x6570;&#x5B57;&#x7684;&#x8303;&#x56F4;&#x5305;&#x542B; 256 &#x4E2A;&#x503C;&#xFF0C;&#x4E8E;&#x662F;&#x53EF;&#x4EE5;&#x6309;&#x4E00;&#x5B9A;&#x89C4;&#x5F8B;&#x5C06;&#x8FD9;&#x4E2A;&#x8303;&#x56F4;&#x5206;&#x5272;&#x6210;&#x5B50;&#x533A;&#x57DF;&#xFF08;&#x4E5F;&#x5C31;&#x662F; bins&#xFF09;&#x3002;&#x5982;&#xFF1A;
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mrow><mo fence="true">[</mo><mn>0</mn><mo separator="true">,</mo><mn>2</mn><mn>5</mn><mn>5</mn><mo fence="true">]</mo></mrow><mo>=</mo><mrow><mo fence="true">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mn>5</mn><mo fence="true">]</mo></mrow><mo>&#x22C3;</mo><mrow><mo fence="true">[</mo><mn>1</mn><mn>6</mn><mo separator="true">,</mo><mn>3</mn><mn>0</mn><mo fence="true">]</mo></mrow><mo>&#x22EF;</mo><mo>&#x22C3;</mo><mrow><mo fence="true">[</mo><mn>2</mn><mn>4</mn><mn>0</mn><mo separator="true">,</mo><mn>2</mn><mn>5</mn><mn>5</mn><mo fence="true">]</mo></mrow></mrow><annotation encoding="application/x-tex">
+\left[0,255\right] = \left[0,15\right]\bigcup\left[16,30\right]\cdots\bigcup\left[240,255\right]
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="strut" style="height:1.05em;"></span><span class="strut bottom" style="height:1.6000100000000002em;vertical-align:-0.55001em;"></span><span class="base displaystyle textstyle uncramped"><span class="minner displaystyle textstyle uncramped"><span class="mopen style-wrap reset-textstyle textstyle uncramped" style="top:0em;">[</span><span class="mord mathrm">0</span><span class="mpunct">,</span><span class="mord mathrm">2</span><span class="mord mathrm">5</span><span class="mord mathrm">5</span><span class="mclose style-wrap reset-textstyle textstyle uncramped" style="top:0em;">]</span></span><span class="mrel">=</span><span class="minner displaystyle textstyle uncramped"><span class="mopen style-wrap reset-textstyle textstyle uncramped" style="top:0em;">[</span><span class="mord mathrm">0</span><span class="mpunct">,</span><span class="mord mathrm">1</span><span class="mord mathrm">5</span><span class="mclose style-wrap reset-textstyle textstyle uncramped" style="top:0em;">]</span></span><span class="mop op-symbol large-op" style="top:-0.000004999999999977245em;">&#x22C3;</span><span class="minner displaystyle textstyle uncramped"><span class="mopen style-wrap reset-textstyle textstyle uncramped" style="top:0em;">[</span><span class="mord mathrm">1</span><span class="mord mathrm">6</span><span class="mpunct">,</span><span class="mord mathrm">3</span><span class="mord mathrm">0</span><span class="mclose style-wrap reset-textstyle textstyle uncramped" style="top:0em;">]</span></span><span class="minner">&#x22EF;</span><span class="mop op-symbol large-op" style="top:-0.000004999999999977245em;">&#x22C3;</span><span class="minner displaystyle textstyle uncramped"><span class="mopen style-wrap reset-textstyle textstyle uncramped" style="top:0em;">[</span><span class="mord mathrm">2</span><span class="mord mathrm">4</span><span class="mord mathrm">0</span><span class="mpunct">,</span><span class="mord mathrm">2</span><span class="mord mathrm">5</span><span class="mord mathrm">5</span><span class="mclose style-wrap reset-textstyle textstyle uncramped" style="top:0em;">]</span></span></span></span></span></span>
+&#x2003;&#x2003;&#x7136;&#x540E;&#x518D;&#x7EDF;&#x8BA1;&#x6BCF;&#x4E00;&#x4E2A; bin(i) &#x7684;&#x50CF;&#x7D20;&#x6570;&#x76EE;&#x3002;&#x53EF;&#x4EE5;&#x5F97;&#x5230;&#x4E0B;&#x56FE;&#xFF08;&#x5176;&#x4E2D; x &#x8F74;&#x8868;&#x793A; bin&#xFF0C;y &#x8F74;&#x8868;&#x793A;&#x5404;&#x4E2A; bin &#x4E2D;&#x7684;&#x50CF;&#x7D20;&#x4E2A;&#x6570;&#xFF09;&#xFF1A;
+&#x2003;&#x2003;&#x2003;&#x2003;<img src="assets/image-20190928145730979.png" alt="image-20190928145730979"></p>
+<p>&#x76F4;&#x65B9;&#x56FE;&#x7684;&#x4E00;&#x4E9B;<strong>&#x672F;&#x8BED;&#x548C;&#x7EC6;&#x8282;</strong>&#xFF1A;</p>
+<ul>
+<li>dims&#xFF1A;&#x9700;&#x8981;&#x7EDF;&#x8BA1;&#x7684;&#x7279;&#x5F81;&#x6570;&#x76EE;&#x3002;&#x5728;&#x4E0A;&#x4F8B;&#x4E2D;&#xFF0C;dims = 1 &#xFF0C;&#x56E0;&#x4E3A;&#x4EC5;&#x4EC5;&#x7EDF;&#x8BA1;&#x4E86;&#x7070;&#x5EA6;&#x503C;&#x3002;</li>
+<li>bins&#xFF1A;&#x6BCF;&#x4E2A;&#x7279;&#x5F81;&#x7A7A;&#x95F4;&#x5B50;&#x533A;&#x6BB5;&#x7684;&#x6570;&#x76EE;&#xFF0C;&#x53EF;&#x8BD1;&#x4E3A; &#x201C;&#x76F4;&#x6761;&#x201D; &#x6216; &#x201C;&#x7EC4;&#x8DDD;&#x201D;&#xFF0C;&#x5728;&#x4E0A;&#x4F8B;&#x4E2D;&#xFF0C; bins = 16&#x3002;</li>
+<li>range&#xFF1A;&#x8981;&#x7EDF;&#x8BA1;&#x7279;&#x5F81;&#x7684;&#x53D6;&#x503C;&#x8303;&#x56F4;&#x3002;&#x5728;&#x4E0A;&#x4F8B;&#x4E2D;&#xFF0C;range = [0, 255]&#x3002;</li>
+</ul>
+<p>&#x76F4;&#x65B9;&#x56FE;&#x7684;<strong>&#x610F;&#x4E49;</strong>&#xFF1A;</p>
+<ul>
+<li>&#x76F4;&#x65B9;&#x56FE;&#x662F;&#x56FE;&#x50CF;&#x4E2D;&#x50CF;&#x7D20;&#x5F3A;&#x5EA6;&#x5206;&#x5E03;&#x7684;&#x56FE;&#x5F62;&#x8868;&#x8FBE;&#x65B9;&#x5F0F;&#x3002; &#x2003;&#x2003;</li>
+<li>&#x5B83;&#x7EDF;&#x8BA1;&#x4E86;&#x6BCF;&#x4E00;&#x4E2A;&#x5F3A;&#x5EA6;&#x503C;&#x6240;&#x5177;&#x6709;&#x7684;&#x50CF;&#x7D20;&#x4E2A;&#x6570;&#x3002;</li>
+<li>&#x4E0D;&#x540C;&#x7684;&#x56FE;&#x50CF;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x53EF;&#x80FD;&#x662F;&#x76F8;&#x540C;&#x7684;</li>
+</ul>
+<h2 id="12-&#x76F4;&#x65B9;&#x56FE;&#x7684;&#x8BA1;&#x7B97;&#x548C;&#x7ED8;&#x5236;">1.2 &#x76F4;&#x65B9;&#x56FE;&#x7684;&#x8BA1;&#x7B97;&#x548C;&#x7ED8;&#x5236;</h2>
+<p>&#x6211;&#x4EEC;&#x4F7F;&#x7528;OpenCV&#x4E2D;&#x7684;&#x65B9;&#x6CD5;&#x7EDF;&#x8BA1;&#x76F4;&#x65B9;&#x56FE;&#xFF0C;&#x5E76;&#x4F7F;&#x7528;matplotlib&#x5C06;&#x5176;&#x7ED8;&#x5236;&#x51FA;&#x6765;&#x3002;</p>
+<p>API&#xFF1A;</p>
+<pre><code class="lang-python">cv2.calcHist(images,channels,mask,histSize,ranges[,hist[,accumulate]])
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li><p>images: &#x539F;&#x56FE;&#x50CF;&#x3002;&#x5F53;&#x4F20;&#x5165;&#x51FD;&#x6570;&#x65F6;&#x5E94;&#x8BE5;&#x7528;&#x4E2D;&#x62EC;&#x53F7; [] &#x62EC;&#x8D77;&#x6765;&#xFF0C;&#x4F8B;&#x5982;&#xFF1A;[img]&#x3002;</p>
+</li>
+<li><p>channels: &#x5982;&#x679C;&#x8F93;&#x5165;&#x56FE;&#x50CF;&#x662F;&#x7070;&#x5EA6;&#x56FE;&#xFF0C;&#x5B83;&#x7684;&#x503C;&#x5C31;&#x662F; [0]&#xFF1B;&#x5982;&#x679C;&#x662F;&#x5F69;&#x8272;&#x56FE;&#x50CF;&#x7684;&#x8BDD;&#xFF0C;&#x4F20;&#x5165;&#x7684;&#x53C2;&#x6570;&#x53EF;&#x4EE5;&#x662F; [0]&#xFF0C;[1]&#xFF0C;[2] &#x5B83;&#x4EEC;&#x5206;&#x522B;&#x5BF9;&#x5E94;&#x7740;&#x901A;&#x9053; B&#xFF0C;G&#xFF0C;R&#x3002; &#x3000;&#x3000;</p>
+</li>
+<li><p>mask: &#x63A9;&#x6A21;&#x56FE;&#x50CF;&#x3002;&#x8981;&#x7EDF;&#x8BA1;&#x6574;&#x5E45;&#x56FE;&#x50CF;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5C31;&#x628A;&#x5B83;&#x8BBE;&#x4E3A; None&#x3002;&#x4F46;&#x662F;&#x5982;&#x679C;&#x4F60;&#x60F3;&#x7EDF;&#x8BA1;&#x56FE;&#x50CF;&#x67D0;&#x4E00;&#x90E8;&#x5206;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x7684;&#x8BDD;&#xFF0C;&#x4F60;&#x5C31;&#x9700;&#x8981;&#x5236;&#x4F5C;&#x4E00;&#x4E2A;&#x63A9;&#x6A21;&#x56FE;&#x50CF;&#xFF0C;&#x5E76;&#x4F7F;&#x7528;&#x5B83;&#x3002;&#xFF08;&#x540E;&#x8FB9;&#x6709;&#x4F8B;&#x5B50;&#xFF09; &#x3000;&#x3000;</p>
+</li>
+<li><p>histSize:BIN &#x7684;&#x6570;&#x76EE;&#x3002;&#x4E5F;&#x5E94;&#x8BE5;&#x7528;&#x4E2D;&#x62EC;&#x53F7;&#x62EC;&#x8D77;&#x6765;&#xFF0C;&#x4F8B;&#x5982;&#xFF1A;[256]&#x3002; &#x3000;&#x3000;</p>
+</li>
+<li>ranges: &#x50CF;&#x7D20;&#x503C;&#x8303;&#x56F4;&#xFF0C;&#x901A;&#x5E38;&#x4E3A; [0&#xFF0C;256]</li>
+</ul>
+<p>&#x793A;&#x4F8B;&#xFF1A;</p>
+<p>&#x5982;&#x4E0B;&#x56FE;&#xFF0C;&#x7ED8;&#x5236;&#x76F8;&#x5E94;&#x7684;&#x76F4;&#x65B9;&#x56FE;</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">import</span> cv2 <span class="hljs-keyword">as</span> cv
+<span class="hljs-keyword">from</span> matplotlib <span class="hljs-keyword">import</span> pyplot <span class="hljs-keyword">as</span> plt
+<span class="hljs-comment"># 1 &#x76F4;&#x63A5;&#x4EE5;&#x7070;&#x5EA6;&#x56FE;&#x7684;&#x65B9;&#x5F0F;&#x8BFB;&#x5165;</span>
+img = cv.imread(<span class="hljs-string">&apos;./image/cat.jpeg&apos;</span>,<span class="hljs-number">0</span>)
+<span class="hljs-comment"># 2 &#x7EDF;&#x8BA1;&#x7070;&#x5EA6;&#x56FE;</span>
+histr = cv.calcHist([img],[<span class="hljs-number">0</span>],<span class="hljs-keyword">None</span>,[<span class="hljs-number">256</span>],[<span class="hljs-number">0</span>,<span class="hljs-number">256</span>])
+<span class="hljs-comment"># 3 &#x7ED8;&#x5236;&#x7070;&#x5EA6;&#x56FE;</span>
+plt.figure(figsize=(<span class="hljs-number">10</span>,<span class="hljs-number">6</span>),dpi=<span class="hljs-number">100</span>)
+plt.plot(histr)
+plt.grid()
+plt.show()
+</code></pre>
+<p><img src="assets/image-20190928155000064.png" alt="image-20190928155000064"></p>
+<h2 id="13-&#x63A9;&#x819C;&#x7684;&#x5E94;&#x7528;">1.3 &#x63A9;&#x819C;&#x7684;&#x5E94;&#x7528;</h2>
+<p>&#x63A9;&#x819C;&#x662F;&#x7528;&#x9009;&#x5B9A;&#x7684;&#x56FE;&#x50CF;&#x3001;&#x56FE;&#x5F62;&#x6216;&#x7269;&#x4F53;&#xFF0C;&#x5BF9;&#x8981;&#x5904;&#x7406;&#x7684;&#x56FE;&#x50CF;&#x8FDB;&#x884C;&#x906E;&#x6321;&#xFF0C;&#x6765;&#x63A7;&#x5236;&#x56FE;&#x50CF; &#x5904;&#x7406;&#x7684;&#x533A;&#x57DF;&#x3002;</p>
+<p>&#x5728;&#x6570;&#x5B57;&#x56FE;&#x50CF;&#x5904;&#x7406;&#x4E2D;&#xFF0C;&#x6211;&#x4EEC;&#x901A;&#x5E38;&#x4F7F;&#x7528;&#x4E8C;&#x7EF4;&#x77E9;&#x9635;&#x6570;&#x7EC4;&#x8FDB;&#x884C;&#x63A9;&#x819C;&#x3002;&#x63A9;&#x819C;&#x662F;&#x7531;0&#x548C;1&#x7EC4;&#x6210;&#x4E00;&#x4E2A;&#x4E8C;&#x8FDB;&#x5236;&#x56FE;&#x50CF;&#xFF0C;&#x5229;&#x7528;&#x8BE5;&#x63A9;&#x819C;&#x56FE;&#x50CF;&#x8981;&#x5904;&#x7406;&#x7684;&#x56FE;&#x50CF;&#x8FDB;&#x884C;&#x63A9;&#x819C;&#xFF0C;&#x5176;&#x4E2D;1&#x503C;&#x7684;&#x533A;&#x57DF;&#x88AB;&#x5904;&#x7406;&#xFF0C;0 &#x503C;&#x533A;&#x57DF;&#x88AB;&#x5C4F;&#x853D;&#xFF0C;&#x4E0D;&#x4F1A;&#x5904;&#x7406;&#x3002;</p>
+<p>&#x63A9;&#x819C;&#x7684;&#x4E3B;&#x8981;&#x7528;&#x9014;&#x662F;&#xFF1A;</p>
+<ul>
+<li>&#x63D0;&#x53D6;&#x611F;&#x5174;&#x8DA3;&#x533A;&#x57DF;&#xFF1A;&#x7528;&#x9884;&#x5148;&#x5236;&#x4F5C;&#x7684;&#x611F;&#x5174;&#x8DA3;&#x533A;&#x63A9;&#x6A21;&#x4E0E;&#x5F85;&#x5904;&#x7406;&#x56FE;&#x50CF;&#x8FDB;&#x884C;&#x201D;&#x4E0E;&#x201C;&#x64CD;&#x4F5C;&#xFF0C;&#x5F97;&#x5230;&#x611F;&#x5174;&#x8DA3;&#x533A;&#x56FE;&#x50CF;&#xFF0C;&#x611F;&#x5174;&#x8DA3;&#x533A;&#x5185;&#x56FE;&#x50CF;&#x503C;&#x4FDD;&#x6301;&#x4E0D;&#x53D8;&#xFF0C;&#x800C;&#x533A;&#x5916;&#x56FE;&#x50CF;&#x503C;&#x90FD;&#x4E3A;0&#x3002;</li>
+<li>&#x5C4F;&#x853D;&#x4F5C;&#x7528;&#xFF1A;&#x7528;&#x63A9;&#x6A21;&#x5BF9;&#x56FE;&#x50CF;&#x4E0A;&#x67D0;&#x4E9B;&#x533A;&#x57DF;&#x4F5C;&#x5C4F;&#x853D;&#xFF0C;&#x4F7F;&#x5176;&#x4E0D;&#x53C2;&#x52A0;&#x5904;&#x7406;&#x6216;&#x4E0D;&#x53C2;&#x52A0;&#x5904;&#x7406;&#x53C2;&#x6570;&#x7684;&#x8BA1;&#x7B97;&#xFF0C;&#x6216;&#x4EC5;&#x5BF9;&#x5C4F;&#x853D;&#x533A;&#x4F5C;&#x5904;&#x7406;&#x6216;&#x7EDF;&#x8BA1;&#x3002;</li>
+<li>&#x7ED3;&#x6784;&#x7279;&#x5F81;&#x63D0;&#x53D6;&#xFF1A;&#x7528;&#x76F8;&#x4F3C;&#x6027;&#x53D8;&#x91CF;&#x6216;&#x56FE;&#x50CF;&#x5339;&#x914D;&#x65B9;&#x6CD5;&#x68C0;&#x6D4B;&#x548C;&#x63D0;&#x53D6;&#x56FE;&#x50CF;&#x4E2D;&#x4E0E;&#x63A9;&#x6A21;&#x76F8;&#x4F3C;&#x7684;&#x7ED3;&#x6784;&#x7279;&#x5F81;&#x3002;</li>
+<li>&#x7279;&#x6B8A;&#x5F62;&#x72B6;&#x56FE;&#x50CF;&#x5236;&#x4F5C;</li>
+</ul>
+<p>&#x63A9;&#x819C;&#x5728;&#x9065;&#x611F;&#x5F71;&#x50CF;&#x5904;&#x7406;&#x4E2D;&#x4F7F;&#x7528;&#x8F83;&#x591A;&#xFF0C;&#x5F53;&#x63D0;&#x53D6;&#x9053;&#x8DEF;&#x6216;&#x8005;&#x6CB3;&#x6D41;&#xFF0C;&#x6216;&#x8005;&#x623F;&#x5C4B;&#x65F6;&#xFF0C;&#x901A;&#x8FC7;&#x4E00;&#x4E2A;&#x63A9;&#x819C;&#x77E9;&#x9635;&#x6765;&#x5BF9;&#x56FE;&#x50CF;&#x8FDB;&#x884C;&#x50CF;&#x7D20;&#x8FC7;&#x6EE4;&#xFF0C;&#x7136;&#x540E;&#x5C06;&#x6211;&#x4EEC;&#x9700;&#x8981;&#x7684;&#x5730;&#x7269;&#x6216;&#x8005;&#x6807;&#x5FD7;&#x7A81;&#x51FA;&#x663E;&#x793A;&#x51FA;&#x6765;&#x3002;</p>
+<p>&#x6211;&#x4EEC;&#x4F7F;&#x7528;cv.calcHist&#xFF08;&#xFF09;&#x6765;&#x67E5;&#x627E;&#x5B8C;&#x6574;&#x56FE;&#x50CF;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x3002; &#x5982;&#x679C;&#x8981;&#x67E5;&#x627E;&#x56FE;&#x50CF;&#x67D0;&#x4E9B;&#x533A;&#x57DF;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#xFF0C;&#x8BE5;&#x600E;&#x4E48;&#x529E;&#xFF1F; &#x53EA;&#x9700;&#x5728;&#x8981;&#x67E5;&#x627E;&#x76F4;&#x65B9;&#x56FE;&#x7684;&#x533A;&#x57DF;&#x4E0A;&#x521B;&#x5EFA;&#x4E00;&#x4E2A;&#x767D;&#x8272;&#x7684;&#x63A9;&#x819C;&#x56FE;&#x50CF;&#xFF0C;&#x5426;&#x5219;&#x521B;&#x5EFA;&#x9ED1;&#x8272;&#xFF0C; &#x7136;&#x540E;&#x5C06;&#x5176;&#x4F5C;&#x4E3A;&#x63A9;&#x7801;mask&#x4F20;&#x9012;&#x5373;&#x53EF;&#x3002;</p>
+<p>&#x793A;&#x4F8B;&#xFF1A;</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">import</span> cv2 <span class="hljs-keyword">as</span> cv
+<span class="hljs-keyword">from</span> matplotlib <span class="hljs-keyword">import</span> pyplot <span class="hljs-keyword">as</span> plt
+<span class="hljs-comment"># 1. &#x76F4;&#x63A5;&#x4EE5;&#x7070;&#x5EA6;&#x56FE;&#x7684;&#x65B9;&#x5F0F;&#x8BFB;&#x5165;</span>
+img = cv.imread(<span class="hljs-string">&apos;./image/cat.jpeg&apos;</span>,<span class="hljs-number">0</span>)
+<span class="hljs-comment"># 2. &#x521B;&#x5EFA;&#x8499;&#x7248;</span>
+mask = np.zeros(img.shape[:<span class="hljs-number">2</span>], np.uint8)
+mask[<span class="hljs-number">400</span>:<span class="hljs-number">650</span>, <span class="hljs-number">200</span>:<span class="hljs-number">500</span>] = <span class="hljs-number">255</span>
+<span class="hljs-comment"># 3.&#x63A9;&#x6A21;</span>
+masked_img = cv.bitwise_and(img,img,mask = mask)
+<span class="hljs-comment"># 4. &#x7EDF;&#x8BA1;&#x63A9;&#x819C;&#x540E;&#x56FE;&#x50CF;&#x7684;&#x7070;&#x5EA6;&#x56FE;</span>
+mask_histr = cv.calcHist([img],[<span class="hljs-number">0</span>],mask,[<span class="hljs-number">256</span>],[<span class="hljs-number">1</span>,<span class="hljs-number">256</span>])
+<span class="hljs-comment"># 5. &#x56FE;&#x50CF;&#x5C55;&#x793A;</span>
+fig,axes=plt.subplots(nrows=<span class="hljs-number">2</span>,ncols=<span class="hljs-number">2</span>,figsize=(<span class="hljs-number">10</span>,<span class="hljs-number">8</span>))
+axes[<span class="hljs-number">0</span>,<span class="hljs-number">0</span>].imshow(img,cmap=plt.cm.gray)
+axes[<span class="hljs-number">0</span>,<span class="hljs-number">0</span>].set_title(<span class="hljs-string">&quot;&#x539F;&#x56FE;&quot;</span>)
+axes[<span class="hljs-number">0</span>,<span class="hljs-number">1</span>].imshow(mask,cmap=plt.cm.gray)
+axes[<span class="hljs-number">0</span>,<span class="hljs-number">1</span>].set_title(<span class="hljs-string">&quot;&#x8499;&#x7248;&#x6570;&#x636E;&quot;</span>)
+axes[<span class="hljs-number">1</span>,<span class="hljs-number">0</span>].imshow(masked_img,cmap=plt.cm.gray)
+axes[<span class="hljs-number">1</span>,<span class="hljs-number">0</span>].set_title(<span class="hljs-string">&quot;&#x63A9;&#x819C;&#x540E;&#x6570;&#x636E;&quot;</span>)
+axes[<span class="hljs-number">1</span>,<span class="hljs-number">1</span>].plot(mask_histr)
+axes[<span class="hljs-number">1</span>,<span class="hljs-number">1</span>].grid()
+axes[<span class="hljs-number">1</span>,<span class="hljs-number">1</span>].set_title(<span class="hljs-string">&quot;&#x7070;&#x5EA6;&#x76F4;&#x65B9;&#x56FE;&quot;</span>)
+plt.show()
+</code></pre>
+<p><img src="assets/image-20190928160241831.png" alt="image-20190928160241831"></p>
+<h1 id="2-&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;">2 &#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;</h1>
+<h2 id="21-&#x539F;&#x7406;&#x4E0E;&#x5E94;&#x7528;">2.1 &#x539F;&#x7406;&#x4E0E;&#x5E94;&#x7528;</h2>
+<h6 id="&#x60F3;&#x8C61;&#x4E00;&#x4E0B;&#xFF0C;&#x5982;&#x679C;&#x4E00;&#x526F;&#x56FE;&#x50CF;&#x4E2D;&#x7684;&#x5927;&#x591A;&#x6570;&#x50CF;&#x7D20;&#x70B9;&#x7684;&#x50CF;&#x7D20;&#x503C;&#x90FD;&#x96C6;&#x4E2D;&#x5728;&#x67D0;&#x4E00;&#x4E2A;&#x5C0F;&#x7684;&#x7070;&#x5EA6;&#x503C;&#x503C;&#x8303;&#x56F4;&#x4E4B;&#x5185;&#x4F1A;&#x600E;&#x6837;&#x5462;&#xFF1F;&#x5982;&#x679C;&#x4E00;&#x5E45;&#x56FE;&#x50CF;&#x6574;&#x4F53;&#x5F88;&#x4EAE;&#xFF0C;&#x90A3;&#x6240;&#x6709;&#x7684;&#x50CF;&#x7D20;&#x503C;&#x7684;&#x53D6;&#x503C;&#x4E2A;&#x6570;&#x5E94;&#x8BE5;&#x90FD;&#x4F1A;&#x5F88;&#x9AD8;&#x3002;&#x6240;&#x4EE5;&#x5E94;&#x8BE5;&#x628A;&#x5B83;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x505A;&#x4E00;&#x4E2A;&#x6A2A;&#x5411;&#x62C9;&#x4F38;&#xFF08;&#x5982;&#x4E0B;&#x56FE;&#xFF09;&#xFF0C;&#x5C31;&#x53EF;&#x4EE5;&#x6269;&#x5927;&#x56FE;&#x50CF;&#x50CF;&#x7D20;&#x503C;&#x7684;&#x5206;&#x5E03;&#x8303;&#x56F4;&#xFF0C;&#x63D0;&#x9AD8;&#x56FE;&#x50CF;&#x7684;&#x5BF9;&#x6BD4;&#x5EA6;&#xFF0C;&#x8FD9;&#x5C31;&#x662F;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x8981;&#x505A;&#x7684;&#x4E8B;&#x60C5;&#x3002;">&#x60F3;&#x8C61;&#x4E00;&#x4E0B;&#xFF0C;&#x5982;&#x679C;&#x4E00;&#x526F;&#x56FE;&#x50CF;&#x4E2D;&#x7684;&#x5927;&#x591A;&#x6570;&#x50CF;&#x7D20;&#x70B9;&#x7684;&#x50CF;&#x7D20;&#x503C;&#x90FD;&#x96C6;&#x4E2D;&#x5728;&#x67D0;&#x4E00;&#x4E2A;&#x5C0F;&#x7684;&#x7070;&#x5EA6;&#x503C;&#x503C;&#x8303;&#x56F4;&#x4E4B;&#x5185;&#x4F1A;&#x600E;&#x6837;&#x5462;&#xFF1F;&#x5982;&#x679C;&#x4E00;&#x5E45;&#x56FE;&#x50CF;&#x6574;&#x4F53;&#x5F88;&#x4EAE;&#xFF0C;&#x90A3;&#x6240;&#x6709;&#x7684;&#x50CF;&#x7D20;&#x503C;&#x7684;&#x53D6;&#x503C;&#x4E2A;&#x6570;&#x5E94;&#x8BE5;&#x90FD;&#x4F1A;&#x5F88;&#x9AD8;&#x3002;&#x6240;&#x4EE5;&#x5E94;&#x8BE5;&#x628A;&#x5B83;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x505A;&#x4E00;&#x4E2A;&#x6A2A;&#x5411;&#x62C9;&#x4F38;&#xFF08;&#x5982;&#x4E0B;&#x56FE;&#xFF09;&#xFF0C;&#x5C31;&#x53EF;&#x4EE5;&#x6269;&#x5927;&#x56FE;&#x50CF;&#x50CF;&#x7D20;&#x503C;&#x7684;&#x5206;&#x5E03;&#x8303;&#x56F4;&#xFF0C;&#x63D0;&#x9AD8;&#x56FE;&#x50CF;&#x7684;&#x5BF9;&#x6BD4;&#x5EA6;&#xFF0C;&#x8FD9;&#x5C31;&#x662F;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x8981;&#x505A;&#x7684;&#x4E8B;&#x60C5;&#x3002;</h6>
+<p><img src="assets/image-20190928162111755.png" alt="image-20190928162111755"></p>
+<h6 id="&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x662F;&#x628A;&#x539F;&#x59CB;&#x56FE;&#x50CF;&#x7684;&#x7070;&#x5EA6;&#x76F4;&#x65B9;&#x56FE;&#x4ECE;&#x6BD4;&#x8F83;&#x96C6;&#x4E2D;&#x7684;&#x67D0;&#x4E2A;&#x7070;&#x5EA6;&#x533A;&#x95F4;&#x53D8;&#x6210;&#x5728;&#x66F4;&#x5E7F;&#x6CDB;&#x7070;&#x5EA6;&#x8303;&#x56F4;&#x5185;&#x7684;&#x5206;&#x5E03;&#x3002;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x5C31;&#x662F;&#x5BF9;&#x56FE;&#x50CF;&#x8FDB;&#x884C;&#x975E;&#x7EBF;&#x6027;&#x62C9;&#x4F38;&#xFF0C;&#x91CD;&#x65B0;&#x5206;&#x914D;&#x56FE;&#x50CF;&#x50CF;&#x7D20;&#x503C;&#xFF0C;&#x4F7F;&#x4E00;&#x5B9A;&#x7070;&#x5EA6;&#x8303;&#x56F4;&#x5185;&#x7684;&#x50CF;&#x7D20;&#x6570;&#x91CF;&#x5927;&#x81F4;&#x76F8;&#x540C;&#x3002;">&#x201C;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x201D;&#x662F;&#x628A;&#x539F;&#x59CB;&#x56FE;&#x50CF;&#x7684;&#x7070;&#x5EA6;&#x76F4;&#x65B9;&#x56FE;&#x4ECE;&#x6BD4;&#x8F83;&#x96C6;&#x4E2D;&#x7684;&#x67D0;&#x4E2A;&#x7070;&#x5EA6;&#x533A;&#x95F4;&#x53D8;&#x6210;&#x5728;&#x66F4;&#x5E7F;&#x6CDB;&#x7070;&#x5EA6;&#x8303;&#x56F4;&#x5185;&#x7684;&#x5206;&#x5E03;&#x3002;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x5C31;&#x662F;&#x5BF9;&#x56FE;&#x50CF;&#x8FDB;&#x884C;&#x975E;&#x7EBF;&#x6027;&#x62C9;&#x4F38;&#xFF0C;&#x91CD;&#x65B0;&#x5206;&#x914D;&#x56FE;&#x50CF;&#x50CF;&#x7D20;&#x503C;&#xFF0C;&#x4F7F;&#x4E00;&#x5B9A;&#x7070;&#x5EA6;&#x8303;&#x56F4;&#x5185;&#x7684;&#x50CF;&#x7D20;&#x6570;&#x91CF;&#x5927;&#x81F4;&#x76F8;&#x540C;&#x3002;</h6>
+<h6 id="&#x8FD9;&#x79CD;&#x65B9;&#x6CD5;&#x63D0;&#x9AD8;&#x56FE;&#x50CF;&#x6574;&#x4F53;&#x7684;&#x5BF9;&#x6BD4;&#x5EA6;&#xFF0C;&#x7279;&#x522B;&#x662F;&#x6709;&#x7528;&#x6570;&#x636E;&#x7684;&#x50CF;&#x7D20;&#x503C;&#x5206;&#x5E03;&#x6BD4;&#x8F83;&#x63A5;&#x8FD1;&#x65F6;&#xFF0C;&#x5728;x&#x5149;&#x56FE;&#x50CF;&#x4E2D;&#x4F7F;&#x7528;&#x5E7F;&#x6CDB;&#xFF0C;&#x53EF;&#x4EE5;&#x63D0;&#x9AD8;&#x9AA8;&#x67B6;&#x7ED3;&#x6784;&#x7684;&#x663E;&#x793A;&#xFF0C;&#x53E6;&#x5916;&#x5728;&#x66DD;&#x5149;&#x8FC7;&#x5EA6;&#x6216;&#x4E0D;&#x8DB3;&#x7684;&#x56FE;&#x50CF;&#x4E2D;&#x53EF;&#x4EE5;&#x66F4;&#x597D;&#x7684;&#x7A81;&#x51FA;&#x7EC6;&#x8282;&#x3002;">&#x8FD9;&#x79CD;&#x65B9;&#x6CD5;&#x63D0;&#x9AD8;&#x56FE;&#x50CF;&#x6574;&#x4F53;&#x7684;&#x5BF9;&#x6BD4;&#x5EA6;&#xFF0C;&#x7279;&#x522B;&#x662F;&#x6709;&#x7528;&#x6570;&#x636E;&#x7684;&#x50CF;&#x7D20;&#x503C;&#x5206;&#x5E03;&#x6BD4;&#x8F83;&#x63A5;&#x8FD1;&#x65F6;&#xFF0C;&#x5728;X&#x5149;&#x56FE;&#x50CF;&#x4E2D;&#x4F7F;&#x7528;&#x5E7F;&#x6CDB;&#xFF0C;&#x53EF;&#x4EE5;&#x63D0;&#x9AD8;&#x9AA8;&#x67B6;&#x7ED3;&#x6784;&#x7684;&#x663E;&#x793A;&#xFF0C;&#x53E6;&#x5916;&#x5728;&#x66DD;&#x5149;&#x8FC7;&#x5EA6;&#x6216;&#x4E0D;&#x8DB3;&#x7684;&#x56FE;&#x50CF;&#x4E2D;&#x53EF;&#x4EE5;&#x66F4;&#x597D;&#x7684;&#x7A81;&#x51FA;&#x7EC6;&#x8282;&#x3002;</h6>
+<p>&#x4F7F;&#x7528;opencv&#x8FDB;&#x884C;&#x76F4;&#x65B9;&#x56FE;&#x7EDF;&#x8BA1;&#x65F6;&#xFF0C;&#x4F7F;&#x7528;&#x7684;&#x662F;&#xFF1A;</p>
+<p>API&#xFF1A;</p>
+<pre><code class="lang-python">dst = cv.equalizeHist(img)
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li>img: &#x7070;&#x5EA6;&#x56FE;&#x50CF;</li>
+</ul>
+<p>&#x8FD4;&#x56DE;&#xFF1A;</p>
+<ul>
+<li>dst : &#x5747;&#x8861;&#x5316;&#x540E;&#x7684;&#x7ED3;&#x679C;</li>
+</ul>
+<p>&#x793A;&#x4F8B;&#xFF1A;</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">import</span> cv2 <span class="hljs-keyword">as</span> cv
+<span class="hljs-keyword">from</span> matplotlib <span class="hljs-keyword">import</span> pyplot <span class="hljs-keyword">as</span> plt
+<span class="hljs-comment"># 1. &#x76F4;&#x63A5;&#x4EE5;&#x7070;&#x5EA6;&#x56FE;&#x7684;&#x65B9;&#x5F0F;&#x8BFB;&#x5165;</span>
+img = cv.imread(<span class="hljs-string">&apos;./image/cat.jpeg&apos;</span>,<span class="hljs-number">0</span>)
+<span class="hljs-comment"># 2. &#x5747;&#x8861;&#x5316;&#x5904;&#x7406;</span>
+dst = cv.equalizeHist(img)
+<span class="hljs-comment"># 3. &#x7ED3;&#x679C;&#x5C55;&#x793A;</span>
+fig,axes=plt.subplots(nrows=<span class="hljs-number">2</span>,ncols=<span class="hljs-number">2</span>,figsize=(<span class="hljs-number">10</span>,<span class="hljs-number">8</span>),dpi=<span class="hljs-number">100</span>)
+axes[<span class="hljs-number">0</span>].imshow(img,cmap=plt.cm.gray)
+axes[<span class="hljs-number">0</span>].set_title(<span class="hljs-string">&quot;&#x539F;&#x56FE;&quot;</span>)
+axes[<span class="hljs-number">1</span>].imshow(dst,cmap=plt.cm.gray)
+axes[<span class="hljs-number">1</span>].set_title(<span class="hljs-string">&quot;&#x5747;&#x8861;&#x5316;&#x540E;&#x7ED3;&#x679C;&quot;</span>)
+plt.show()
+</code></pre>
+<p><img src="assets/image-20190928163431354.png" alt="image-20190928163431354"></p>
+<h2 id="22-&#x81EA;&#x9002;&#x5E94;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;">2.2 &#x81EA;&#x9002;&#x5E94;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;</h2>
+<h6 id="&#x4E0A;&#x8FF0;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#xFF0C;&#x6211;&#x4EEC;&#x8003;&#x8651;&#x7684;&#x662F;&#x56FE;&#x50CF;&#x7684;&#x5168;&#x5C40;&#x5BF9;&#x6BD4;&#x5EA6;&#x3002;-&#x7684;&#x786E;&#x5728;&#x8FDB;&#x884C;&#x5B8C;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x4E4B;&#x540E;&#xFF0C;&#x56FE;&#x7247;&#x80CC;&#x666F;&#x7684;&#x5BF9;&#x6BD4;&#x5EA6;&#x88AB;&#x6539;&#x53D8;&#x4E86;&#xFF0C;&#x5728;&#x732B;&#x817F;&#x8FD9;&#x91CC;&#x592A;&#x6697;&#xFF0C;&#x6211;&#x4EEC;&#x4E22;&#x5931;&#x4E86;&#x5F88;&#x591A;&#x4FE1;&#x606F;&#xFF0C;&#x6240;&#x4EE5;&#x5728;&#x8BB8;&#x591A;&#x60C5;&#x51B5;&#x4E0B;&#xFF0C;&#x8FD9;&#x6837;&#x505A;&#x7684;&#x6548;&#x679C;&#x5E76;&#x4E0D;&#x597D;&#x3002;&#x5982;&#x4E0B;&#x56FE;&#x6240;&#x793A;&#xFF0C;&#x5BF9;&#x6BD4;&#x4E0B;&#x4E24;&#x5E45;&#x56FE;&#x50CF;&#x4E2D;&#x96D5;&#x50CF;&#x7684;&#x753B;&#x9762;&#xFF0C;&#x7531;&#x4E8E;&#x592A;&#x4EAE;&#x6211;&#x4EEC;&#x4E22;&#x5931;&#x4E86;&#x5F88;&#x591A;&#x4FE1;&#x606F;&#x3002;">&#x4E0A;&#x8FF0;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#xFF0C;&#x6211;&#x4EEC;&#x8003;&#x8651;&#x7684;&#x662F;&#x56FE;&#x50CF;&#x7684;&#x5168;&#x5C40;&#x5BF9;&#x6BD4;&#x5EA6;&#x3002; &#x7684;&#x786E;&#x5728;&#x8FDB;&#x884C;&#x5B8C;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x4E4B;&#x540E;&#xFF0C;&#x56FE;&#x7247;&#x80CC;&#x666F;&#x7684;&#x5BF9;&#x6BD4;&#x5EA6;&#x88AB;&#x6539;&#x53D8;&#x4E86;&#xFF0C;&#x5728;&#x732B;&#x817F;&#x8FD9;&#x91CC;&#x592A;&#x6697;&#xFF0C;&#x6211;&#x4EEC;&#x4E22;&#x5931;&#x4E86;&#x5F88;&#x591A;&#x4FE1;&#x606F;&#xFF0C;&#x6240;&#x4EE5;&#x5728;&#x8BB8;&#x591A;&#x60C5;&#x51B5;&#x4E0B;&#xFF0C;&#x8FD9;&#x6837;&#x505A;&#x7684;&#x6548;&#x679C;&#x5E76;&#x4E0D;&#x597D;&#x3002;&#x5982;&#x4E0B;&#x56FE;&#x6240;&#x793A;&#xFF0C;&#x5BF9;&#x6BD4;&#x4E0B;&#x4E24;&#x5E45;&#x56FE;&#x50CF;&#x4E2D;&#x96D5;&#x50CF;&#x7684;&#x753B;&#x9762;&#xFF0C;&#x7531;&#x4E8E;&#x592A;&#x4EAE;&#x6211;&#x4EEC;&#x4E22;&#x5931;&#x4E86;&#x5F88;&#x591A;&#x4FE1;&#x606F;&#x3002;</h6>
+<p><img src="assets/image-20191024105039014.png" alt="image-20191024105039014"></p>
+<p>&#x4E3A;&#x4E86;&#x89E3;&#x51B3;&#x8FD9;&#x4E2A;&#x95EE;&#x9898;&#xFF0C; &#x9700;&#x8981;&#x4F7F;&#x7528;&#x81EA;&#x9002;&#x5E94;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x3002; &#x6B64;&#x65F6;&#xFF0C; &#x6574;&#x5E45;&#x56FE;&#x50CF;&#x4F1A;&#x88AB;&#x5206;&#x6210;&#x5F88;&#x591A;&#x5C0F;&#x5757;&#xFF0C;&#x8FD9;&#x4E9B;&#x5C0F;&#x5757;&#x88AB;&#x79F0;&#x4E3A;&#x201C;tiles&#x201D;&#xFF08;&#x5728; OpenCV &#x4E2D; tiles &#x7684; &#x5927;&#x5C0F;&#x9ED8;&#x8BA4;&#x662F; 8x8&#xFF09;&#xFF0C;&#x7136;&#x540E;&#x518D;&#x5BF9;&#x6BCF;&#x4E00;&#x4E2A;&#x5C0F;&#x5757;&#x5206;&#x522B;&#x8FDB;&#x884C;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x3002; &#x6240;&#x4EE5;&#x5728;&#x6BCF;&#x4E00;&#x4E2A;&#x7684;&#x533A;&#x57DF;&#x4E2D;&#xFF0C; &#x76F4;&#x65B9;&#x56FE;&#x4F1A;&#x96C6;&#x4E2D;&#x5728;&#x67D0;&#x4E00;&#x4E2A;&#x5C0F;&#x7684;&#x533A;&#x57DF;&#x4E2D;&#xFF09;&#x3002;&#x5982;&#x679C;&#x6709;&#x566A;&#x58F0;&#x7684;&#x8BDD;&#xFF0C;&#x566A;&#x58F0;&#x4F1A;&#x88AB;&#x653E;&#x5927;&#x3002;&#x4E3A;&#x4E86;&#x907F;&#x514D;&#x8FD9;&#x79CD;&#x60C5;&#x51B5;&#x7684;&#x51FA;&#x73B0;&#x8981;&#x4F7F;&#x7528;&#x5BF9;&#x6BD4;&#x5EA6;&#x9650;&#x5236;&#x3002;&#x5BF9;&#x4E8E;&#x6BCF;&#x4E2A;&#x5C0F;&#x5757;&#x6765;&#x8BF4;&#xFF0C;&#x5982;&#x679C;&#x76F4;&#x65B9;&#x56FE;&#x4E2D;&#x7684; bin &#x8D85;&#x8FC7;&#x5BF9;&#x6BD4;&#x5EA6;&#x7684;&#x4E0A;&#x9650;&#x7684;&#x8BDD;&#xFF0C;&#x5C31;&#x628A; &#x5176;&#x4E2D;&#x7684;&#x50CF;&#x7D20;&#x70B9;&#x5747;&#x5300;&#x5206;&#x6563;&#x5230;&#x5176;&#x4ED6; bins &#x4E2D;&#xFF0C;&#x7136;&#x540E;&#x5728;&#x8FDB;&#x884C;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#x3002;</p>
+<p><img src="assets/image-20191024105353109.png" alt="image-20191024105353109"></p>
+<p>&#x6700;&#x540E;&#xFF0C;&#x4E3A;&#x4E86; &#x53BB;&#x9664;&#x6BCF;&#x4E00;&#x4E2A;&#x5C0F;&#x5757;&#x4E4B;&#x95F4;&#x7684;&#x8FB9;&#x754C;&#xFF0C;&#x518D;&#x4F7F;&#x7528;&#x53CC;&#x7EBF;&#x6027;&#x5DEE;&#x503C;&#xFF0C;&#x5BF9;&#x6BCF;&#x4E00;&#x5C0F;&#x5757;&#x8FDB;&#x884C;&#x62FC;&#x63A5;&#x3002;</p>
+<p>API&#xFF1A;</p>
+<pre><code class="lang-python">cv.createCLAHE(clipLimit, tileGridSize)
+</code></pre>
+<p>&#x53C2;&#x6570;&#xFF1A;</p>
+<ul>
+<li>clipLimit: &#x5BF9;&#x6BD4;&#x5EA6;&#x9650;&#x5236;&#xFF0C;&#x9ED8;&#x8BA4;&#x662F;40</li>
+<li>tileGridSize: &#x5206;&#x5757;&#x7684;&#x5927;&#x5C0F;&#xFF0C;&#x9ED8;&#x8BA4;&#x4E3A;<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mn>8</mn><mo>&#x2217;</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">8*8</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="strut" style="height:0.64444em;"></span><span class="strut bottom" style="height:0.64444em;vertical-align:0em;"></span><span class="base textstyle uncramped"><span class="mord mathrm">8</span><span class="mbin">&#x2217;</span><span class="mord mathrm">8</span></span></span></span> </li>
+</ul>
+<p>&#x793A;&#x4F8B;&#xFF1A;</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">import</span> cv2 <span class="hljs-keyword">as</span> cv
+<span class="hljs-comment"># 1. &#x4EE5;&#x7070;&#x5EA6;&#x56FE;&#x5F62;&#x5F0F;&#x8BFB;&#x53D6;&#x56FE;&#x50CF;</span>
+img = cv.imread(<span class="hljs-string">&apos;./image/cat.jpeg&apos;</span>,<span class="hljs-number">0</span>)
+<span class="hljs-comment"># 2. &#x521B;&#x5EFA;&#x4E00;&#x4E2A;&#x81EA;&#x9002;&#x5E94;&#x5747;&#x8861;&#x5316;&#x7684;&#x5BF9;&#x8C61;&#xFF0C;&#x5E76;&#x5E94;&#x7528;&#x4E8E;&#x56FE;&#x50CF;</span>
+clahe = cv.createCLAHE(clipLimit=<span class="hljs-number">2.0</span>, tileGridSize=(<span class="hljs-number">8</span>,<span class="hljs-number">8</span>))
+cl1 = clahe.apply(img)
+<span class="hljs-comment"># 3. &#x56FE;&#x50CF;&#x5C55;&#x793A;</span>
+fig,axes=plt.subplots(nrows=<span class="hljs-number">1</span>,ncols=<span class="hljs-number">2</span>,figsize=(<span class="hljs-number">10</span>,<span class="hljs-number">8</span>),dpi=<span class="hljs-number">100</span>)
+axes[<span class="hljs-number">0</span>].imshow(img,cmap=plt.cm.gray)
+axes[<span class="hljs-number">0</span>].set_title(<span class="hljs-string">&quot;&#x539F;&#x56FE;&quot;</span>)
+axes[<span class="hljs-number">1</span>].imshow(cl1,cmap=plt.cm.gray)
+axes[<span class="hljs-number">1</span>].set_title(<span class="hljs-string">&quot;&#x81EA;&#x9002;&#x5E94;&#x5747;&#x8861;&#x5316;&#x540E;&#x7684;&#x7ED3;&#x679C;&quot;</span>)
+plt.show()
+</code></pre>
+<p><img src="assets/image-20190928165605432.png" alt="image-20190928165605432"></p>
+<hr>
+<p><strong>&#x603B;&#x7ED3;</strong></p>
+<ol>
+<li><p>&#x7070;&#x5EA6;&#x76F4;&#x65B9;&#x56FE;&#xFF1A;</p>
+<ul>
+<li><p>&#x76F4;&#x65B9;&#x56FE;&#x662F;&#x56FE;&#x50CF;&#x4E2D;&#x50CF;&#x7D20;&#x5F3A;&#x5EA6;&#x5206;&#x5E03;&#x7684;&#x56FE;&#x5F62;&#x8868;&#x8FBE;&#x65B9;&#x5F0F;&#x3002; </p>
+</li>
+<li><p>&#x5B83;&#x7EDF;&#x8BA1;&#x4E86;&#x6BCF;&#x4E00;&#x4E2A;&#x5F3A;&#x5EA6;&#x503C;&#x6240;&#x5177;&#x6709;&#x7684;&#x50CF;&#x7D20;&#x4E2A;&#x6570;&#x3002;</p>
+</li>
+<li>&#x4E0D;&#x540C;&#x7684;&#x56FE;&#x50CF;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x53EF;&#x80FD;&#x662F;&#x76F8;&#x540C;&#x7684;</li>
+</ul>
+<p>cv.calcHist&#xFF08;images&#xFF0C;channels&#xFF0C;mask&#xFF0C;histSize&#xFF0C;ranges [&#xFF0C;hist [&#xFF0C;accumulate]]&#xFF09;</p>
+</li>
+<li><p>&#x63A9;&#x819C;</p>
+<p>&#x521B;&#x5EFA;&#x8499;&#x7248;&#xFF0C;&#x900F;&#x8FC7;mask&#x8FDB;&#x884C;&#x4F20;&#x9012;&#xFF0C;&#x53EF;&#x83B7;&#x53D6;&#x611F;&#x5174;&#x8DA3;&#x533A;&#x57DF;&#x7684;&#x76F4;&#x65B9;&#x56FE;</p>
+</li>
+<li><p>&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#xFF1A;&#x589E;&#x5F3A;&#x56FE;&#x50CF;&#x5BF9;&#x6BD4;&#x5EA6;&#x7684;&#x4E00;&#x79CD;&#x65B9;&#x6CD5;</p>
+<p>cv.equalizeHist(): &#x8F93;&#x5165;&#x662F;&#x7070;&#x5EA6;&#x56FE;&#x50CF;&#xFF0C;&#x8F93;&#x51FA;&#x662F;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x56FE;&#x50CF;</p>
+</li>
+<li><p>&#x81EA;&#x9002;&#x5E94;&#x7684;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;</p>
+<p>&#x5C06;&#x6574;&#x5E45;&#x56FE;&#x50CF;&#x5206;&#x6210;&#x5F88;&#x591A;&#x5C0F;&#x5757;&#xFF0C;&#x7136;&#x540E;&#x518D;&#x5BF9;&#x6BCF;&#x4E00;&#x4E2A;&#x5C0F;&#x5757;&#x5206;&#x522B;&#x8FDB;&#x884C;&#x76F4;&#x65B9;&#x56FE;&#x5747;&#x8861;&#x5316;&#xFF0C;&#x6700;&#x540E;&#x8FDB;&#x884C;&#x62FC;&#x63A5;</p>
+<p>clahe = cv.createCLAHE(clipLimit, tileGridSize)</p>
+</li>
+</ol>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="section2.html" class="navigation navigation-prev " aria-label="Previous page: 3.3 图像平滑">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="section4.html" class="navigation navigation-next " aria-label="Next page: 3.5 边缘检测">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"3.4 直方图","level":"1.4.4","depth":2,"next":{"title":"3.5 边缘检测","level":"1.4.5","depth":2,"path":"OpenCV图像处理/section4.md","ref":"OpenCV图像处理/section4.md","articles":[]},"previous":{"title":"3.3 图像平滑","level":"1.4.3","depth":2,"path":"OpenCV图像处理/section2.md","ref":"OpenCV图像处理/section2.md","articles":[]},"dir":"ltr"},"config":{"plugins":["code","splitter","expandable-chapters","chart","graph","katex"],"root":".","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"splitter":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"code":{"copyButtons":true},"graph":{},"katex":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"chart":{"type":"c3"},"expandable-chapters":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"title":"opencv","language":"zh-hans","output.name":"site","gitbook":"3.2.3"},"file":{"path":"OpenCV图像处理/section3.md","mtime":"2019-10-24T07:10:53.496Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-12-18T03:16:54.606Z"},"basePath":"..","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="../gitbook/gitbook.js"></script>
+    <script src="../gitbook/theme.js"></script>
+    
+        
+        <script src="../gitbook/gitbook-plugin-code/plugin.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-splitter/splitter.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-expandable-chapters/expandable-chapters.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="../gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
