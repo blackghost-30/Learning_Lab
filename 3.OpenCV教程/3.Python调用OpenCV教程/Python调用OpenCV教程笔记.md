@@ -1,4 +1,4 @@
-# 第一章：课程简介
+# 第零章：课程简介
 
 本章主要对课程的内容进行介绍。
 
@@ -29,7 +29,7 @@
 
 
 
-# 第二章：OpenCV简介
+# 第一章：OpenCV简介
 
 本章主要对图像处理中的基本概念以及OpenCV进行介绍。
 
@@ -188,7 +188,7 @@ pip install opencv-contrib-python==3.4.2.17
 
 
 
-# 第三章：OpenCV基本操作
+# 第二章：OpenCV基本操作
 
 本章主要介绍OpenCV中的基本操作。
 
@@ -209,13 +209,717 @@ pip install opencv-contrib-python==3.4.2.17
 
 ## 第六课：2-1_图像的IO操作
 
+这一小节将介绍如何读取图像、如何显示图像和如何保存图像。
+
+### 1.读取图像
+
+- **API：**
+
+```python
+cv.imread()
+```
+
+- **参数：**
+  - 要读取的图像的路径，可采用**相对或绝对路径**；
+  - 读取方式的标志：
+    - **cv.IMREAD*COLOR**：以彩色模式加载图像，任何图像的透明度都将被忽略。这是默认参数；
+    - **cv.IMREAD*GRAYSCALE**：以灰度模式加载图像；
+    - **cv.IMREAD_UNCHANGED**：包括alpha通道的加载图像模式；
+    - **可以使用1、0或者-1来替代上面三个标志**；
+  - **注意：**
+    - **如果加载的路径有错误，不会报错，会返回一个None值；**
+    - **OpenCV中读取出来的图像是按BGR的格式存储的，后期若用matplotlib显示的话要翻转通道**；
+- **参考代码：**
+
+```python
+import numpy as np
+import cv2 as cv
+
+# 以灰度图的形式读取图像
+img = cv.imread('messi5.jpg',0)
+```
+
+
+
+### 2.显示图像
+
+- **API：**
+
+```python
+cv.imshow()
+```
+
+- **参数：**
+  - 显示图像的窗口名称，以字符串类型表示；
+  - 要加载的图像，一般是**调用读取图像API时的返回值**；
+  - **注意：在调用显示图像的API后，要调用cv.waitKey()给图像绘制留下时间，否则窗口会出现无响应情况，并且图像无法显示出来**；
+- **参考代码：**
+
+```python
+# opencv中显示
+cv.imshow('image',img)
+cv.waitKey(0)		# 永远等待
+
+# matplotlib中展示
+plt.imshow(img[:,:,::-1])
+
+```
+
+
+
+### 3.保存图像
+
+- **API：**
+
+```python
+cv.imwrite()
+```
+
+- **参数：**
+  - 文件名，要保存在哪里，即保存的路径；
+  - 要保存的图像；
+- **参考代码：**
+
+```python
+cv.imwrite('messigray.png',img)
+```
+
+
+
+### 4.上机实验
+
+```python
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 1 读取图像
+img = cv.imread('images/Chapter2/2-1-1.png',1)
+
+# 2 显示图像
+# 2.1 利用opencv展示图像
+# cv.imshow('image',img)
+
+# 2.2 在matplotlib中展示图像
+# OpenCV读取的图像是按BGR格式存储的，需转换成matplotlib的RGB格式
+plt.imshow(img[:,:,::-1])		# plt.imshow(img, cmap=plot.cm.gray)
+plt.title('匹配结果'), plt.xticks([]), plt.yticks([])
+plt.show()
+k = cv.waitKey(0)
+
+# 3 保存图像
+cv.imwrite('images/Chapter2/2-1-1_save.png',img)
+
+```
+
 
 
 ## 第七课：2-1_在图像上绘制图形
 
+### 1.绘制直线
+
+- **API：**
+
+```python
+cv.line(img, start, end, color, thickness)
+```
+
+- **参数：**
+  - **img**：要绘制直线的图像；
+  - **start,end**： 直线的起点和终点；
+  - **color**：线条的颜色；
+  - **thickness**： 线条宽度；
+
+
+
+### 2.绘制圆形
+
+- **API：**
+
+```python
+cv.circle(img, centerpoint, r, color, thickness)
+```
+
+- **参数：**
+  - **img**：要绘制圆形的图像；
+  - **Centerpoint, r**：圆心和半径；
+  - **color**：线条的颜色；
+  - **thickness**：线条宽度，为**-1**时生成闭合图案并填充颜色；
+
+
+
+### 3.绘制矩形
+
+- **API：**
+
+```python
+cv.rectangle(img,leftupper,rightdown,color,thickness)
+```
+
+- **参数：**
+  - **img**：要绘制矩形的图像；
+  - **leftupper, rightdown**：矩形的左上角和右下角坐标；
+  - **color**：线条的颜色；
+  - **thickness**：线条宽度；
+
+
+
+### 4.向图像中添加文字
+
+- **API：**
+
+```python
+cv.putText(img,text,station, font, fontsize,color,thickness,cv.LINE_AA)
+```
+
+- **参数：**
+  - **img**：图像；
+  - **text**：要写入的文本数据；
+  - **station**：文本的放置位置；
+  - **font**：字体；
+  - **fontsize**：字体大小；
+
+
+
+### 5.上机实验
+
+```python
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 1 创建一个空白的图像
+img = np.zeros((512,512,3), np.uint8)
+
+# 2 绘制图形
+cv.line(img, (0,0), (511,511), (255,0,0), 5)	# 左上角为(0, 0)坐标
+cv.rectangle(img, (384,0), (510,128), (0,255,0), 3)
+cv.circle(img, (447,63), 63, (0,0,255), -1)
+font = cv.FONT_HERSHEY_SIMPLEX
+cv.putText(img,'OpenCV', (10,500), font, 4, (255,255,255), 2 , cv.LINE_AA)
+
+# 3 图像展示
+plt.imshow(img[:,:,::-1])
+plt.title('匹配结果'), plt.xticks([]), plt.yticks([])
+plt.show()
+
+# 4 保存图像
+cv.imwrite('images/Chapter2/2-1-2_save.png',img)
+
+```
+
+![2-2最终效果](images/第二章/2-1-2_save.png)
+
 
 
 ## 第八课：2-1_图像基本操作的其他内容
+
+### 1.获取并修改图像中的像素点
+
+- 我们可以通过**行和列的坐标值**获取该像素点的像素值；
+- 对于BGR图像，它返回一个**蓝，绿，红值的数组**；
+- 对于灰度图像，仅返回**相应的强度值**；
+- 使用相同的方法对像素值进行修改；
+- 示例代码如下：可在**jupyter notebook**中验证
+
+```python
+import numpy as np
+import cv2 as cv
+
+img = cv.imread('messi5.jpg')
+
+# 获取某个像素点的值
+px = img[100,100]
+
+# 仅获取蓝色通道的强度值
+blue = img[100,100,0]
+
+# 修改某个位置的像素值
+img[100,100] = [255,255,255]
+
+```
+
+
+
+### 2.获取图像的属性
+
+- 图像属性包括行数、列数和通道数、图像数据类型、像素数等；
+
+| 属性                     | API       |
+| ------------------------ | --------- |
+| 形状                     | img.shape |
+| 图像大小，即一共多少像素 | img.size  |
+| 数据类型                 | img.dtype |
+
+
+
+### 3.图像通道的拆分和合并
+
+- 有时需要**在B，G，R通道图像上单独工作**，在这种情况下，需要将BGR图像分割为**单个通道**；
+- 或者在其他情况下，可能需要将这些单独的通道合并到BGR图像；
+- 示例代码：注意OpenCV的BGR颜色顺序
+
+```python
+# 通道拆分
+b,g,r = cv.split(img)
+
+# 通道合并
+img = cv.merge((b,g,r))
+
+```
+
+
+
+### 4.色彩空间的改变
+
+- OpenCV中有150多种颜色空间转换方法；
+- 最广泛使用的转换方法有两种：
+  - **BGR↔Gray；**
+  - **BGR↔HSV；**
+- API：
+
+```python
+cv.cvtColor(input_image，flag)
+```
+
+- 参数：
+  - input_image：进行颜色空间转换的图像；
+  - flag：转换类型：
+    - cv.COLOR_BGR2GRAY：BGR↔Gray；
+    - cv.COLOR_BGR2HSV：BGR→HSV；
+
+
+
+## 第九课：2-1_图像基础处理总结
+
+- 图像IO操作的API：
+  - cv.imread()：读取图像
+  - cv.imshow()：显示图像
+  - cv.imwrite()：保存图像
+
+- 在图像上绘制几何图像：
+  - cv.line()：绘制直线
+  - cv.circle()：绘制圆形
+  - cv.rectangle()：绘制矩形
+  - cv.putText()：在图像上添加文字
+
+- 直接使用行列索引获取图像中的像素并进行修改；
+
+- 图像的属性
+
+| 属性                     | API       |
+| ------------------------ | --------- |
+| 形状                     | img.shape |
+| 图像大小，即一共多少像素 | img.size  |
+| 数据类型                 | img.dtype |
+
+- 拆分通道与合并通道：
+  - 拆分通道：cv.split()
+  - 合并通道：cv.merge()
+
+- 色彩空间的改变：
+  - cv.cvtColor(input_image，flag)
+
+
+
+## 第十节课：2-2图像的加法
+
+### 1.图像的加法简介
+
+- 使用OpenCV的**cv.add()函数**把两幅图像相加，或通过numpy操作添加两个图像，如res = img1 + img2；
+- 两个图像应该具有相同的大小和类型，或者第二个图像可以是标量值；
+- 两者的不同：
+  - **OpenCV的加法是饱和操作；**
+  - **Numpy添加是模运算；**
+  - **一般而言OpenCV的加法操作会更好一些**
+
+
+
+### 2.上机实验
+
+- 示例代码1：
+
+```python
+>>> x = np.uint8([250])
+>>> y = np.uint8([10])
+>>> print( cv.add(x,y) ) # 250+10 = 260 => 255
+[[255]]
+>>> print( x+y )          # 250+10 = 260 % 256 = 4
+[4]
+```
+
+- 示例代码2：
+
+```python
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img1 = cv.imread("images/Chapter2/view.jpg")
+img2 = cv.imread("images/Chapter2/rain.jpg")
+
+# 2 加法操作
+img3 = cv.add(img1,img2) # cv中的加法
+img4 = img1+img2 # 直接相加
+
+# 3 图像显示
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img3[:,:,::-1])
+axes[0].set_title("cv中的加法")
+axes[1].imshow(img4[:,:,::-1])
+axes[1].set_title("直接相加")
+plt.show()
+
+# 4 保存图像
+cv.imwrite('images/Chapter2/2-2-1_save.png',img3)
+cv.imwrite('images/Chapter2/2-2-2_save.png',img4)
+
+```
+
+![2-2对比图](images/第二章/2-2对比图.png)
+
+
+
+## 第十一节课：2-2图像的混合
+
+- **定义：**
+
+  - 混合也是加法，但是不同的是**两幅图像的权重不同**，这就会给人一种混合或者透明的感觉；
+
+- **图像混合的计算公式如下：**
+
+  - ```latex
+    g(x) = (1−α)f0(x) + αf1(x)
+    ```
+
+  - 通过修改**α的值（0 → 1）**，可以实现非常炫酷的混合；
+
+- **API：**
+
+```python
+cv2.addWeighted()
+```
+
+- **参数：**
+
+```python
+dst = α⋅img1 + β⋅img2 + γ
+```
+
+- **参考代码：**
+
+```python
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 1 读取图像
+img1 = cv.imread("images/Chapter2/view.jpg")
+img2 = cv.imread("images/Chapter2/rain.jpg")
+
+# 2 图像混合
+img3 = cv.addWeighted(img1, 0.7, img2, 0.3, 0)
+
+# 3 图像显示
+plt.figure(figsize=(8,8))
+plt.imshow(img3[:,:,::-1])
+plt.show()
+
+# 4 保存图像
+cv.imwrite('images/Chapter2/2-2-2_save.png',img3)
+
+```
+
+![最终效果](images/第二章/2-2-2_save.png)
+
+
+
+# 第三章：OpenCV图像处理
+
+本章主要讲解OpenCV中对于图像的处理部分，主要包括：
+
+- 图像的几何变换；
+- 图像的形态学转换；
+- 图像的平滑方法；
+- 直方图的方法；
+- 边缘检测的方法；
+- 模板匹配和霍夫变换的应用；
+
+
+
+## 第十二节课：3-1_图像缩放
+
+### 1.内容介绍
+
+- 缩放是对图像的大小进行调整，即是图像放大或缩小；
+- **API：**
+
+```python
+cv2.resize(src, dsize, fx=0, fy=0, interpolation=cv2.INTER_LINEAR)
+```
+
+- **参数：**
+
+  - src：输入图像；
+  - dsize：绝对尺寸，直接指定调整后图像的大小；
+  - fx,fy：相对尺寸，将dsize设置为None，然后将fx和fy设置为比例因子即可；
+  - interpolation：插值方法
+
+  | 插值              | 含义                   |
+  | ----------------- | ---------------------- |
+  | cv2.INTER_LINEAR  | 双线性插值法           |
+  | cv2.INTER_NEAREST | 最近邻插值             |
+  | cv2.INTER_AREA    | 像素区域重采样（默认） |
+  | cv2.INTER_CUBIC   | 双三次插值             |
+
+
+
+### 2.上机实验
+
+```python
+# 图像的缩放示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 读取图片
+img1 = cv.imread("images/Chapter3/kid.jpg")
+# 2.图像缩放
+# 2.1 绝对尺寸
+rows,cols = img1.shape[:2]      # 获取行列的像素值
+res1 = cv.resize(img1,(2*cols,2*rows),interpolation=cv.INTER_CUBIC)      # 绝对缩放
+
+# 2.2 相对尺寸
+res2 = cv.resize(img1,None,fx=0.5,fy=0.5)
+
+# 3 图像显示
+# 3.1 使用opencv显示图像(不推荐)
+# cv.imshow("orignal",img1)
+# cv.imshow("enlarge",res)
+# cv.imshow("shrink）",res1)
+# cv.waitKey(0)
+
+# 3.2 使用matplotlib显示图像
+fig,axes=plt.subplots(nrows=1,ncols=3,figsize=(10,8),dpi=100)
+axes[0].imshow(res1[:,:,::-1])
+axes[0].set_title("绝对尺度（放大）")
+axes[1].imshow(img1[:,:,::-1])
+axes[1].set_title("原图")
+axes[2].imshow(res2[:,:,::-1])
+axes[2].set_title("相对尺度（缩小）")
+plt.show()
+
+```
+
+
+
+## 第十三节课：3-1_图像平移
+
+### 1.内容介绍
+
+- 图像平移将图像按照**指定方向和距离**，移动到相应的位置；
+- **API：**
+
+```python
+cv.warpAffine(img, M, dsize)
+```
+
+- **参数：**
+
+  - img：输入图像；
+  - **M：2*3移动矩阵**
+
+  ![图像的平移之矩阵参数](images/第三章/图像的平移之矩阵参数.png)
+
+  - dsize：输出图像的大小；
+  - **注意：输出图像的大小，它应该是(宽度，高度)的形式。请记住，width=列数，height=行数；**
+
+
+
+### 2.上机实验
+
+```python
+# 图像的平移示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 读取图像
+img1 = cv.imread("images/Chapter3/kid.jpg")
+
+# 2. 图像平移
+rows,cols = img1.shape[:2]
+M = np.float32([[1, 0, 100], [0, 1, 50]])	# 平移矩阵
+dst = cv.warpAffine(img1, M, (cols, rows))
+
+# 3. 图像显示
+fig, axes=plt.subplots(nrows=1, ncols=2, figsize=(10,8), dpi=100)
+axes[0].imshow(img1[:,:,::-1])
+axes[0].set_title("原图")
+axes[1].imshow(dst[:,:,::-1])
+axes[1].set_title("平移后结果")
+plt.show()
+
+```
+
+
+
+## 第十四节课：3-1_图像旋转
+
+### 1.内容介绍
+
+- **基本定义：**
+  - 图像旋转是指图像按照某个位置转动一定角度的过程，旋转中图像仍保持原始尺寸；
+  - 图像旋转后图像的水平对称轴、垂直对称轴及中心坐标原点都可能会发生变换；
+  - 因此需要对图像旋转中的坐标进行相应转换；
+
+- **理论推导：**
+
+---
+
+图像的旋转，本质是**坐标轴的旋转：**
+
+![坐标轴的旋转](images/第三章/图像的旋转坐标示意图.png)
+
+假设图像逆时针旋转了θ角，则根据坐标转换可得：
+
+![旋转变换1](images/第三章/旋转方程式1.png)
+
+其中有：
+
+![几何角度关系](images/第三章/几何关系.png)
+
+将其带入上面的公式中可得：
+
+![旋转变换2](images/第三章/旋转方程式2.png)
+
+用旋转矩阵来表示为：
+
+![旋转矩阵1](images/第三章/旋转矩阵1.png)
+
+也就是说，**相对于原来的那个坐标系而言，原本为(x, y)的坐标将变为(x', y')，这样就得到了坐标**。
+
+除此之外我们还要修正原点的位置，因为原图像中的坐标原点在图像的左上角，经过旋转后图像的大小会有所变化，原点也需要修正。
+
+假设在旋转的时候是以旋转中心为坐标原点的，旋转结束后还需要将坐标原点移到图像左上角，也就是还要进行一次变换。
+
+![旋转示意图](images/第三章/旋转示意图.png)
+
+即在原有的矩阵变换的基础上还需要再次进行一次矩阵变换：
+
+![旋转矩阵2](images/第三章/旋转矩阵2.png)
+
+---
+
+
+
+### 2.OpenCV的函数操作及上机实验
+
+- **思想：**
+  - **在OpenCV中图像旋转首先根据旋转角度和旋转中心获取旋转矩阵；**
+  - **然后根据旋转矩阵进行变换，即可实现任意角度和任意中心的旋转效果；**
+- **API：**
+
+```python
+cv2.getRotationMatrix2D(center, angle, scale)
+```
+
+- **参数：**
+  - center：旋转中心；
+  - angle：旋转角度；
+  - scale：缩放比例；
+- **返回：**
+  - M：旋转矩阵；
+  - 需要再调用cv.warpAffine完成图像的旋转；
+- **上机实验：**
+
+```python
+# 图像旋转的示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread("images/Chapter3/kid.jpg")
+
+# 2 图像旋转
+rows,cols = img.shape[:2]
+# 2.1 生成旋转矩阵
+M = cv.getRotationMatrix2D((cols/2,rows/2),90,1)
+# 2.2 进行旋转变换
+dst = cv.warpAffine(img,M,(cols,rows))
+
+# 3 图像展示
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img[:,:,::-1])
+axes[0].set_title("原图")
+axes[1].imshow(dst[:,:,::-1])
+axes[1].set_title("旋转后结果")
+plt.show()
+
+```
+
+
+
+## 第十五节课：3-1_图像的仿射变换
+
+
+
+
+
+
+
+
+
+## 第十六节课：3-1_图像的透射变换
+
+
+
+## 第十七节课：3-1_图像金字塔
+
+
+
+## 第十八节课：3-1_几何变换总结
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
