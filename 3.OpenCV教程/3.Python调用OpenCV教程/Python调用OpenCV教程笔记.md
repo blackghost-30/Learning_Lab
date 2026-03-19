@@ -643,12 +643,12 @@ cv.imwrite('images/Chapter2/2-2-2_save.png',img3)
 
 本章主要讲解OpenCV中对于图像的处理部分，主要包括：
 
-- 图像的几何变换；
-- 图像的形态学转换；
-- 图像的平滑方法；
-- 直方图的方法；
-- 边缘检测的方法；
-- 模板匹配和霍夫变换的应用；
+- 3-1_图像的几何变换；
+- 3-2_图像的形态学转换；
+- 3-3_图像的平滑方法；
+- 3-4_直方图的方法；
+- 3-5_边缘检测的方法；
+- 3-6_模板匹配和霍夫变换的应用；
 
 
 
@@ -828,7 +828,7 @@ plt.show()
 
 
 
-### 2.OpenCV的函数操作及上机实验
+### 2.API介绍
 
 - **思想：**
   - **在OpenCV中图像旋转首先根据旋转角度和旋转中心获取旋转矩阵；**
@@ -846,7 +846,10 @@ cv2.getRotationMatrix2D(center, angle, scale)
 - **返回：**
   - M：旋转矩阵；
   - 需要再调用cv.warpAffine完成图像的旋转；
-- **上机实验：**
+
+
+
+### 3.上机实验
 
 ```python
 # 图像旋转的示例代码
@@ -879,29 +882,694 @@ plt.show()
 
 ```
 
+![图像的旋转效果图](images/第三章/图像的旋转效果图.png)
+
 
 
 ## 第十五节课：3-1_图像的仿射变换
 
+### 1.内容介绍
+
+- 图像的仿射变换涉及到图像的**形状位置角度**的变化，是对图像的缩放，旋转，翻转和平移等操作的组合；
+- **原理介绍：**
+  - 图1中的点1，2和3与图二中三个点一一映射，仍然形成三角形，但形状已经大大改变；
+  - **通过两组三点求出仿射变换**， 就能把仿射变换应用到图像中所有的点中，完成图像的仿射变换；
+
+![仿射变换示意图](images/第三章/仿射变换示意图.png)
+
+- **OpenCV中的原理做法**
+
+  - 在OpenCV中，仿射变换的矩阵是一个**2×3的矩阵**：
+
+  ![仿射变换矩阵1](images/第三章/仿射变换矩阵1.png)
+
+  - 其中左边的2×2子矩阵A是线性变换矩阵，右边的2×1子矩阵B是平移项：
+
+  ![仿射变换矩阵2](images/第三章/仿射变换矩阵2.png)
+
+  - 对于图像上的任一位置(x,y)，仿射变换执行的是如下的操作：
+
+  ![仿射变换矩阵3](images/第三章/仿射变换矩阵3.png)
+
+  - 对于图像，宽度方向是x，高度方向是y，坐标的顺序和图像像素对应下标一致。所以原点的位置是左上角，y的方向是向下；
+  - **基本思想总结：**
+    - 在仿射变换中，原图中所有的平行线在结果图像中同样平行；
+    - 为了创建这个矩阵我们需要从原图像中**找到三个点以及他们在输出图像中的位置**；
+    - 然后**cv2.getAﬃneTransform**会创建一个 2x3 的矩阵，最后这个矩阵会被传给函数**cv2.warpAﬃne；**
 
 
 
+### 2.API介绍
+
+- 获取变换矩阵：
+
+  ````python
+  cv2.getAﬃneTransform()
+  ````
+
+  - 传入变换前的三个点坐标和变换后的三个点坐标即可得到仿射变换矩阵；
+
+- 进行仿射变换：
+
+  ```python
+  cv2.warpAﬃne()
+  ```
+
+  - 仍是是将变换矩阵传递给平移函数，然后得到效果；
 
 
+
+### 3.上机实验
+
+```python
+# 图像的仿射变换的示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 图像读取
+img = cv.imread("images/Chapter3/kid.jpg")
+
+# 2 仿射变换
+rows,cols = img.shape[:2]
+# 2.1 创建变换矩阵
+pts1 = np.float32([[50,50],[200,50],[50,200]])
+pts2 = np.float32([[100,100],[200,50],[100,250]])
+M = cv.getAffineTransform(pts1,pts2)
+# 2.2 完成仿射变换
+dst = cv.warpAffine(img,M,(cols,rows))
+
+# 3 图像显示
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img[:,:,::-1])
+axes[0].set_title("原图")
+axes[1].imshow(dst[:,:,::-1])
+axes[1].set_title("仿射后结果")
+plt.show()
+
+```
+
+![图像的仿射变换效果图](images/第三章/图像的仿真变换效果图.png)
 
 
 
 ## 第十六节课：3-1_图像的透射变换
 
+### 1.内容介绍
+
+- **定义：**
+
+  - 透射变换是视角变化的结果；
+  - 利用透视中心、像点、目标点三点共线的条件；
+
+  ![透射示意图](images/第三章/投影示意图.png)
+
+- **OpenCv中的原理作用：**
+
+  - 它的本质将图像投影到一个新的视平面，其通用变换公式为：
+
+  ![透射变换矩阵1](images/第三章/透射变换矩阵1.png)
+
+  - 其中，(u,v)是原始的图像像素坐标，w取值为1；
+  - (x=x'/z',y=y'/z')是透射变换后的结果；
+  - 后面的矩阵称为透视变换矩阵，一般情况下，我们将其分为三部分：
+
+  ![透射矩阵2](images/第三章/透射变换矩阵2.png)
+
+  - T1表示对图像进行线性变换，T2对图像进行平移，T3表示对图像进行投射变换，最后一个数一般设为1；
+  - **基本思想总结：**
+    - 在opencv中，我们要找到四个点，其中任意三个不共线，然后获取变换矩阵T，再进行透射变换；
+    - 通过函数**cv.getPerspectiveTransform()**找到变换矩阵；
+    - 将**cv.warpPerspective()**应用于此3x3变换矩阵；
+
+
+
+### 2.API介绍
+
+- 获取变换矩阵：
+
+  ````python
+  cv.getPerspectiveTransform()
+  ````
+
+  - 传入变换前的四个点坐标和变换后的四个点坐标即可得到仿射变换矩阵；
+
+- 进行仿射变换：
+
+  ```python
+  cv.warpPerspective()
+  ```
+
+  - 仍是是将变换矩阵传递给函数，然后得到效果；
+
+
+
+### 3.上机实验
+
+```python
+# 图像的透射 变换的示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread("images/Chapter3/kid.jpg")
+
+# 2 透射变换
+rows,cols = img.shape[:2]
+# 2.1 创建变换矩阵
+pts1 = np.float32([[56,65],[368,52],[28,387],[389,390]])
+pts2 = np.float32([[100,145],[300,100],[80,290],[310,300]])
+
+T = cv.getPerspectiveTransform(pts1,pts2)
+# 2.2 进行变换
+dst = cv.warpPerspective(img,T,(cols,rows))
+
+# 3 图像显示
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img[:,:,::-1])
+axes[0].set_title("原图")
+axes[1].imshow(dst[:,:,::-1])
+axes[1].set_title("透射后结果")
+plt.show()
+```
+
+![图像的透射变换效果](images/第三章/透射变换效果图.png)
+
 
 
 ## 第十七节课：3-1_图像金字塔
+
+### 1.内容介绍
+
+- 图像金字塔是图像多尺度表达的一种，主要用于图像的分割，是一种以多分辨率来解释图像的有效但概念简单的结构；
+- 一幅图像的金字塔是一系列以金字塔形状排列的分辨率逐步降低，且来源于同一张原始图的图像集合；
+- 其通过梯次向下采样获得，直到达到某个终止条件才停止采样；
+
+- **金字塔的底部是待处理图像的高分辨率表示，而顶部是低分辨率的近似，层级越高，图像越小，分辨率越低；**
+
+![图像金字塔](images/第三章/图像金字塔.jpeg)
+
+
+
+### 2.API介绍
+
+```python
+cv.pyrUp(img)		# 对图像进行上采样
+cv.pyrDown(img)		# 对图像进行下采样
+```
+
+
+
+### 3.上机实验
+
+```python
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 1 图像读取
+img = cv.imread("./image/image2.jpg")
+
+# 2 进行图像采样
+up_img = cv.pyrUp(img)  # 上采样操作
+img_1 = cv.pyrDown(img)  # 下采样操作
+
+# 3 图像显示
+cv.imshow('enlarge', up_img)
+cv.imshow('original', img)
+cv.imshow('shrink', img_1)
+cv.waitKey(0)
+cv.destroyAllWindows()
+```
+
+![图像金字塔效果图](images/第三章/图像金字塔效果图.png)
 
 
 
 ## 第十八节课：3-1_几何变换总结
 
+- 图像缩放：对图像进行放大或缩小
+  - **cv.resize()**
 
+- 图像平移：
+  - 指定平移矩阵后，调用**cv.warpAffine()**平移图像
+
+- 图像旋转：
+  - 调用**cv.getRotationMatrix2D()**获取旋转矩阵，然后调用**cv.warpAffine()**进行旋转
+
+- 仿射变换：
+  - 调用**cv.getAffineTransform()**将创建变换矩阵，最后该矩阵将传递给**cv.warpAffine()**进行变换
+
+- 透射变换：
+  - 通过函数**cv.getPerspectiveTransform()**找到变换矩阵，将**cv.warpPerspective()**进行投射变换
+
+- 金字塔
+  - 图像金字塔是图像多尺度表达的一种，使用的API：
+    - **cv.pyrUp()**：向上采样
+    - **cv.pyrDown()**：向下采样
+
+
+
+## 第十九节课：3-2_连通性
+
+### 1.邻接
+
+- 图像中，最小的单位是像素，每个像素周围有8个邻接像素，常见的邻接关系有3种：
+  - **4邻接**：像素p(x,y)的4邻域是：(x+1,y)；(x-1,y)；(x,y+1)；(x,y-1)，用*N*4(*p*)表示像素p的4邻接；
+  - **D邻接**：像素p(x,y)的D邻域是：对角上的点 (x+1,y+1)；(x+1,y-1)；(x-1,y+1)；(x-1,y-1)，用*ND(p)*表示像素p的D邻域；
+  - **8邻接**：像素p(x,y)的8邻域是： 4邻域的点＋D邻域的点，用*N*8(*p*)表示像素p的8邻域；
+
+![邻接的概念](images/第三章/邻接的概念.png)
+
+
+
+### 2.连通性
+
+- **连通性**是描述区域和边界的重要概念，两个像素连通的两个必要条件是：
+
+  - 两个像素的位置是否相邻；
+  - **两个像素的灰度值是否满足特定的相似性准则或者是否相等**；
+
+- 根据连通性的定义，有4联通、8联通和m联通三种：
+
+  - **4连通**：对于具有值*V*的像素*p*和*q*，如果*q*在集合*N*4(*p*)中，则称这两个像素是4连通；
+  - **8连通**：对于具有值*V*的像素*p*和*q*，如果*q*在集合*N*8(*p*)中，则称这两个像素是8连通；
+
+  ![4连通与8连通](images/第三章/4连通和8连通.png)
+
+  - **m连通**：对于具有值*V*的像素*p*和*q*，如果：
+
+    - *q*在集合*N*4(*p*)中，或
+    - *q*在集合*N**D*(*p*)中，并且***N*4(*p*)与*N*4(*q*)的交集没有值*V*的像素**；
+    - 则称这两个像素是*m*连通的，即4连通和D连通的混合连通；
+
+    ![m连通示意图](images/第三章/m连通.png)
+
+
+
+## 第二十节课：3-2_膨胀与腐蚀
+
+### 1.内容介绍
+
+- **膨胀**
+
+  - 膨胀是使图像中高亮部分扩张，效果图拥有比原图更大的高亮区域，本质是求局部最大值的操作；
+
+  - 用一个结构元素扫描图像中的每一个像素，用结构元素中的每一个像素与其覆盖的像素做“与”操作，如果都为0，则该像素为0，否则为1；
+  - **膨胀的作用是将与物体接触的所有背景点合并到物体中，使目标增大，可添补目标中的孔洞**；
+
+  ![膨胀操作](images/第三章/膨胀操作.png)
+
+  - **API：**
+
+    - img：要处理的图像
+    - kernel：核结构
+    - iterations：膨胀的次数，默认是1
+
+    ```python
+    cv.dilate(img,kernel,iterations)
+    ```
+
+- **腐蚀**
+
+  - 腐蚀是原图中的高亮区域被蚕食，效果图拥有比原图更小的高亮区域，腐蚀是求局部最小值的操作；
+  - 用一个结构元素扫描图像中的每一个像素，用结构元素中的每一个像素与其覆盖的像素做“与”操作，如果都为1，则该像素为1，否则为0；
+  - **腐蚀的作用是消除物体边界点，使目标缩小，可以消除小于结构元素的噪声点**；
+
+  ![腐蚀操作](images/第三章/腐蚀操作.png)
+
+  - **API：**
+
+    - img：要处理的图像
+    - kernel：核结构
+    - iterations：腐蚀的次数，默认是1
+
+    ```python
+    cv.erode(img,kernel,iterations)
+    ```
+
+  
+
+### 2.上机实验
+
+```python
+# 腐蚀与膨胀示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread("images/Chapter3/letter.png")
+
+# 2 创建核结构
+kernel = np.ones((5, 5), np.uint8)
+
+# 3 图像腐蚀和膨胀
+erosion = cv.erode(img, kernel) # 腐蚀
+dilate = cv.dilate(img,kernel) # 膨胀
+
+# 4 图像展示
+fig,axes=plt.subplots(nrows=1,ncols=3,figsize=(10,8),dpi=100)
+axes[0].imshow(img)
+axes[0].set_title("原图")
+axes[1].imshow(erosion)
+axes[1].set_title("腐蚀后结果")
+axes[2].imshow(dilate)
+axes[2].set_title("膨胀后结果")
+plt.show()
+
+```
+
+![服饰与膨胀效果图](images/第三章/腐蚀与膨胀效果图.png)
+
+
+
+## 第二十一节课：3-2_开闭运算
+
+### 1.总括
+
+- 开运算和闭运算是将腐蚀和膨胀按照一定的次序进行处理；
+- 这两者并不是可逆的，即先开后闭并不能得到原来的图像；
+
+
+
+### 2.开运算
+
+- 开运算是**先腐蚀后膨胀**；
+- 作用：分离物体，消除小区域；
+- 特点：消除噪点，去除小的干扰块，而不影响原来的图像；
+
+![开运算示意图](images/第三章/开运算示意图.png)
+
+
+
+### 3.闭运算
+
+- 闭运算与开运算相反，是**先膨胀后腐蚀**；
+- 作用：消除/闭合物体里面的孔洞；
+- 特点：可以填充闭合区域；
+
+![闭运算示意图](images/第三章/闭运算示意图.png)
+
+
+
+### 4.上机实验
+
+- **API：**
+
+```python
+cv.morphologyEx(img, op, kernel)
+```
+
+- **参数：**
+  - img：要处理的图像；
+  - op：处理方式
+    - 若进行开运算，则设为cv.MORPH_OPEN；
+    - 若进行闭运算，则设为cv.MORPH_CLOSE；
+  - Kernel：核结构；
+- **示例代码：**
+
+```python
+# 开闭运算的示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img1 = cv.imread("images/Chapter3/letteropen.png")
+img2 = cv.imread("images/Chapter3/letterclose.png")
+
+# 2 创建核结构
+kernel = np.ones((10, 10), np.uint8)
+
+# 3 图像的开闭运算
+cvOpen = cv.morphologyEx(img1,cv.MORPH_OPEN,kernel)     # 开运算
+cvClose = cv.morphologyEx(img2,cv.MORPH_CLOSE,kernel)   # 闭运算
+
+# 4 图像展示
+fig,axes=plt.subplots(nrows=2,ncols=2,figsize=(10,8))
+axes[0,0].imshow(img1)
+axes[0,0].set_title("原图")
+axes[0,1].imshow(cvOpen)
+axes[0,1].set_title("开运算结果")
+axes[1,0].imshow(img2)
+axes[1,0].set_title("原图")
+axes[1,1].imshow(cvClose)
+axes[1,1].set_title("闭运算结果")
+plt.show()
+
+```
+
+![开闭运算示意图](images/第三章/开闭运算示意图.png)
+
+
+
+## 第二十二节课：3-2_黑帽与礼帽
+
+### 1.礼帽运算
+
+- 原图像与“开运算“的结果图之差，如下式计算：
+
+![礼帽公式运算](images/第三章/礼帽计算公式.png)
+
+- 因为开运算带来的结果是放大了裂缝或者局部低亮度的区域，因此，从原图中减去开运算后的图，得到的效果图突出了比原图轮廓周围的区域更明亮的区域，且这一操作和选择的核的大小相关；
+- 礼帽运算用来分离比邻近点亮一些的斑块。当一幅图像具有大幅的背景的时候，而微小物品比较有规律的情况下，可以使用顶帽运算进行背景提取；
+
+
+
+### 2.黑帽运算
+
+- 为”闭运算“的结果图与原图像之差。数学表达式为：
+
+![黑帽计算公式](images/第三章/黑帽计算公式.png)
+
+- 黑帽运算后的效果图突出了比原图轮廓周围的区域更暗的区域，且这一操作和选择的核的大小相关；
+- 黑帽运算用来分离比邻近点暗一些的斑块；
+
+
+
+### 3.API
+
+- 由前面的概念可以知道，礼帽和黑帽本质上是在**提取背景**；
+
+- **API：**
+
+```python
+cv.morphologyEx(img, op, kernel)
+```
+
+- **参数：**
+
+  - img：要处理的图像；
+  - op：处理方式：
+
+  ![黑帽礼帽参数选择](E:\Learning_Lab\3.OpenCV教程\3.Python调用OpenCV教程\images\第三章\黑帽礼帽参数选择.png)
+
+  - Kernel：核结构；
+
+- **示例代码：**
+
+```python
+# 黑帽礼帽示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img1 = cv.imread("images/Chapter3/letteropen.png")
+img2 = cv.imread("images/Chapter3/letterclose.png")
+
+# 2 创建核结构
+kernel = np.ones((10, 10), np.uint8)
+
+# 3 图像的礼帽和黑帽运算
+cvOpen = cv.morphologyEx(img1,cv.MORPH_TOPHAT,kernel)       # 礼帽运算
+cvClose = cv.morphologyEx(img2,cv.MORPH_BLACKHAT,kernel)    # 黑帽运算
+
+# 4 图像显示
+fig,axes=plt.subplots(nrows=2,ncols=2,figsize=(10,8))
+axes[0,0].imshow(img1)
+axes[0,0].set_title("原图")
+axes[0,1].imshow(cvOpen)
+axes[0,1].set_title("礼帽运算结果")
+axes[1,0].imshow(img2)
+axes[1,0].set_title("原图")
+axes[1,1].imshow(cvClose)
+axes[1,1].set_title("黑帽运算结果")
+plt.show()
+
+```
+
+![黑帽礼帽运算效果图](images/第三章/黑帽礼帽运算结果图.png)
+
+
+
+## 第二十三节课：3-2_形态学操作总结
+
+### 1.**连通性**
+
+- 邻接关系：4邻接，8邻接和D邻接；
+- 连通性：4连通，8连通和m连通；
+
+
+
+### 2.**形态学操作**
+
+- **腐蚀和膨胀：**
+  - 腐蚀：求局部最小值；
+  - 膨胀：求局部最大值；
+- **开闭运算：**
+  - 开：先腐蚀后膨胀；
+  - 闭：先膨胀后腐蚀；
+- **礼帽和黑帽：**
+  - 礼帽：原图像与开运算之差；
+  - 黑帽：闭运算与原图像之差；
+
+
+
+## 第二十四节课：3-3_图像噪声
+
+### 1.椒盐噪声
+
+- 椒盐噪声也称为脉冲噪声，是图像中经常见到的一种噪声；
+- 它是一种随机出现的白点或者黑点，亮的区域有黑色像素或是在暗的区域有白色像素或是两者皆有；
+- 椒盐噪声的成因可能是影像讯号受到突如其来的强烈干扰而产生、类比数位转换器或位元传输错误等；
+- 例如失效的感应器导致像素值为最小值，饱和的感应器导致像素值为最大值；
+
+![椒盐噪声](images/第三章/椒盐噪声.png)
+
+
+
+### 2.高斯噪声
+
+- 高斯噪声是指噪声密度函数服从高斯分布的一类噪声；
+- 由于高斯噪声在空间和频域中数学上的易处理性，这种噪声(也称为正态噪声)模型经常被用于实践中；
+- 高斯随机变量z的概率密度函数由下式给出：
+  - 其中z表示灰度值，μ表示z的平均值或期望值，σ表示z的标准差，标准差的平方称为z的方差；
+
+![高斯噪声公式](images/第三章/高斯噪声公式.png)
+
+- 高斯函数的曲线如图所示：
+
+![高斯噪声概率密度分布](E:\Learning_Lab\3.OpenCV教程\3.Python调用OpenCV教程\images\第三章\高斯噪声的概率密度.png)
+
+- 带有高斯噪声的图片如图所示：
+
+![高斯噪声图片](images/第三章/高斯噪声.png)
+
+
+
+## 第二十五节课：3-3_均值滤波
+
+### 1.图像平滑介绍
+
+- 图像平滑从信号处理的角度看就是**去除其中的高频信息，保留低频信息**；
+- 因此我们可以对图像实施**低通滤波，低通滤波可以去除图像中的噪声，对图像进行平滑**；
+
+- 根据滤波器的不同可分为：
+  - **均值滤波；**
+  - **高斯滤波；**
+  - **中值滤波； **
+  - **双边滤波；**
+
+
+
+### 2.均值滤波
+
+![均值滤波的介绍](images/第三章/均值滤波的介绍.png)
+
+
+
+### 3.均值滤波API
+
+- **API：**
+
+```
+cv.blur(src, ksize, anchor, borderType)
+```
+
+- **参数：**
+  - src：输入图像；
+  - ksize：卷积核的大小；
+  - anchor：默认值 (-1,-1) ，表示核中心；
+  - borderType：边界类型；
+
+
+
+### 4.均值滤波上机实验
+
+```python
+# 均值滤波示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 图像读取
+img1 = cv.imread('images/Chapter3/dogsp.jpeg')
+img2 = cv.imread('images/Chapter3/dogGauss.jpeg')
+
+# 2 均值滤波
+blur1 = cv.blur(img1,(5,5))
+blur2 = cv.blur(img2,(5,5))
+
+# 3 图像显示
+fig,axes=plt.subplots(nrows=2,ncols=2,figsize=(10,8))
+axes[0,0].imshow(img1[:,:,::-1])
+axes[0,0].set_title("椒盐狗原图")
+axes[0,1].imshow(blur1[:,:,::-1])
+axes[0,1].set_title("均值滤波椒盐狗")
+axes[1,0].imshow(img2[:,:,::-1])
+axes[1,0].set_title("高斯狗原图")
+axes[1,1].imshow(blur2[:,:,::-1])
+axes[1,1].set_title("均值滤波高斯狗")
+plt.show()
+
+```
+
+![均值滤波效果图](images/第三章/均值滤波效果图.png)
+
+
+
+## 第二十六节课：3-3_高斯滤波
+
+
+
+## 第二十七节课：3-3_中值滤波
+
+
+
+## 第二十八节课：3-3_图像平滑总结
 
 
 
