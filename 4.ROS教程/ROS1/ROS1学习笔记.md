@@ -304,9 +304,339 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
 
 # 第六节课：应用商店APT源
 
+## 1.APT工具介绍
+
+- **定义：**
+  - APT是Ubuntu自带的一套软件包下载工具；
+  - 可以使用它从网上的源服务器下载指定的软件包并自动安装；
+  - 与手机上的应用商店很类似；
+
+- **APT的源列表：**
+  - Ubuntu安装时，默认APT的源服务器只有Ubuntu的官方源（应用商店）；
+  - 我们可以通过编辑APT的源列表增加新的应用商店；
+  - **前面添加的ROS的源，就是添加了ROS的应用商店（前面是中科大的源）**；
+
+![APT源列表](images/06_应用商店APT源/APT的源列表.png)
+
+
+
+## 2.ROS的“应用商店”
+
+### 2.1 应用商店长什么样
+
+- 应用商店是通俗的叫法，实际上是**存放ROS的各种包的源服务器**，就像**Github那样的托管平**台;
+- 网址为：[ROS应用商店网站](https://index.ros.org)
+
+![ROS官方源列表](images/06_应用商店APT源/ROS官方源列表.png)
+
+- 可点击**Package List**，网页将展示几乎**所有的ROS的资源，包括软件库、依赖包、源码**等等；
+
+- 当然，我们需要选择我们对应的系统，我们选择了自己的版本：noetic；
+
+- 这些软件包我们都可以通过apt命令来安装，安装的格式是：
+
+  - ```bash
+    sudo apt install ros-[ros版本]-name
+    ```
+
+![Noetic的PagageList](images/06_应用商店APT源/Noetic的PakageList.png)
+
+### 2.2 每个软件包长什么样
+
+- 我们选择里面的一个包：**rqt_robot_steering**，双击这个包进入它的界面；
+  - 可以看到它们有关于这个包的**基本信息、包的源码信息以及对于这个包的关于作者等的介绍；**
+  - **Website**界面有关于这个包的详细介绍；
+
+![某个ROS包的界面](images/06_应用商店APT源/某个包的界面.png) 
+
+- 点击右侧的**Website**，进入这个包的具体演示界面，它会详细的描述楚这个包的作用以及如何使用：
+
+![包的Website页面](images/06_应用商店APT源/包的Website页面.png)
+
+
+
+## 3.运行一个ROS实例
+
+### 3.1 rqt_robot_steering实例
+
+以上一小节的**rqt_robot_steering**这个软件包为例，讲解如何**运行一个ROS实例**。
+
+- **安装rqt_robot_steering软件包**
+
+  - ```bash
+    sudo apt install ros-noetic-rqt-robot-steering
+    ```
+
+  - 终端运行上面指令以安装软件包；
+
+- **运行ROS内核**
+
+  - 另外打开一个终端，运行如下指令：
+
+  - ```bash
+    roscore
+    ```
+
+- **运行rqt_robot_steering软件包**
+
+  - 在原来的终端中运行：
+
+  - ```bash
+    rosrun rqt_robot_steering rqt_robot_steering
+    ```
+
+  - 两个rqt_robot_steering：
+
+    - 前面一个是包名称；
+    - 后面一个是节点名称；
+
+![运行rqt_robot_steering实例](images/06_应用商店APT源/运行rqt_robot_steering实例.png) 
+
+### 3.2 turtlesim实例
+
+- **再开一个终端，输入指令安装小乌龟：**
+
+  - ```Bash
+    sudo apt install ros-noetic-turtlesim
+    ```
+
+- **接着在这一个终端运行小乌龟：**
+
+  - ```bash
+    rosrun turtlesim turtlesim_node
+    ```
+
+![运行turtlesim实例](images/06_应用商店APT源/运行turtlesim实例.png) 
+
+### 3.3 用rqt_robot_steering控制turtlesim
+
+- 这样，小乌龟出来了，rqt_robot_steering软件包的控制界面也出来了；
+- 在软件包界面的输入栏前面加上turtle1（任意写，不然不会启动）；
+- 我们就可以用竖直杆控制速度，水平杆控制旋转的方向来完成仿真实验了；
+
 
 
 # 第七节课：开源自由市场Github
+
+## 7.1 Github应用商店
+
+- 除了ROS的官方应用商店，Github中也有很多优质的ROS软件包；
+- ROS本身和index.ros上的大部分软件包在Github都开放了源代码；
+
+ 
+
+## 7.2 Github与index.ros的不同
+
+- Github中的软件包都是以**源代码的形式**开源，我们下载下来后还需要**编译**才能运行；
+- 所以需要先建立一个**工作空间，来进行源代码编译**；
+- 所谓工作空间就是建立一个**符合某种要求的目录结构，编译器会按照这个目录建构去检索源代码完成编译**；
+
+ 
+
+## 7.3 建立目录结构并安装Git工具
+
+### 7.3.1 建立目录结构
+
+- 目录结构：**HOME——>catkin_ws——>src**；
+
+- 下载的源代码就需要放在src目录里才能正常编译，所以在终端分别执行：
+
+  ```bash
+  mkdir catkin_ws
+  
+  cd catkin_ws
+  
+  mkdir src
+  
+  cd src
+  ```
+
+- 这样就创建好工作空间了，后续我们自己写的源代码也会放在这个工作空间中；
+- **catkin是ROS1中的编译器，catkin_ws就是catkin workplace的意思**；
+
+### 7.3.2 安装Git工具
+
+- 从GitHub下载或上传文件需要用到**git工具**，在终端执行：
+- 注意，这句终端执行目录需要在**src目录**下执行；
+
+```bash
+sudo apt install git
+```
+
+![创建工作目录并安装Git工具](images/07_开源自由市场Github/创建工作空间并安装git工具.png)
+
+
+
+## 7.4 下载源码包
+
+- 完成上述工作后就可以进行源码的下载了；
+- 在GitHub搜索栏中搜索：**wpr_simulation**，找到**6-robot**这一项；
+- 点击进入选择**Code按钮**，复制弹出来的一串网址：https://github.com/6-robot/wpr_simulation.git；
+- 接着回到终端，执行命令：
+
+```bash
+git clone https://github.com/6-robot/wpr_simulation.git
+```
+
+- 这样就可以把源代码下载到我们的**src文件夹下了（要保证在src文件夹执行）**；
+
+![Git克隆源代码](images/07_开源自由市场Github/克隆Github源代码.png)
+
+ 
+
+## 7.5 查看下载内容并进行编译
+
+### 7.5.1 查看文件内容
+
+- **wpr_simulation目录：**
+  - 如下图所示即为我们从GitHub上clone下来的文件，全部文件在wpr_simulation文件夹下；
+
+<img src="images/07_开源自由市场Github/wpr_simulation结构目录.png" alt="包的结构目录" style="zoom:150%;" />
+
+- **scripts文件夹：**
+  - 先看**scripts**文件夹，可以看到它里面放了一些**脚本文件(.sh文件)和python程序**；
+  - 这些文件主要是完成**依赖包的安装和为机器人映射端口**，这类操作一般进行**一次**即可；
+
+<img src="images/07_开源自由市场Github/scripts目录.png" alt="scripts目录" style="zoom: 150%;" />
+
+### 7.5.2 安装依赖包
+
+- **依赖包文件：**
+
+  - 在scripts文件夹下可以看到有**install_for_noetic.sh**文件；
+  - 这个就是用于给noetic系统**安装这个项目的依赖包**的执行文件；
+
+- **安装依赖包：**
+
+  - 在这个文件夹下右键，选择在终端打开，然后输入执行下面的指令，输入密码即可安装依赖包；
+
+  ```bash
+  ./install_for_noetic.sh
+  ```
+
+### 7.5.3 编译
+
+- 安装好依赖包后，回到工作空间的入口地址：**catkin_ws**；
+- 然后输入指令，它将会编译**src文件夹下的所有源代码**：
+
+```bash
+catkin_make
+```
+
+- **注意：catkin_make命令必须要在catkin_ws目录下运行。而不是src子目录**；
+
+![编译源代码](images/07_开源自由市场Github/编译源代码.png)
+
+
+
+## 7.6 运行包的功能
+
+### 7.6.1 加载包的环境参数到终端命令
+
+- 首先需要**将catkin_ws工作空间里的环境参数加载到终端里**，否则运行指令会提示找不到软件包；
+- 即**用source指令载入工作空间的环境设置**，终端中执行：
+
+```bash
+source ~/catkin_ws/devel/steup.bash
+```
+
+### 7.6.2 运行编译好的ROS程序
+
+- 完成上一步后，即可运行程序，输入指令：
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- 然后就会得到如下界面：
+
+![仿真器启动页面](images/07_开源自由市场Github/仿真器启动页面.png) 
+
+- 这就是我们后面会经常用到的**仿真环境Gazebo**；
+- 再次打开上一节课的**rqt_robot_steering**，删除前面的turtle1，就可以用这个工具控制机器人的运动了；
+
+![rqt控制仿真器](images/07_开源自由市场Github/用rqt_robot_steering控制wpr_simulation.png) 
+
+
+
+## 7.7 将环境参数初始化指令添加到终端初始化脚本中
+
+- 我们当然希望每次启动终端，它就会自动的帮我们初始化环境参数；
+- 我们只需要**把source指令加入到~/.bashrc文件**即可；
+- 终端中输入：
+
+```bash
+gedit ~/.bashrc
+```
+
+- 在弹出的文本编辑器中，划到末尾，加上：
+
+```bash
+source ~/catkin_ws/devel/setup.bash
+```
+
+- 这样，每次启动终端它就会自动帮我们初始化;
+
+ 
+
+## 7.8 修改ROS软件包的源代码
+
+以之前的小乌龟为例，讲解如何**从index.ros到GitHub再自己修改源代码并编译**。
+
+- 打开index.ros，并搜索turtlesim：
+
+![ros.index中寻找包](images/07_开源自由市场Github/ros.index中寻找包.png) 
+
+- 点击第一个，然后点击它的GitHub链接：
+
+![index跳转Github](images/07_开源自由市场Github/index跳转Github.png) 
+
+- 进入Github，点击Code，复制链接：
+
+![img](images/07_开源自由市场Github/复制Github链接.png) 
+
+- 打开终端，切换到src目录下，安装源码：
+
+<img src="images/07_开源自由市场Github/安装源码.png" alt="安装源码" style="zoom:150%;" />
+
+- 切换版本
+  - 由于下载默认是ROS2的版本，需要将它切换为ROS1版本，否则会编译报错，依次进行如下操作：
+    - 先进入小海龟的文件夹：**cd ros_tutorials/**；
+    - 然后切换版本：**git checkout noetic-devel**；
+
+![切换版本](images/07_开源自由市场Github/切换版本.png)
+
+- 编译
+  - 切换版本后我们可以进行编译，同样的执行下面代码：
+    - 切换回入口：cd ~/catkin_ws；
+    - 编译：catkin_make；
+
+- 把小海龟跑起来
+  - 编译完成后我们既可以运行这个小海龟了：
+    - 先是启动ros内核：**roscore**；
+    - 然后新开窗口，运行小海龟：**rosrun turtlesim turtlesim_node**；
+
+![运行小乌龟](images/07_开源自由市场Github/运行小乌龟.png)
+
+- 修改源代码
+
+  - 打开**"~/catkin_ws/src/ros_tutorials/turtlesim/src/tutrle_frame.cpp"**文件；
+  - 修改如下几个地方：改变框的大小和名字还有背景颜色，再次编译并运行；
+
+  ![修改源码](images/07_开源自由市场Github/修改源码.png)
+
+  - 可以看到它的框的大小、名字还有背景颜色都变了；
+  - **这就是ROS中修改源代码整个流程和逻辑；**
+
+  ![再次运行小乌龟](images/07_开源自由市场Github/再次运行小乌龟.png)
+
+ 
+
+## 7.9 总结
+
+- 这节课讲了**如何从Github中下载源码并进行编译然后运行**；
+- 并展示了**如何修改源码增加自己想要的功能**；
+- 这就是真正实现工程时的开发逻辑和流程；
 
 
 
