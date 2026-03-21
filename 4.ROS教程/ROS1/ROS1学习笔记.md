@@ -1035,21 +1035,549 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 # 第十二节课：Topic话题和Message消息
 
+## 1.Topic话题的定义及其特点
+
+### 1.1 一个发布者的情况
+
+- 话题Topic是节点间进行**持续通讯**的一种形式；
+- 话题通讯的两个节点通过**话题的名称**建立起话题通讯连接；
+- 话题中通讯的数据，叫做**消息Message**；
+- 消息Message通常会按照一定的频率持续不断的发送，以保证消息数据的实时性；
+- 消息的发送方叫做话题的**发布者Publisher**；
+- 消息的接收方叫做话题的**订阅者Subscriber**；
+
+![两个节点间的Topic话题](images/12_Topic话题和Message包/只有两个节点的Topic情况.png)
+
+### 1.2 多个发布者的情况
+
+- 多个发布者的情况可以分两种：
+
+  - 不同发布者只管理自己的话题：
+
+  ![多个发布者不同话题](images/12_Topic话题和Message包/多个发布者不同话题.png)
+
+  - 不同发布者处在同一个话题：
+
+  ![多个发布者相同话题](images/12_Topic话题和Message包/多个发布者相同话题.png)
+
+- 多个发布者时的Topic的特点：
+  - 一个ROS节点网络中，可以同时存在多个话题；
+  - 一个话题可以有多个发布者，也可以有多个订阅者；
+  - 一个节点可以对多个话题进行订阅，也可以发布多个话题；
+  - 不同的传感器消息通常会拥有各自独立话题名称，每个话题只有一个发布者；
+  - 机器人速度指令话题通常有多个发布者，但同一时间只能有一个发言人；
+
+
+
+## 2.Message消息的定义及其特点
+
+![Message消息包](images/12_Topic话题和Message包/Message消息包.png)
+
+- **消息的类型：**
+  - 如上图所示，为满足不同传输的要求，消息会存在很多种类型，在生成消息包时需要指定消息的类型；
+
+- **类型的来源：**
+  - 上一节课创建的软件包中，有一个依赖项：**std_msgs**，这个软件包中就包含了很多的消息类型；
+
+- **std_msgs消息类型：**
+
+  - 打开index网站，搜索**std_msgs**，然后点击Msg API，就可以看到这个软件包中存在的消息类型；
+  - 点击某些类型可以看到，它们内部存在一些嵌套关系，其实消息类型本质上就类似于C的结构体；
+  - 若软件包中不存在想要的消息类型，后续可以通过自组装定义我们自己想要的消息类型；
+
+  ![std_msgs消息包页面](images/12_Topic话题和Message包/std_msgs消息包页面.png)
+
 
 
 # 第十三节课：Publisher发布者的C++实现
+
+## 1.整体项目框架
+
+- 在这一节课中，将完成下图中的两个发布者：
+
+![项目框架](images/13_Publisher发布者的C++实现/多个发布者不同话题.png)
+
+
+
+## 2.chao_node的话题发布
+
+- **首先需要引入头文件：**
+
+  ```C++
+  #include <std_msgs/String.h>
+  ```
+
+- **初始化ROS核心：**
+
+  ```c++
+  ros:init(argc, argv, "chao_node")
+  ```
+
+- **创建管理节点的管家：**
+
+  ```c++
+  ros:NodeHandle nh
+  ```
+
+- **创建发布的话题：**
+
+  ```c++
+  ros::Publisher pub = nh.advertise<std_msgs::String>("kuai_shang_che_kai_hei_qun", 10)
+  ```
+
+  - 第一个参数是话题名称，不能是中文；
+  - 第二个是缓冲区的大小；
+
+- **创建一个ROS时间控制对象：**
+
+  ```c++
+  ros::Rate loop_rate(10)
+  ```
+
+- **在while循环中：**
+
+  - **创建消息：**
+
+    ```c++
+    std_msgs::String msg	// 在while循环内部再创建变量虽然可能内存消耗大一点，但每次循环后都会回收内存，问题不大
+    ```
+
+  - **给消息赋值：**
+
+    ```c++
+    msg.data = "国服马超，带飞"
+    ```
+
+  - **往话题中发布消息：**
+
+    ```c++
+    pub.publish(msg)
+    ```
+
+  - **延时阻塞：**
+
+    ```c++
+    loop_rate.sleep()
+    ```
+
+```c++
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+
+int main(int argc, char *argv[])
+{
+    /* code */
+    ros::init(argc, argv, "chao_node");         // 初始化ROS核心
+    printf("我的枪去而复返，你的生命有去无回\n");
+
+    ros::NodeHandle nh;			// 创建一个ros中的NodeHandle类，这个类的节点的管家
+    ros::Publisher pub = nh.advertise<std_msgs::String>("kuai_shang_che_kai_hei_qun", 10);  // 创建一个发布话题
+
+    ros::Rate loop_rate(10);    // ros的时间控制对象
+
+    while(ros::ok())
+    {
+        printf("我要开始刷屏了！\n");
+        std_msgs::String msg;           // 定义一个String类型的消息
+        msg.data = "国服马超，带飞";      // 赋值给消息
+        pub.publish(msg);               // 发布消息
+        loop_rate.sleep();              // 延时阻塞
+    }
+    return 0;
+}
+
+```
+
+
+
+## 3.ROS中的话题工具：rostopic
+
+- ```c++
+  // 列出当前系统中所有活跃着的话题
+  rostopic list
+  ```
+
+- ```c++
+  // 显示指定话题中发送的消息包内容
+  rostopic echo 主题名称
+  
+  // 如果由于中文，Unicode字符显示乱码，可用如下指令转义
+  echo -e <上一句指令的输出>
+  ```
+
+- ```c++
+  // 统计指定话题中消息包发送频率
+  rostopic hz 主题名称
+  ```
+
+
+
+## 4.消息发送的步骤总结
+
+![消息发送步骤总结](images/13_Publisher发布者的C++实现/消息发送的步骤总结.png)
+
+
+
+## 5.yao_node的话题发布
+
+- 复制原来的chao_node.cpp文件，改名为yao_node.cpp；
+- **修改内容如下：**
+
+```c++
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+
+int main(int argc, char *argv[])
+{
+    /* code */
+    ros::init(argc, argv, "yao_node");         // 注册节点
+    printf("过去生于未来!\n");
+
+    ros::NodeHandle nh;     // 创建一个ros中的NodeHandle类，这个类的节点的管家
+    ros::Publisher pub = nh.advertise<std_msgs::String>("gie_gie_dai_wo", 10);  // 创建一个发布话题
+
+    ros::Rate loop_rate(10);    // ros的时间控制对象
+
+    while(ros::ok())
+    {
+        printf("我要开始刷屏了！\n");
+        std_msgs::String msg;           // 定义一个String类型的消息
+        msg.data = "求上车++++";		  // 赋值给消息
+        pub.publish(msg);               // 发布消息
+        loop_rate.sleep();              // 延时阻塞
+    }
+    return 0;
+}
+
+```
+
+- **修改编译配置文件：**
+
+```c++
+add_executable(chao_node src/chao_node.cpp)
+target_link_libraries(chao_node
+   ${catkin_LIBRARIES}
+)
+
+add_executable(yao_node src/yao_node.cpp)
+target_link_libraries(yao_node
+   ${catkin_LIBRARIES}
+)
+```
+
+- **编译后在终端执行：**
+
+![运行效果](images/13_Publisher发布者的C++实现/终端运行效果.png)
 
 
 
 # 第十四节课：Subscriber订阅者的C++实现
 
+## 1.整体项目框架
+
+- 在这一节课中，将实现**右边的订阅者**；
+
+![项目结构](images/14_Subscriber订阅者的C++实现/多个发布者不同话题.png)
 
 
 
+## 2.创建订阅者节点
+
+### 2.1 创建atr_pkg包
+
+- 在终端中输入如下命令创建软件包：
+
+```bash
+catkin_create_pkg atr_pkg rospy roscpp std_msgs
+```
+
+- **注意一定要在catkin_ws/src目录创建才行，下图的目录是错误的**；
+
+![创建软件包](images/14_Subscriber订阅者的C++实现/创建软件包.png)
+
+### 2.2 创建ma_node节点
+
+- 在VsCode中打开atr_pkg，然后在其src目录下新建ma_node.cpp文件；
+- 在**ma_node.cpp**文件中添加如下内容：
+  - 引入头文件；
+  - 注册节点；
+  - 新建管家，并用管家新建订阅；
+  - **定义订阅者的回调函数；**
+  - 在while()循环中加入**回看消息包的函数**；
+
+```c++
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+
+void chao_callback(std_msgs::String msg)	// 订阅者的回调函数
+{
+    printf(msg.data.c_str());	// 打印消息内容
+    printf("\n");
+}
+
+int main(int argc, char *argv[])
+{
+    ros::init(argc, argv, "ma_node");	// 注册节点
+
+    ros::NodeHandle nh;		// 新建管家
+    ros::Subscriber sub = nh.subscribe("kuai_shang_che_kai_hei_qun", 10, chao_callback);	// 新建订阅，注意这里还需要传入回调函数名
+
+    while(ros::ok())
+    {
+        ros::spinOnce();	// 必须加，其作用是转过头看一下有没有新的消息包
+    }
+
+    return 0;
+}
+
+```
+
+### 2.3 添加编译条件
+
+- 在CMakeList.txt文件中的最后添加如下内容：
+
+```c++
+add_executable(ma_node src/ma_node.cpp)
+target_link_libraries(ma_node
+  ${catkin_LIBRARIES}
+)
+```
+
+- **Ctrl+Shift+B**编译；
 
 
 
+## 3.运行效果
 
+- 在终端中运行ROS核心
+
+```bash
+roscore
+```
+
+- 在终端中启动chao_node节点
+
+```bash
+rosrun ssr_pkg chao_node
+```
+
+- 在终端中启动ma_node节点
+
+```bash
+rosrun atr_pkg ma_node
+```
+
+- 最后的运行效果如图所示：
+
+![运行效果1](images/14_Subscriber订阅者的C++实现/运行效果1.png)
+
+
+
+## 4.调整和优化
+
+- 在上面的运行效果中，每一条的打印消息都是一样的；
+- 可以使用带有显示时间的函数进行打印；
+- 改造：
+  - **将ma_node.cpp文件中的printf()函数改为ROS_INFO()函数**：
+  - **除此之外，还要在main函数内部添加setlocale(LC_ALL, "")函数，因为ROS_INFO()函数会受C++的locale环境影响，需要将其设置成中文环境**；
+
+```c++
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+
+void chao_callback(std_msgs::String msg)
+{
+    ROS_INFO(msg.data.c_str());
+}
+
+int main(int argc, char *argv[])
+{
+    setlocale(LC_ALL, "");
+    ros::init(argc, argv, "ma_node");
+
+    ros::NodeHandle nh;
+    ros::Subscriber sub = nh.subscribe("kuai_shang_che_kai_hei_qun", 10, chao_callback);
+
+    while(ros::ok())
+    {
+        ros::spinOnce();
+    }
+
+    return 0;
+}
+
+```
+
+- 再次编译并运行，得到如下运行效果，其中前面的数字是时间戳：
+
+![运行效果2](images/14_Subscriber订阅者的C++实现/运行效果2.png)
+
+
+
+## 5.添加订阅瑶妹妹的消息
+
+- 同样的，直接在原来的ma_node.cpp文件中添加内容：
+  - 从管家中重新获取一个订阅，这个订阅对象的名称不能与前面的相同；
+  - 定义回调函数，这里显示用ROS_WARN()，它会以黄色显示；
+
+```c++
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+
+void chao_callback(std_msgs::String msg)
+{
+    ROS_INFO(msg.data.c_str());
+}
+
+void yao_callback(std_msgs::String msg)
+{
+    ROS_WARN(msg.data.c_str());
+}
+
+int main(int argc, char *argv[])
+{
+    setlocale(LC_ALL, "");
+    ros::init(argc, argv, "ma_node");
+
+    ros::NodeHandle nh;
+    ros::Subscriber sub = nh.subscribe("kuai_shang_che_kai_hei_qun", 10, chao_callback);
+
+    ros::Subscriber sub2 = nh.subscribe("gie_gie_dai_wo", 10, yao_callback);
+    
+    while(ros::ok())
+    {
+        ros::spinOnce();
+    }
+
+    return 0;
+}
+
+```
+
+- 编译后重新运行，得到效果图如下：
+
+![运行效果3](images/14_Subscriber订阅者的C++实现/运行效果3.png)
+
+
+
+## 6.图形化显示话题通信的工具
+
+- 在保持上面全部节点通信的同时，再开一个终端，执行指令：
+
+```bash
+rqt_graph
+```
+
+- 执行后得到效果图如图所示：
+  - **椭圆形的是节点；**
+  - **横线上的是话题；**
+  - **横线代表数据的流向；**
+
+![图形化话题通信](images/14_Subscriber订阅者的C++实现/图形化显示话题通信.png)
+
+
+
+## 7.总结
+
+### 7.1 话题是谁的话题
+
+- 话题不单单只是发布者或订阅者的话题；
+- 话题是ROS系统自己创建的，即使发布者没有在运行，如果有节点订阅了话题，这个话题就会自动被ROS系统创建；
+
+### 7.2 小节
+
+![话题的订阅总结](images/14_Subscriber订阅者的C++实现/话题的订阅总结.png)
+
+
+
+# 第十五节课：launch启动多个ROS节点
+
+## 1.使用launch启动节点
+
+### 1.1 launch文件的介绍
+
+- launch文件是一种遵循**XML语法**的描述文件；
+- **可以使用launch实现启动ROS的节点**；
+- XML语法启动节点：**当内容为空时可以省略后面的</标记名称>，直接将/移到第一个<>中**
+
+```xml
+<标记名称 属性名1= "属性值1" ...>
+    内容
+</标记名称>
+```
+
+- **描述多层嵌套结构是XML语法的主要作用之一：**
+
+![XML语法解释](images/15_launch启动多个ROS节点/XML语法解释.png)
+
+- 可以用一个王者荣耀的例子来解释XML语法的使用：
+
+![王者荣耀的XML描述](images/15_launch启动多个ROS节点/王者荣耀的XML描述.png)
+
+### 1.2 如何用launch描述一个ROS启动
+
+- 以上一节课中的例子，可以用launch文件的XML语法描述如下：
+- 注意：**这里不需要单独为roscore添加描述，因为launch文件的机制是只要有一个节点就会启动ROS核心**；
+- 描述内容中的name用于解决**同名不同包**的问题；
+
+![XML语法描述launch文件](images/15_launch启动多个ROS节点/XML描述launch文件.png)
+
+
+
+## 2.编写运行launch文件
+
+- launch文件只需要放在某个软件包下即可，它会自动遍历整个文件夹；
+- **我们在atr_pkg下创建launch文件夹用来存放launch文件，然后新建launch文件kai_hei.launch**，然后添加如下内容：
+  - launch-prefix="gnome-terminel -e：可以指定该节点在另一个终端输出；
+  - output="screen：可解决ROS_INFO不显示的问题，但对ROS_WARN不起作用，它会暴力的输出；
+
+```xml
+<launch>
+    
+    <node pkg="ssr_pkg" type="yao_node" name="yao_node"/>
+
+    <node pkg="ssr_pkg" type="chao_node" name="chao_node" launch-prefix="gnome-terminel -e"/>
+
+    <node pkg="atr_pkg" type="ma_node" name="ma_node" output="screen"/>
+
+</launch>
+```
+
+- 然后在终端中输入下列指令即可同时运行之前的几个节点：
+
+```bash
+roslaunch atr_pkg kai_hei.launch
+```
+
+- 最终的效果如图所示：
+
+![最终效果](images/15_launch启动多个ROS节点/最终效果.png)
+
+
+
+## 3.总结
+
+![小结](images/15_launch启动多个ROS节点/小结.png)
+
+
+
+# 第十六节课：Publisher发布者的Python实现
+
+
+
+# 第十七节课：Subscriber订阅者的Python实现
+
+
+
+# 第十八节课：ROS机器人运动控制
+
+
+
+# 第十九节课：机器人运动控制的C++实现
+
+
+
+# 第二十节课：机器人运动控制的Python实现
 
 
 
