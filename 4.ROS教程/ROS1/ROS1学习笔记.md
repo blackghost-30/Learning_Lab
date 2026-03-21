@@ -997,7 +997,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 ## 5.Node节点的完善
 
-前面写的源代码还无法与ROS产生互动，因为它并没有任何与ROS框架相关的东西。下面按照ROS的框架添加代码。
+**前面写的源代码还无法与ROS产生互动，因为它并没有任何与ROS框架相关的东西**。下面按照ROS的框架添加代码。
 
 ![chao_node.cpp源码完善](images/11_年轻人的第一个Node节点/chao_node.cpp源码完善.png)
 
@@ -1562,6 +1562,125 @@ roslaunch atr_pkg kai_hei.launch
 
 
 # 第十六节课：Publisher发布者的Python实现
+
+## 1.整体项目框架
+
+- 本节用Python语言实现两个发布者；
+
+![课程内容](images/16_Publisher发布者的Python实现/多个发布者不同话题.png)
+
+
+
+## 2.整体项目编程
+
+### 2.1 创建软件包
+
+- 在终端中切换到**~/catkin_ws/src**目录；
+- 执行以下指令完成软件包的创建：
+
+```bash
+catkin_create_pkg ssr_py_pkg rospy std_msgs
+```
+
+### 2.2 编译软件包
+
+- 在创建完包后需要直接编译一下，但需要区分：
+  - Python是解释性语言，是不需要编译的；
+  - 这里的编译是为了让ROS在后续能够找到ROS节点；
+  - 对于用Python开发的软件包而言，只需要编译一次即可；
+
+![创建软件包并编译](images/16_Publisher发布者的Python实现/创建软件包并编译.png)
+
+### 2.3 编辑节点
+
+- 打开VsCode后，发现ssr_py_pkg中只有**src、CMakeList.txt和package.xml**三个文件；
+
+- 在ssr_py_pkg下新建**scripts**文件夹，然后在此文件夹下添加节点；
+
+- **chao_node.py节点编辑：**
+
+  - 在scripts文件夹下新建文件**chao_node.py**文件；
+  - python创建发布者节点的过程如下：
+
+  ![Python发布者节点的创建](images/16_Publisher发布者的Python实现/Python发布者节点.png)
+
+  - **文件编程：**
+
+  ```python
+  #!/usr/bin/env python3
+  #coding=utf-8
+  
+  import rospy
+  from std_msgs.msg import String
+  
+  if __name__ == "__main__":
+      rospy.init_node("chao_node")	# 注册节点
+      rospy.logwarn("我的枪去而复返，你的生命有去无回！")	# 打印信息
+  
+      pub = rospy.Publisher("kuai_shang_che_kai_hei_qun", String, queue_size=10)	# 获取发布对象
+  
+      rate = rospy.Rate(10)	# 获取时间控制对象
+  
+      while not rospy.is_shutdown():		 # 注意while循环的条件
+          rospy.loginfo("我要开始刷屏了")	# 打印提示信息
+  
+          msg = String()					# 获取一个消息对象
+          msg.data = "国服马超，带飞"		# 复制内容
+          pub.publish(msg)				# 发布内容
+          rate.sleep()					# 控制速率
+  
+  ```
+
+  - **运行节点：**
+
+    - **Ubuntu中新创建的文件不带有执行权限，需要先把文件的执行权限打开**；
+    - 在对应文件夹下打开终端，输入如下指令给文件**添加执行权限**：
+
+    ```bash
+    chmod +x chao_node.py
+    ```
+
+    ![更改权限](images/16_Publisher发布者的Python实现/更改文件权限.png)
+
+    - 接着在终端中执行ROS初始化以及运行节点即可：
+
+    ![运行节点效果图](images/16_Publisher发布者的Python实现/运行效果.png)
+
+- **yao_node.py节点编程：**
+
+  - 在原目录下直接复制chao_node.py，改名为**yao_node.py**；
+  - **更改文件的内容如下：**
+
+  ```python
+  #!/usr/bin/env python3
+  #coding=utf-8
+  
+  import rospy
+  from std_msgs.msg import String
+  
+  if __name__ == "__main__":
+      rospy.init_node("yao_node")
+      rospy.logwarn("过去生于未来")
+  
+      pub = rospy.Publisher("gie_gie_dai_wo", String, queue_size=10)
+  
+      rate = rospy.Rate(10)
+  
+      while not rospy.is_shutdown():
+          rospy.loginfo("我要开始刷屏了")
+  
+          msg = String()
+          msg.data = "求上车++++"
+          pub.publish(msg)
+          rate.sleep()
+  
+  ```
+
+  - **运行节点：**
+
+    - 同样地按照前面的先初始化ROS然后再运行节点，即可成功运行：
+
+    ![运行效果2](images/16_Publisher发布者的Python实现/运行效果2.png)
 
 
 
