@@ -1686,6 +1686,118 @@ catkin_create_pkg ssr_py_pkg rospy std_msgs
 
 # 第十七节课：Subscriber订阅者的Python实现
 
+## 1.整体项目框架
+
+- 本节用Python语言实现**右边的订阅者**；
+
+![课程内容](images/16_Publisher发布者的Python实现/多个发布者不同话题.png)
+
+
+
+## 2.整体项目编程
+
+### 2.1 创建软件包
+
+- 在终端中切换到**~/catkin_ws/src**目录；
+- 执行以下指令完成软件包的创建：
+
+```bash
+catkin_create_pkg atr_py_pkg rospy std_msgs
+```
+
+### 2.2 编译软件包
+
+- 在创建完包后需要直接编译一下，但需要区分：
+  - Python是解释性语言，是不需要编译的；
+  - 这里的编译是为了让ROS在后续能够找到ROS节点；
+  - 对于用Python开发的软件包而言，只需要编译一次即可；
+
+![创建软件包并编译](images/17_Subscriber订阅者的Python实现/创建软件包并编译.png)
+
+### 2.3 编辑节点
+
+- 打开VsCode后，发现atr_py_pkg中只有**src、CMakeList.txt和package.xml**三个文件；
+
+- 在atr_py_pkg下新建**scripts**文件夹，然后在此文件夹下添加节点；
+
+- **ma_node.py节点编辑：**
+
+  - 在scripts文件夹下新建文件**ma_node.py**文件；
+  - python创建订阅者节点的过程如下：
+
+  ![Python订阅者节点的创建](images/17_Subscriber订阅者的Python实现/Python订阅者节点.png)
+
+  - **文件编程：**
+
+  ```python
+  #!/usr/bin/env python3
+  #coding=utf-8
+  
+  import rospy
+  from std_msgs.msg import String
+  
+  def chao_callback(msg):
+      rospy.loginfo(msg.data)
+  
+  def yao_callback(msg):
+      rospy.logwarn(msg.data)
+  
+  if __name__ == "__main__":
+      rospy.init_node("ma_node")
+  
+      sub = rospy.Subscriber("kuai_shang_che_kai_hei_qun", String, chao_callback, queue_size=10)
+  
+      sub2 = rospy.Subscriber("gie_gie_dai_wo", String, yao_callback, queue_size=10)
+  
+      rospy.spin()
+  
+  ```
+
+  - **运行节点：**
+
+    - **Ubuntu中新创建的文件不带有执行权限，需要先把文件的执行权限打开**；
+    - 在对应文件夹下打开终端，输入如下指令给文件**添加执行权限**：
+
+    ```bash
+    chmod +x ma_node.py
+    ```
+
+    ![更改权限](images/17_Subscriber订阅者的Python实现/更改可执行权限.png)
+
+    - 接着在终端中执行ROS初始化以及运行节点即可：
+
+    ![运行节点效果图](images/17_Subscriber订阅者的Python实现/运行效果1.png)
+
+
+
+## 3.用.launch文件同时启动多个ROS节点
+
+- **我们在atr_py_pkg下创建launch文件夹用来存放launch文件，然后新建launch文件kai_hei.launch**，然后添加如下内容：
+  - launch-prefix="gnome-terminel -e：可以指定该节点在另一个终端输出；
+  - **之前的C++文件编译后不带CPP后缀，所以type中没有后缀，但是.py是可执行文件，不编译，需要加后缀；**
+
+```xml
+<launch>
+
+    <node pkg="ssr_py_pkg" type="chao_node.py" name="chao_node"/>
+
+    <node pkg="ssr_py_pkg" type="yao_node.py" name="yao_node"/>
+
+    <node pkg="atr_py_pkg" type="ma_node.py" name="ma_node" launch-prefix="gnome-terminal -e"/>
+
+</launch>
+```
+
+- 然后在终端中输入下列指令即可同时运行之前的几个节点：
+
+```bash
+roslaunch atr_py_pkg kai_hei.launch
+```
+
+- 最终的效果如图所示：
+
+![最终效果](images/17_Subscriber订阅者的Python实现/最终运行效果.png)
+
 
 
 # 第十八节课：ROS机器人运动控制
