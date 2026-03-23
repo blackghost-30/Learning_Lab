@@ -1802,15 +1802,305 @@ roslaunch atr_py_pkg kai_hei.launch
 
 # 第十八节课：ROS机器人运动控制
 
+## 1.机器人运动控制的分解描述
+
+- 机器人的运动可以分解为两部分：
+  - **矢量运动**：包括前后、左右、上下的直线运动；
+  - **旋转运动**：包括左右旋转运动、左右的倾倒运动（滚转运动）、前后倾倒（俯仰运动）；
+
+![机器人运动的分解](images/18_ROS机器人运动控制/运动的分解.png)
+
+- 所有的三维运动都可以由上面的矢量运动和旋转运动合成得到：
+
+![三维运动](images/18_ROS机器人运动控制/三维运动的示意图.png)
+
+
+
+## 2.机器人运动分解的量化表示
+
+### 2.1 平移运动的量化
+
+- 右手做出打枪的手势，其中食指指向机器人运动的正前方，可以得到机器人平移运动的坐标系；
+- 机器人的任意平移运动，都可以通过这三个矢量表示；
+
+![平移运动的量化](images/18_ROS机器人运动控制/平移运动的量化.png)
+
+### 2.2 旋转运动的量化
+
+- 右手四指握拳，只剩下拇指，当：
+  - 拇指指向x轴正方向时，四指的旋转方向即滚转运动的正方向；
+  - 拇指指向y轴正方向时，四指的旋转方向即俯仰运动的正方向；
+  - 拇指指向z轴正方向时，四指的旋转方式即旋转运动的正方向；
+
+![旋转运动](images/18_ROS机器人运动控制/旋转运动的量化.png)
+
+- 所有的三维旋转运动都可以由上面的三个方向合成得到：
+
+![旋转运动的示意图](images/18_ROS机器人运动控制/旋转运动的示意图.png)
+
+
+
+## 3.ROS中的运动控制中的消息包
+
+- 在ROS中，单位如下统一：
+  - 平移运动的单位是m/s；
+  - 旋转运动的单位是rad/s；
+- ROS中的机器人运动控制，是通过消息包的方式来控制的，消息包的格式如下：
+
+![ROS的运动控制模式](images/18_ROS机器人运动控制/ROS中运动控制的结构.png)
+
+
+
+## 4.geometry_msgs软件包介绍
+
+- geometry_msgs软件包是ROS中的运动控制消息包；
+- 在index.ros.rog网站中，可以查看对它的详细描述：
+  - Twist就是geometry_msgs中的运动控制消息包；
+  - Twist里面包含了两个Vector3的变量，对应了平移运动和旋转运动；
+  - 每个Vector3变量内部又有x、y、z三个变量描述；
+
+![geometry_msgs软件包](images/18_ROS机器人运动控制/geometry_msgs消息包格式.png)
+
+
+
+## 5.ROS中的运动控制话题消息架构
+
+- 机器人出厂时会自带一个机器人核心节点，这个节点可以直接驱动机器人的底层硬件；
+- 机器人核心节点会向上订阅一个话题，这个话题叫cmd_vel；
+- 我们在开发过程中，就只需要写一个速度控制节点，并往cmd_vel话题中发布消息即可，这个消息的格式就是前面的Twist；
+
+![运动控制话题消息架构](images/18_ROS机器人运动控制/ROS中运动控制的话题订阅关系.png)
+
 
 
 # 第十九节课：机器人运动控制的C++实现
+
+## 1.环境的搭建
+
+- 由于没有实体的机器人，所以采用ROS中的仿真进行模拟；
+
+- 本节课程用之前介绍过的wpr_simulation开源项目进行仿真，前面已经下载过了源码，也就是**仿真环境Gazebo**；
+
+- 根据下面步骤进行环境的搭建：
+
+  - 进入**wpr_simulation软件包目录**中；
+  - 执行**git pull**完成软件包的更新；
+  - 回退到**catkin_ws**下，执行**catkin_make**进行编译；
+
+  ![环境搭建](images/19_机器人运动控制的C++实现/环境搭建.png)
+
+  - 编译完成后，可以选择启动该仿真程序（在主目录下执行）：
+
+  ```bash
+  roslaunch wpr_simulation wpb_simple.launch
+  ```
+
+  - 然后可以运行该项目中的一个运动控制小例程：
+
+  ```bash
+  rosrun wpr_simulation demo_vel_ctrl
+  ```
+
+
+
+## 2.开发软件包
+
+### 2.1 整体思路框架
+
+- 整体思路如下：
+  - **我们完全不需要去操作底层的控制，只需要完成上层的速度控制节点即可**；
+
+![整体框架](images/19_机器人运动控制的C++实现/整体思路.png)
+
+### 2.2 软件包开发
+
+- **首先创建软件包vel_pkg**
+
+  - 切换目录：
+
+  ```bash
+  cd catkin_ws/src
+  ```
+
+  - 创建软件包：
+
+  ```bash
+  catkin_create_pkg vel_pkg roscpp rospy geometry_msgs
+  ```
+
+![创建软件包](images/19_机器人运动控制的C++实现/创建软件包.png)
+
+- **创建节点**
+
+  - 在src目录下新建文件：vel_node.cpp
+  - 然后在文件中添加如下内容：
+
+  ```cpp
+  #include <ros/ros.h>
+  #include <geometry_msgs/Twist.h>
+  
+  int main(int argc, char *argv[])
+  {
+      ros::init(argc, argv, "vel_node");
+  
+      ros::NodeHandle n;
+      ros::Publisher vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+  
+      geometry_msgs::Twist vel_msg;
+  
+      vel_msg.linear.x = 0.1;
+      vel_msg.linear.y = 0;
+      vel_msg.linear.z = 0;
+  
+      vel_msg.angular.x = 0;
+      vel_msg.angular.y = 0;
+      vel_msg.angular.z = 0;
+  
+      ros::Rate r(30);
+  
+      while(ros::ok())
+      {
+          vel_pub.publish(vel_msg);
+          r.sleep();
+      }
+  
+      return 0;
+  }
+  
+  ```
+
+- **添加编译条件**
+
+  - 在CMakeList.txt文件中，添加如下代码：
+  - 然后直接编译即可，如果没有抄错基本能够成功编译；
+
+  ```bash
+  add_executable(vel_node src/vel_node.cpp)
+  add_dependencies(vel_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(vel_node
+   ${catkin_LIBRARIES}
+  )
+  ```
+
+
+
+## 3.运行节点仿真程序
+
+- 先启动仿真环境
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- 运行自己写的节点：
+
+```bash
+rosrun vel_pkg vel_node
+```
+
+![运行仿真结果](images/19_机器人运动控制的C++实现/运行仿真.gif)
+
+
+
+## 4.逻辑总结
+
+整个过程的逻辑如下：
+
+- wpr_simulation是一个仿真环境；
+- 当启动了demo_vel_ctrl这个小例程后，它就会发布/cmd_vel话题，为wpr_simulation中的wpb_simple.launch提供消息；
+- 我们现在所创建的节点就是替代demo_vel_ctrl这个节点；
+- 我们在写完节点后不启动demo_vel_ctrl，而是启动了我们自己的节点，机器人也能正常的跑起来；
+- 这证明了我们的节点是工作正常的；
 
 
 
 # 第二十节课：机器人运动控制的Python实现
 
+## 1.项目思路
 
+![Python实现的整体思路](images/20_机器人运动控制的Python实现/整体思路.png)
+
+
+
+## 2.开发软件包
+
+### 2.1 创建软件包
+
+- 在工作空间的src目录下创建软件包**vel_py_pkg**：
+
+![创建软件包](images/20_机器人运动控制的Python实现/创建软件包.png)
+
+### 2.2 开发软件包
+
+- 回到VsCode中，在软件包下新建**文件夹scripts**；
+- 在scripts文件夹下新建文件，**vel_node.py**；
+- 然后在vel_node.py文件下添加如下内容：
+
+```python
+#!/usr/bin/env python3
+#coding=utf-8
+
+import rospy
+from geometry_msgs.msg import Twist
+
+if __name__ == "__main__":
+    rospy.init_node("vel_node")
+
+    vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
+
+    vel_msg = Twist()
+
+    vel_msg.linear.x = 0.1
+
+    rate = rospy.Rate(30)
+
+    while not rospy.is_shutdown():
+        vel_pub.publish(vel_msg)
+        rate.sleep()
+
+```
+
+- 为文件添加可执行权限：
+
+![为文件添加可执行权限](images/20_机器人运动控制的Python实现/添加可执行权限.png)
+
+
+
+## 3.运行节点仿真程序
+
+- 先启动仿真环境
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- 运行自己写的节点：
+
+```bash
+rosrun vel_py_pkg vel_node.py
+```
+
+![运行结果](images/20_机器人运动控制的Python实现/运行仿真.gif)
+
+
+
+# 第二十一节课：激光雷达工作原理
+
+
+
+# 第二十二节课：使用RViz观测传感器数据
+
+
+
+# 第二十三节课：激光雷达消息包格式
+
+
+
+# 第二十四节课：获取激光雷达数据的C++节点
+
+
+
+# 第二十五节课：获取激光雷达数据的Python节点
 
 
 
