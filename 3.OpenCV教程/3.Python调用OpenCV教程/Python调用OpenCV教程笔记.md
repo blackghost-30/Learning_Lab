@@ -1563,14 +1563,696 @@ plt.show()
 
 ## 第二十六节课：3-3_高斯滤波
 
+### 1.高斯滤波简介
+
+#### 1.1 高斯分布的介绍
+
+- 对于图像而言，其为二维的矩阵形式，所以常常用二维高斯对图形进行高斯滤波处理；
+- 二维高斯的概率分布函数如下所示：
+
+![二维高斯的概率密度分布](images/第三章/二维高斯概率密度函数.png)
+
+- 二维高斯在可视化上是一个突起的帽子的形状，其中σ可看成两个值，分别为x、y方向标准差：
+  - 两个σ的取值越大，整个形状越平坦；两个σ的取值越小，整个形状越突起；
+
+![二维高斯的图形化](images/第三章/二维高斯的图形化.png)
+
+#### 1.2 高斯平滑介绍
+
+- **高斯平滑的基本思想**
+
+  - 正态分布是一种钟形曲线，越接近中心，取值越大，越远离中心，取值越小；
+  - 计算结果时，将"中心点"作为原点，其他点按其在正态曲线上的位置分配权重，即可以得到平均值；
+  - 与均值滤波的区别就是，高斯滤波对于不同像素点是有权重分配的；
+
+- **高斯滤波的流程**
+
+  - 首先确定权重矩阵的形状：假设取3×3矩阵，则矩阵形状如图所示
+
+  ![权重矩阵的形状](images/第三章/最近点分布.png)
+
+  - 确定权重矩阵的取值：指定两个σ的值，权重矩阵随之确定，这里取1.5
+
+  ![未归一化权重矩阵](images/第三章/指定σ后的权重矩阵.png)
+
+  - 归一化权重矩阵：由于指定σ后的权重矩阵不是归一化的，需要将其归一化
+
+  ![归一化权重矩阵](images/第三章/归一化权重矩阵.png)
+
+  - 获得原图像像素的取值：
+
+  ![原图像像素值](images/第三章/原图像的像素值.png)
+
+  - 进行高斯滤波：接着就可以进行高斯模糊了
+
+  ![高斯模糊](images/第三章/高斯滤波过程.png)
+
+  - 得到高斯结果：
+
+  ![高斯模糊结果](images/第三章/高斯滤波结果.png)
+
+  - **最后将九个值加起来即为中心点的高斯模糊的值；**
+
+#### 1.3 API介绍
+
+- **API：**
+
+```python
+cv2.GaussianBlur(src,ksize,sigmaX,sigmay,borderType)
+```
+
+- **参数：**
+  - src：输入图像；
+  - ksize：高斯卷积核的大小，**注意** ： 卷积核的宽度和高度都应为奇数，且可以不同；
+  - sigmaX：水平方向的标准差；
+  - sigmaY：垂直方向的标准差，默认值为0，表示与sigmaX相同；
+  - borderType：填充边界类型；
+
+
+
+### 2.上级实验
+
+```python
+# 高斯滤波示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 图像读取
+img = cv.imread('images/Chapter3/dogGauss.jpeg')
+
+# 2 高斯滤波
+blur = cv.GaussianBlur(img,(3,3),1)
+
+# 3 图像显示
+plt.figure(figsize=(10,8),dpi=100)
+plt.subplot(121),plt.imshow(img[:,:,::-1]),plt.title('原图')
+plt.xticks([]), plt.yticks([])
+plt.subplot(122),plt.imshow(blur[:,:,::-1]),plt.title('高斯滤波后结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![高斯滤波效果图](images/第三章/高斯滤波效果图.png)
+
 
 
 ## 第二十七节课：3-3_中值滤波
+
+### 1.中值滤波介绍
+
+- 中值滤波是一种典型的**非线性滤波技术**，基本思想是用像素点邻域灰度值的中值来代替该像素点的灰度值；
+
+- 中值滤波对**椒盐噪声**来说尤其有用，因为它不依赖于邻域内那些与典型值差别很大的值；
+
+
+
+### 2.API介绍
+
+- API：
+
+```python
+cv.medianBlur(src, ksize)
+```
+
+- 参数：
+  - src：输入图像；
+  - ksize：卷积核的大小；
+
+
+
+### 3.上机实验
+
+```python
+# 中值滤波示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 图像读取
+img = cv.imread('images/Chapter3/dogsp.jpeg')
+
+# 2 中值滤波
+blur = cv.medianBlur(img,5)
+
+# 3 图像展示
+plt.figure(figsize=(10,8),dpi=100)
+plt.subplot(121),plt.imshow(img[:,:,::-1]),plt.title('原图')
+plt.xticks([]), plt.yticks([])
+plt.subplot(122),plt.imshow(blur[:,:,::-1]),plt.title('中值滤波后结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![中值滤波示意图](images/第三章/中值滤波效果图.png)
 
 
 
 ## 第二十八节课：3-3_图像平滑总结
 
+### 1.图像噪声的介绍
+
+- 椒盐噪声：图像中随机出现的白点或者黑点；
+- 高斯噪声：噪声的概率密度分布是正态分布；
+
+
+
+### 2.图像平滑操作
+
+- **均值滤波**
+
+  - 算法简单，计算速度快；
+  - 但是在去噪的同时去除了很多细节部分，将图像变得模糊；
+  - **API：cv.blur()；**
+
+- **高斯滤波**
+
+  - 去除高斯噪声；
+
+  - **API：cv.GaussianBlur()；**
+
+- **中值滤波**
+
+  - 去除椒盐噪声；
+
+  - **API：cv.medianBlur()；**
+
+
+
+## 第二十九节课：3-4_直方图的原理与显示
+
+### 1.直方图的原理
+
+- **直方图的形成：**
+  - 图像直方图用以表示数字图像中亮度分布，标绘了图像中每个亮度值的像素个数；
+  - 这种直方图中，横坐标的左侧为较暗的区域，而右侧为较亮的区域；
+  - 一张较暗图片的直方图中的数据多集中于左侧和中间部分，而整体明亮、只有少量阴影的图像则相反；
+
+![直方图的表示](images/第三章/直方图的表示.png)
+
+- **直方图的相关术语有：**
+  - dims：需要统计的特征数目。在上例中，dims=1 ，因为仅仅统计了灰度值；
+  - bins：每个特征空间子区段的数目，可译为 “直条” 或 “组距”，在上例中， bins = 16；
+  - range：要统计特征的取值范围，在上例中，range = [0, 255]；
+
+- **直方图的意义：**
+  - 直方图是图像中像素强度分布的图形表达方式；
+  - 它统计了每一个强度值所具有的像素个数；
+  - 不同的图像的直方图可能是相同的；
+
+- **彩色图像的直方图：**
+  - 对于彩色图像而言，不能直接根据彩色图像绘制直方图，而是将其分离通道后进行直方图绘制；
+
+
+
+### 2.直方图计算的API
+
+我们使用OpenCV中的方法统计直方图，并使用matplotlib将其绘制出来。
+
+- **API：**
+
+```python
+cv2.calcHist(images, channels, mask, histSize, ranges[,hist[,accumulate]])
+```
+
+- **参数（都要用中括号传进来）：**
+  - **images：原图像**
+    - 当传入函数时应该用中括号 [] 括起来，例如：[img]；
+  - **channels：通道**
+    - 如果输入图像是灰度图，它的值就是 [0]；
+    - 如果是彩色图像的话，传入的参数可以是 [0]，[1]，[2] 它们分别对应着通道 B，G，R；
+  - **mask：掩模图像**
+    - 要统计整幅图像的直方图就把它设为 None；
+    - 但是如果想统计图像某一部分的直方图的话，就需要制作一个掩模图像，并使用它；
+  - **histSize：BIN 的数目**
+    - 也应该用中括号括起来，例如：[256]；
+  - **ranges：**
+    - 像素值范围，通常为 [0，256]
+
+
+
+### 3.上机实验
+
+```python
+# 直方图的示例代码
+
+import numpy as np
+import cv2 as cv
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 直接以灰度图的方式读入
+img = cv.imread('images/Chapter3/cat.jpeg',0)
+
+# 2 统计灰度图
+histr = cv.calcHist([img],[0],None,[256],[0,256])
+
+# 3 绘制灰度图
+plt.figure(figsize=(10,6),dpi=100)
+plt.plot(histr)
+plt.grid()
+plt.show()
+
+```
+
+![运行效果](images/第三章/直方图效果.png)
+
+
+
+## 第三十节课：3-4_掩膜的运用
+
+### 1.掩膜的介绍
+
+- **掩膜的介绍：**
+  - 在数字图像处理中，我们通常使用二维矩阵数组进行掩膜；
+  - 掩膜是**由0和1组成一个二进制图像**，利用该掩膜图像对要处理的图像进行掩膜；
+  - **其中1值的区域被处理，0 值区域被屏蔽，不会处理**；
+
+- **掩膜的主要用途是：**
+  - **提取感兴趣区域：**
+    - 用预先制作的感兴趣区掩模与待处理图像进行”与“操作，得到感兴趣区图像；
+    - 感兴趣区内图像值保持不变，而区外图像值都为0；
+  - **屏蔽作用：**
+    - 用掩模对图像上某些区域作屏蔽，使其不参加处理或不参加处理参数的计算；
+    - 或仅对屏蔽区作处理或统计；
+  - **结构特征提取：**
+    - 用相似性变量或图像匹配方法检测和提取图像中与掩模相似的结构特征；
+  - **特殊形状图像制作：**
+    - 可以在原来的图像基础上制作出特殊的形状图像；
+
+- **OpenCV中的掩膜：**
+  - 使用cv.calcHist()来查找**完整图像的直方图**；
+  -  如果要查找图像某些区域的直方图，只需**在要查找直方图的区域上创建一个白色的掩膜图像**；
+  - 否则创建黑色， 然后将其作为掩码mask传递即可；
+
+
+
+### 2.上机实验
+
+```python
+# 掩膜图像的示例代码
+
+import numpy as np
+import cv2 as cv
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 直接以灰度图的方式读入
+img = cv.imread('images/Chapter3/cat.jpeg',0)
+
+# 2. 创建蒙版
+mask = np.zeros(img.shape[:2], np.uint8)        # 创建全黑图像
+mask[400:650, 200:500] = 255                    # 指定区域为1
+
+# 3.掩模
+masked_img = cv.bitwise_and(img,img,mask = mask)        # 进行与操作，得到特定区域的原图像
+
+# 4. 统计掩膜后图像的灰度图
+mask_histr = cv.calcHist([img],[0],mask,[256],[1,256])
+
+# 5. 图像展示
+fig,axes=plt.subplots(nrows=2,ncols=2,figsize=(10,8))
+axes[0,0].imshow(img,cmap=plt.cm.gray)
+axes[0,0].set_title("原图")
+axes[0,1].imshow(mask,cmap=plt.cm.gray)
+axes[0,1].set_title("蒙版数据")
+axes[1,0].imshow(masked_img,cmap=plt.cm.gray)
+axes[1,0].set_title("掩膜后数据")
+axes[1,1].plot(mask_histr)
+axes[1,1].grid()
+axes[1,1].set_title("灰度直方图")
+plt.show()
+
+```
+
+![掩膜效果图](images/第三章/掩膜效果图.png)
+
+
+
+## 第三十一节课：3-4_直方图均衡化
+
+### 1.原理与应用
+
+- **直方图均衡化**把原始图像的灰度直方图从比较集中的某个灰度区间变成在更广泛灰度范围内的分布；
+- 是对图像进行**非线性拉伸**，重新分配图像像素值，使一定灰度范围内的像素数量大致相同；
+
+- 可以提高**图像整体的对比度**，特别是**有用数据的像素值分布比较接近时**；
+- 在**曝光过度或不足的图像**中也可以更好的突出细节；
+
+![直方图均衡化](images/第三章/图像直方图均衡化.png)
+
+
+
+### 2.API介绍
+
+- **API：**
+
+```python
+dst = cv.equalizeHist(img)
+```
+
+- **参数与返回：**
+  - **参数：**
+    - img：灰度图像；
+  - **返回：**
+    - dst：均衡化后的结果；
+
+
+
+### 3.上机实验
+
+```python
+# 直方图均衡化的示例代码
+
+import numpy as np
+import cv2 as cv
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 直接以灰度图的方式读入
+img = cv.imread('images/Chapter3/cat.jpeg',0)
+
+# 2. 均衡化处理
+dst = cv.equalizeHist(img)
+
+# 3. 结果展示
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img,cmap=plt.cm.gray)
+axes[0].set_title("原图")
+axes[1].imshow(dst,cmap=plt.cm.gray)
+axes[1].set_title("均衡化后结果")
+plt.show()
+
+```
+
+![直方图均衡化效果](images/第三章/直方图均衡化的结果.png)
+
+
+
+## 第三十二节课：3-4_自适应均衡化
+
+### 1.自适应均衡化的介绍
+
+- **均衡化的缺点：**
+
+  - 上一节课的均衡化中，虽然提高了对比度，但猫腿部分损失了太多的细节，均衡化常常效果不好；
+
+- **自适应均衡化：解决均衡化的缺点**
+
+  -   整幅图像被分成很多小块，这些小块被称为**“tiles”（在 OpenCV 中 tiles 的 大小默认是 8x8）**；
+  - 然后再对每一个小块分别进行直方图均衡化；
+  -  在每一个区域中， 直方图会集中在某一个小的区域中，**如果有噪声的话，噪声会被放大**；
+  - 对于每个小块来说，如果直方图中的bin超过对比度的上限的话，就把其中的像素点均匀分散到其他bins中，然后再进行直方图均衡化；
+  - 最后，为了去除每一个小块之间的边界，再使用**双线性差值**，对每一小块进行拼接；
+
+  ![自适应均衡化](images/第三章/自适应均衡化.png)
+
+- **API介绍：**
+
+  - **API：**
+
+  ```python
+  cv.createCLAHE(clipLimit, tileGridSize)
+  ```
+
+  - **参数：**
+    - clipLimit：对比度限制，默认是40；
+    - tileGridSize：分块的大小，默认为8∗8；
+  - **注意：**
+    - 这个API只是进行自适应均衡化对象的创建，还需要将该对象应用于图像；
+
+
+
+### 2.上机实验
+
+```python
+# 自适应均衡化的示例代码
+
+import numpy as np
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 以灰度图形式读取图像
+img = cv.imread('images/Chapter3/cat.jpeg',0)
+
+# 2. 创建一个自适应均衡化的对象，并应用于图像
+clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+cl1 = clahe.apply(img)
+
+# 3. 图像展示
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img,cmap=plt.cm.gray)
+axes[0].set_title("原图")
+axes[1].imshow(cl1,cmap=plt.cm.gray)
+axes[1].set_title("自适应均衡化后的结果")
+plt.show()
+
+```
+
+![自适应均衡化效果](images/第三章/自适应均衡化效果图.png)
+
+
+
+## 第三十三节课：3-4_直方图总结
+
+- **灰度直方图**
+  - 直方图是图像中像素强度分布的图形表达方式；
+  - 它统计了每一个强度值所具有的像素个数；
+  - 不同的图像的直方图可能是相同的；
+  - **cv.calcHist（images，channels，mask，histSize，ranges [，hist [，accumulate]]）**
+
+- **掩膜**
+  - 创建蒙版，透过mask进行传递，可获取感兴趣区域的直方图；
+
+- **直方图均衡化**
+
+  - 增强图像对比度的一种方法；
+
+  - **cv.equalizeHist()**
+
+-  **自适应的直方图均衡**
+  - 将整幅图像分成很多小块，然后再对每一个小块分别进行直方图均衡化，最后进行拼接；
+  - **clahe = cv.createCLAHE(clipLimit, tileGridSize)**
+
+
+
+## 第三十四节课：3-5_边缘检测原理
+
+### 1.边缘检测原理及其表现形式
+
+- 边缘检测的目的是标识数字图像中**亮度变化明显的点**；
+- 换句话来说，边缘就是图像中灰度变化剧烈的区域；
+- 图像属性中的**显著变化**通常反映了属性的重要事件和变化，如下图所示即为边缘的实际表现形式：
+
+![边缘的表现形式](images/第三章/边缘的表现形式.png)
+
+
+
+### 2.边缘检测的分类
+
+- **基于搜索的边缘检测：**
+  - 通过寻找图像**一阶导数中的最大值**来检测边界；
+  - 利用计算结果估计边缘的局部方向，通常采用梯度的方向，并利用此方向找到局部梯度模的最大值；
+  - 代表算法是**Sobel算子和Scharr算子**；
+
+![基于搜索的边缘检测](images/第三章/搜索的边缘检测.png)
+
+- **基于零穿越的边缘检测：**
+  - 通过寻找**图像二阶导数零穿越**来寻找边界；
+  - 代表算法是**Laplacian算子**；
+
+![基于零穿越的边缘检测](images/第三章/零穿越的边缘检测.png)
+
+
+
+## 第三十五节课：3-5_sobel算子
+
+### 1.原理
+
+#### 1.1 sobel算子简介
+
+- Sobel算法比较简单，实际中效率比**canny边缘检测**效率要高，但边缘不如Canny检测的准确；
+- Sobel算子是**高斯平滑与微分操作的结合体**，所以其抗噪声能力很强，用途较多；
+
+#### 1.2 sobel算子的原理
+
+- **不连续函数的一阶导数：**
+
+![不连续函数的一阶导数](images/第三章/不连续函数的一阶导数.png)
+
+- **实际中sobel算子的卷积核运算：高斯权重加一阶微分**
+
+![sobel算子的操作](images/第三章/sobel算子.png)
+
+#### 1.3 Scharr算子
+
+- 原先的sobel算子的权重分别为2和1；
+- scharr算子在sobel算子的基础上，增大了权重，使得边缘检测更加敏感：
+
+![scharr算子](images/第三章/scharr算子.png)
+
+#### 1.4 算法的本质剖析
+
+- 这两个算子的本质是在做**“卷积+数据融合”**；
+- 卷积就是在求微分，融合是为了得到两个方向的和；
+- 最后所呈现出来的所谓的图像，实际上就是**梯度的分布图**；
+
+
+
+### 2.API介绍
+
+- **API：**
+
+```python
+Sobel_x_or_y = cv2.Sobel(src, ddepth, dx, dy, dst, ksize, scale, delta, borderType)
+```
+
+- **参数：**
+  - src：传入的图像；
+  - ddepth：图像的深度；
+  - dx和dy：指求导的阶数，0表示这个方向上没有求导，取值为0、1；
+  - ksize：是Sobel算子的大小，即卷积核的大小，必须为奇数1、3、5、7，默认为3；
+    - 如果ksize=-1，就演变成为3x3的Scharr算子；
+  - scale：缩放导数的比例常数，默认情况为没有伸缩系数；
+  - borderType：图像边界的模式，默认值为cv2.BORDER_DEFAULT；
+
+- **位数问题：**
+
+  - Sobel函数求完导数后会有负值，还有会大于255的值；
+  - 而原图像是uint8，即8位无符号数，所以Sobel建立的图像位数不够，会有截断；
+  - 因此要使用16位有符号的数据类型，即cv2.CV_16S；
+  - 处理完图像后，再使用cv2.convertScaleAbs()函数将其转回原来的uint8格式，否则图像无法显示；
+
+  ```python
+  Scale_abs = cv2.convertScaleAbs(x)  # 格式转换函数
+  ```
+
+- **通道融合：**
+
+  - Sobel算子是在两个方向计算的，最后还需要用cv2.addWeighted( )函数将其组合起来；
+
+  ```python
+  result = cv2.addWeighted(src1, alpha, src2, beta) # 图像混合
+  ```
+
+
+
+### 3.上机实验
+
+#### 3.1 sobel算子
+
+```python
+# sobel算子的示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread('images/Chapter3/horse.jpg',0)
+
+# 2 计算Sobel卷积结果
+x = cv.Sobel(img, cv.CV_16S, 1, 0)
+y = cv.Sobel(img, cv.CV_16S, 0, 1)
+
+# 3 将数据进行转换
+Scale_absX = cv.convertScaleAbs(x)      # convert 转换  scale 缩放
+Scale_absY = cv.convertScaleAbs(y)
+
+# 4 结果合成
+result = cv.addWeighted(Scale_absX, 0.5, Scale_absY, 0.5, 0)
+
+# 5 图像显示
+plt.figure(figsize=(10,8),dpi=100)
+plt.subplot(121),plt.imshow(img,cmap=plt.cm.gray),plt.title('原图')
+plt.xticks([]), plt.yticks([])
+plt.subplot(122),plt.imshow(result,cmap = plt.cm.gray),plt.title('Sobel滤波后结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![sobel结果图](images/第三章/sobel结果图.png)
+
+#### 3.2 scharr算子
+
+```python
+# scharr算子的示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread('images/Chapter3/horse.jpg',0)
+
+# 2 计算scharr卷积结果
+x = cv.Sobel(img, cv.CV_16S, 1, 0, ksize = -1)
+y = cv.Sobel(img, cv.CV_16S, 0, 1, ksize = -1)
+
+# 3 将数据进行转换
+Scale_absX = cv.convertScaleAbs(x)      # convert 转换  scale 缩放
+Scale_absY = cv.convertScaleAbs(y)
+
+# 4 结果合成
+result = cv.addWeighted(Scale_absX, 0.5, Scale_absY, 0.5, 0)
+
+# 5 图像显示
+plt.figure(figsize=(10,8),dpi=100)
+plt.subplot(121),plt.imshow(img,cmap=plt.cm.gray),plt.title('原图')
+plt.xticks([]), plt.yticks([])
+plt.subplot(122),plt.imshow(result,cmap = plt.cm.gray),plt.title('Sobel滤波后结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![scharr结果图](images/第三章/scharr结果图.png)
+
+
+
+## 第三十六节课：3-5_laplacian算子
+
+
+
+## 第三十七节课：3-5_Canny边缘检测
+
+
+
+## 第三十八节课：3-5_边缘检测总结
 
 
 
@@ -1580,6 +2262,41 @@ plt.show()
 
 
 
+
+
+## 第三十九节课：3-6_模板匹配
+
+
+
+## 第四十节课：3-6_霍夫线变换原理
+
+
+
+## 第四十一节课：3-6_霍夫线检测
+
+
+
+## 第四十二节课：3-6_霍夫圆检测
+
+
+
+## 第四十三节课：3-6_模板匹配和霍夫检测总结
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 第四章：图像特征提取与描述
 
 
 
