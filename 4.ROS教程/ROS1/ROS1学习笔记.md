@@ -2115,19 +2115,290 @@ rosrun vel_py_pkg vel_node.py
 
 # 第二十二节课：使用RViz观测传感器数据
 
+## 1.RViz简介
+
+- 全名：The Robot Visualization Tool；
+- 这是一个可视化工具，主要用来：
+  - 可视化传感器的数据；
+  - 可视化机器人运算处理的中间结果；
+  - 可视化即将执行的目标指示；
+
+
+
+## 2.RViz的使用
+
+### 2.1 RViz的启动
+
+- 在终端中启动仿真环境
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- 打开RViz可视化工具：
+
+```bash
+rviz
+```
+
+- RViz界面的主要内容有：
+  - 菜单栏；
+  - 工具栏；
+  - 当前可视化项目的列表；
+  - 对可视化项目的操作；
+  - 图形化显示窗口；
+  - 视角位置数值调整窗口，一般不用，而是直接手动调整视角；
+  - 状态栏；
+
+![启动RViz](images/22_使用RViz观测传感器数据/启动RViz工具.png)
+
+### 2.2 RViz的使用
+
+- **修改Fixed Frame并添加机器人模型：**
+
+![添加机器人模型](images/22_使用RViz观测传感器数据/添加机器人模型.gif)
+
+- **添加激光雷达并选择订阅话题：**
+
+![添加激光雷达并选择订阅话题](images/22_使用RViz观测传感器数据/添加激光雷达并订阅话题.gif)
+
+- **在仿真环境中添加障碍物，RViz将实时显示点阵：**
+
+![场景交互](images/22_使用RViz观测传感器数据/场景交互.gif)
+
+### 2.3 RViz配置文件的保存
+
+- 在RViz中可以电机File将当前的环境格式保存为.rviz格式的文件；
+- 在下次打开RViz时可以直接点击File将该文件环境读取进来；
+
+- 除此之外，还可以通过launch文件启动RViz，如wpr_simulation中自带的一个launch文件：
+
+```bash
+roslaunch wpr_simulation wpb_rviz.launch
+```
+
+- 后续的RViz启动就通过这个方式来启动；
+
+
+
+## 3.RViz与Gazebo的区别
+
+- **Gazebo：**
+  - 是模拟真是机器人发出传感器数据的工具；
+  - 在实际的机器人开发中，Gazebo是不存在的，由真实的机器人和真实的环境代替；
+- **RViz：**
+  - 是接收传感器数据并进行显示的工具，即它显示的是机器人实际能检测的环境状况；
+  - 在实际的机器人开发中，RViz可能还存在，它仍然可以接收实际机器人的传感器数据并显示；
+
 
 
 # 第二十三节课：激光雷达消息包格式
 
+## 1.启动仿真环境与RViz
+
+- ```bash
+  roslaunch wpr_simulation wpb_simple.launch
+  ```
+
+- ```bash
+  roslaunch wpr_simulation wpb_rviz.launch
+  ```
+
+- 然后在机器人周围放上障碍物，即可得到点阵图；
+
+![启动仿真环境](images/23_激光雷达数据包格式/启动仿真环境.png)
+
+
+
+## 2.官网查看ROS中对激光雷达点阵数据的封装
+
+- 官网中选择**Package**和**Noetic的版本**；
+- 然后在搜索框中搜索：**sensor_msgs**；
+- 进去后点击**Website**进入其描述网址，然后选择**LaserScan Message**：
+
+![激光雷达数据格式](images/23_激光雷达数据包格式/激光雷达数据格式.png)
+
+- 中文翻译如下：
+
+![中文翻译版](images/23_激光雷达数据包格式/激光雷达数据格式中文翻译.png)
+
+
+
+## 3.用rostopic查看仿真中的数据格式
+
+- **在终端中执行：**
+
+```bash
+rostopic echo /scan --noarr
+```
+
+- 得到如下结果：
+
+![终端显示的激光雷达数据](images/23_激光雷达数据包格式/终端显示的激光雷达数据.png)
+
+- **数据格式剖析：**
+  - header：主要是存储时间戳和坐标系ID
+    - 时间戳：消息包发送的时间；
+    - 坐标系ID：涉及到TF系统；
+  - angle_min和angle_max：对应了激光雷达的起始角度和终止角度（弧度）；
+  - angle_increment：相邻两次测距的旋转夹角（弧度）；
+  - time_increment：相邻两次测距的时间差（s）；
+  - scan_time：两次扫描的起始时间差（s），即扫描周期；
+  - range_min和range_max：雷达扫描的最小距离和最大距离（m）；
+  - ranges：数据数组
+    - 包含360个float32的数据，即旋转一周扫描360个点，然后存入数组中；
+    - 数据的排序跟扫描的起始角度和终止角度对应，就是360个值；
+    - 若测量距离过大，数据就是INF；
+  - intensities：360个float32数据，与ranges对应，是测距返回的信号强度；
+
 
 
 # 第二十四节课：获取激光雷达数据的C++节点
+
+## 1.环境搭建
+
+- 本节课的依赖环境就是之前说的wpr_simulation；
+- 整个环境的搭建可参照《第十九节课的环境搭建》；
+- 思路：
+  - 若已经下载了就可以直接编译并运行；
+  - 若还没下载就下载源码然后编译运行；
+
+
+
+## 2.运行环境
+
+- 仿真环境的运行：
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- wpr_simulation中有一个获取雷达数据的例子程序。可运行查看效果：
+
+```bash
+rosrun wpr_simulation demo_lidar_data
+```
+
+![例子程序](images/24_获取激光雷达数据的C++节点/wpr_simulation的获取雷达数据例子程序.png)
+
+
+
+## 3.项目框架
+
+- ROS开发中，激光雷达会有一个节点，这个节点是由厂商提供的，**配置一下端口即可将激光雷达的电路数据传输到这个节点中**；
+- 这个节点会发布一个话题，消息的格式就是之前的sensor_msgs::LaserScan，话题的名称是约定的/scan；
+- 我们只需要完成数据获取节点，订阅/scan话题即可得到数据；
+
+![项目框架](images/24_获取激光雷达数据的C++节点/项目框架.png)
+
+- **最后总结一下实现步骤如下：**
+
+![实现步骤](images/24_获取激光雷达数据的C++节点/实现步骤.png)
+
+
+
+## 4.项目开发
+
+- **创建软件包：catkin_ws src目录下**
+
+```bash
+catkin_create_pkg lidar_pkg roscpp rospy sensor_msgs
+```
+
+- **VsCode中，在lidar_pkg目录下的src目录下创建lidar_node.cpp文件，然后编程：**
+
+```cpp
+#include <ros/ros.h>
+#include <sensor_msgs/LaserScan.h>
+
+void LidarCallback(const sensor_msgs::LaserScan msg)
+{
+    float fMidDist = msg.ranges[180];
+    ROS_INFO("前方测距 ranges[180] = %f 米", fMidDist);
+}
+
+int main(int argc, char *argv[])
+{
+    setlocale(LC_ALL, "");
+    ros::init(argc, argv, "lidar_node");
+    
+    ros::NodeHandle n;
+    ros::Subscriber lidar_sub = n.subscribe("/scan", 10, &LidarCallback);
+    
+    ros::spin();
+    
+    return 0;
+}
+
+```
+
+- **添加编译规则：CMakeList.txt文件最后添加：**
+
+```cpp
+add_executable(lidar_node src/lidar_node.cpp)
+target_link_libraries(lidar_node
+  ${catkin_LIBRARIES}
+)
+```
+
+- **编译：catkin_ws下，终端执行命令**
+
+```bash
+catkin_make
+```
+
+
+
+## 5.运行查看数据
+
+- **启动仿真环境：**
+
+```bash
+roslaunch wpr_simulation wpb.simple.launch
+```
+
+- **启动节点：**
+
+```bash
+rosrun lidar_pkg lidar_node
+```
+
+- **实际效果：**
+  - 可不断移动仿真环境中的书柜，然后观察终端数据的变化；
+
+![运行效果](images/24_获取激光雷达数据的C++节点/运行效果.png)
 
 
 
 # 第二十五节课：获取激光雷达数据的Python节点
 
 
+
+# 第二十六节课：激光雷达避障的C++节点
+
+
+
+# 第二十七节课：激光雷达避障的Python节点
+
+
+
+# 第二十八节课：ROS中的IMU惯性测量单元的消息包
+
+
+
+# 第二十九节课：获取IMU数据的C++节点
+
+
+
+# 第三十节课：获取IMU数据的Python节点
+
+
+
+# 第三十一节课：IMU航向锁定的C++节点
+
+
+
+# 第三十二节课：IMU航向锁定的Python节点
 
 
 
