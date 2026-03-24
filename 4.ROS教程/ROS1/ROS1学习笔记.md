@@ -2325,7 +2325,7 @@ int main(int argc, char *argv[])
     ros::NodeHandle n;
     ros::Subscriber lidar_sub = n.subscribe("/scan", 10, &LidarCallback);
     
-    ros::spin();
+    ros::spin();		// 内部自带了循环，不需要再套个while
     
     return 0;
 }
@@ -2372,9 +2372,162 @@ rosrun lidar_pkg lidar_node
 
 # 第二十五节课：获取激光雷达数据的Python节点
 
+## 1.项目整体结构
+
+- 在我的开发中，为了区分前面的lidar_pkg，我改为了lidar_py_pkg；
+
+![项目整体结构](images/25_获取激光雷达数据的Python节点/实现步骤.png)
+
+
+
+## 2.项目开发
+
+- 创建软件包：
+
+```bash
+cd catkin_ws/src
+catkin_create_pkg lidar_py_pkg roscpp rospy sensor_msgs
+```
+
+- 编译：
+
+```bash
+cd ..			# 回退到catkin_ws目录
+catkin_make		# 编译
+```
+
+- 创建文件：
+  - 在VsCode中，在lidar_py_pkg文件夹下创建scripts文件夹；
+  - 再在这个文件夹下创建lidar_node.py文件；
+
+- 编辑文件：
+
+```python
+#!/usr/bin/env python3
+#coding=utf-8
+
+import rospy
+from sensor_msgs.msg import LaserScan
+
+def LidarCallback(msg):
+    dist = msg.ranges[180]
+    rospy.loginfo("前方测距 range[180] = %f 米", dist)
+
+
+if __name__ == "__main__":
+    rospy.init_node("lidar_node")
+    lidar_sub = rospy.Subscriber("/scan", LaserScan, LidarCallback, queue_size=10)
+    rospy.spin()
+
+```
+
+- 为文件添加可执行权限
+
+```bash
+cd catkin_ws/src/lidar_py_pkg/scripts
+chmod +x lidar_node.py
+```
+
+- 运行仿真环境并运行节点
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+rosrun lidar_py_pkg lidar_node.py
+```
+
+![运行结果](images/25_获取激光雷达数据的Python节点/效果图.png)
+
 
 
 # 第二十六节课：激光雷达避障的C++节点
+
+## 1.项目框架
+
+- 在前面的基础上，使节点订阅雷达数据的同时，发布速度控制话题；
+
+![项目框架](images/26_激光雷达避障的C++节点/项目框架.png)
+
+- 实现步骤：
+
+![实现步骤](images/26_激光雷达避障的C++节点/实现步骤.png)
+
+
+
+## 2.项目开发
+
+- 在原来的lidar_pkg软件包的lidar_node.cpp文件基础上增加：
+  - 每调用回调函数50次就发布一次速度指令；
+
+```cpp
+#include <ros/ros.h>
+#include <sensor_msgs/LaserScan.h>
+#include <geometry_msgs/Twist.h>
+
+ros::Publisher vel_pub;     // 声明为全局变量
+int nCount = 0;				// 计数值变量，用于延长旋转时间
+
+void LidarCallback(const sensor_msgs::LaserScan msg)
+{
+    float fMidDist = msg.ranges[180];
+    ROS_INFO("前方测距 ranges[180] = %f 米", fMidDist);
+
+    if(nCount > 0)
+    {
+        nCount --;
+        return;
+    }
+
+    geometry_msgs::Twist vel_cmd;
+    if(fMidDist < 1.5)
+    {
+        vel_cmd.angular.z = 0.3;
+        nCount = 50;
+    }
+    else
+    {
+        vel_cmd.linear.x = 0.05;
+    }
+    vel_pub.publish(vel_cmd);
+}
+
+int main(int argc, char *argv[])
+{
+    setlocale(LC_ALL, "");
+    ros::init(argc, argv, "lidar_node");
+    
+    ros::NodeHandle n;
+    ros::Subscriber lidar_sub = n.subscribe("/scan", 10, &LidarCallback);   // 订阅激光雷达话题
+    
+    vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);            // 发布速度话题
+
+    ros::spin();
+    
+    return 0;
+}
+
+```
+
+
+
+## 3.编译运行
+
+- 启动仿真环境：
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- 运行节点：
+
+```bash
+rosrun lidar_pkg lidar_node
+```
+
+- 效果如下：
+
+![激光雷达避障效果图]()
+
+
 
 
 
