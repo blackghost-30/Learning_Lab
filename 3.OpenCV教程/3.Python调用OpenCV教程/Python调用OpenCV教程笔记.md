@@ -2246,25 +2246,285 @@ plt.show()
 
 ## 第三十六节课：3-5_laplacian算子
 
+### 1.laplacian算子的介绍
+
+![拉普拉斯算子介绍](images/第三章/拉普拉斯算子介绍.png)
+
+
+
+### 2.API介绍
+
+- **API：**
+
+```python
+laplacian = cv2.Laplacian(src, ddepth[, dst[, ksize[, scale[, delta[, borderType]]]]])
+```
+
+- **参数：**
+  - Src：需要处理的图像；
+  - Ddepth：图像的深度，-1表示采用的是原图像相同的深度，目标图像的深度必须大于等于原图像的深度；与前面一样，一般指定为**CV_16S**；
+  - ksize：算子的大小，即卷积核的大小，必须为1,3,5,7；
+
+
+
+### 3.上机实验
+
+```python
+# 拉普拉斯算子的示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread('images/Chapter3/horse.jpg',0)
+
+# 2 laplacian转换
+result = cv.Laplacian(img,cv.CV_16S)
+Scale_abs = cv.convertScaleAbs(result)
+
+# 3 图像展示
+plt.figure(figsize=(10,8),dpi=100)
+plt.subplot(121),plt.imshow(img,cmap=plt.cm.gray),plt.title('原图')
+plt.xticks([]), plt.yticks([])
+plt.subplot(122),plt.imshow(Scale_abs,cmap = plt.cm.gray),plt.title('Laplacian检测后结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![拉普拉斯算子效果图](images/第三章/拉普拉斯算子的效果图.png)
+
 
 
 ## 第三十七节课：3-5_Canny边缘检测
+
+### 1.Canny边缘检测的原理
+
+#### 1.1 Canny算法的简介
+
+- Canny 边缘检测算法是一种非常流行的边缘检测算法；
+- 由**John F. Canny**于1986年提出的，被认为是最优的边缘检测算法；
+
+#### 1.2 Canny算法的原理
+
+Canny边缘检测算法是由4步构成，分别介绍如下：
+
+- **第一步：噪声去除**
+  - 边缘检测很容易受到噪声的影响，所以首先使用5*5高斯滤波器去除噪声；
+
+- **第二步：计算图像梯度**
+
+  - 对平滑后的图像使用**Sobel算子**计算水平方向和竖直方向的一阶导数（Gx 和 Gy）；
+  - 根据得到的这两幅梯度图（Gx 和 Gy）找到边界的梯度和方向；
+  - **若某个像素点是边缘，其梯度方向总是垂直与边缘垂直；梯度方向被归为四类：垂直，水平，和两个对角线方向；**
+  - 公式如下：
+
+  ![公式](images/第三章/Canny算法检测边缘公式.png)
+
+- **第三步：非极大值抑制**
+
+  - 在获得梯度的方向和大小之后，对整幅图像进行扫描，去除**那些非边界上的点**；
+  - 对每一个像素进行检查，**看这个点的梯度是不是周围具有相同梯度方向的点中最大的**；
+  - 如下图所示：
+    - A点位于图像的边缘，在其梯度变化方向，选择像素点B和C，用来检验A点的梯度是否为极大值；
+    - 若为极大值，则进行保留，否则A点被抑制，最终的结果是具有“细边”的二进制图像；
+
+  ![非极大值抑制](images/第三章/非极大值抑制.png)
+
+- **第四步：滞后阈值**
+
+  - 接下来就是确定真正的边界。
+  - 设置两个阈值： minVal和maxVal，当图像的灰度梯度高于maxVal时被认为是真的边界， 低于minVal 的边界会被抛弃；
+  - 如果介于两者之间的话，就要看这个点是否与某个被确定为真正的边界点相连，如果是就认为它也是边界点，如果不是就抛弃，如下图：
+    - A高于阈值maxVal所以是真正的边界点，C虽然低于maxVal但高于minVal并且与A相连，所以也被认为是真正的边界点；
+    - 而B就会被抛弃，因为低于maxVal而且不与真正的边界点相连；
+    - 所以选择合适的maxVal和minVal对于能否得到好的结果非常重要；
+
+  ![滞后阈值](images/第三章/滞后阈值.png)
+
+
+
+### 2.API介绍
+
+- **API：**
+
+```python
+canny = cv2.Canny(image, threshold1, threshold2)
+```
+
+- **参数：**
+  - image：灰度图；
+  - threshold1：minval，**较小的阈值将间断的边缘连接起来**；
+  - threshold2：maxval，**较大的阈值检测图像中明显的边缘**；
+- **上机实验：**
+
+```python
+# Canny算子示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 图像读取
+img = cv.imread('images/Chapter3/horse.jpg',0)
+
+# 2 Canny边缘检测
+lowThreshold = 0
+max_lowThreshold = 100
+canny = cv.Canny(img, lowThreshold, max_lowThreshold)
+
+# 3 图像展示
+plt.figure(figsize=(10,8),dpi=100)
+plt.subplot(121),plt.imshow(img,cmap=plt.cm.gray),plt.title('原图')
+plt.xticks([]), plt.yticks([])
+plt.subplot(122),plt.imshow(canny,cmap = plt.cm.gray),plt.title('Canny检测后结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![Canny算法效果图](images/第三章/Canny算法效果图.png)
 
 
 
 ## 第三十八节课：3-5_边缘检测总结
 
+- **边缘检测的原理**
+  - 基于搜索：利用一阶导数的最大值获取边界；
+  - 基于零穿越：利用二阶导数为0获取边界；
 
+- **Sobel算子**
+  - 基于搜索的方法获取边界；
+  - cv.sobel()——>cv.convertScaleAbs()——>cv.addweights()
 
+- **Laplacian算子**
+  - 基于零穿越获取边界；
+  - cv.Laplacian()
 
+- **Canny算法**
+  - 噪声去除：高斯滤波；
+  - 计算图像梯度：sobel算子，计算梯度大小和方向；
+  - 非极大值抑制：利用梯度方向像素来判断当前像素是否为边界点；
+  - 滞后阈值：设置两个阈值，确定最终的边界；
 
+- **算子比较**
 
-
-
+![算子比较](images/第三章/算子比较.png)
 
 
 
 ## 第三十九节课：3-6_模板匹配
+
+### 1.模板匹配的原理
+
+- **思路：**
+
+  - 模板匹配是在给定的图片中查找和模板最相似的区域，该算法的输入包括模板和图片；
+  - 任务的思路是不断的移动模板图片，计算其与图像中对应区域的匹配度，并将匹配度最高的区域选择为最终的结果；
+
+- **实现流程：**
+
+  - **准备两幅图像：**
+    - 原图像(I)：在这幅图中，找到与模板相匹配的区域；
+    - 模板(T)：与原图像进行比对的图像块；
+
+  ![模板匹配的输入](images/第三章/模板匹配的输入图像.jpg)
+
+  - **滑动模板图像和原图像进行比对：**
+
+    - 模板每次移动一个像素 (从左往右，从上往下)，在每一个位置，都计算与模板图像的相似程度：
+
+    ![模板匹配的相似度计算](images/第三章/模板匹配的相似度计算.jpg)
+
+  - **模板比对的结果：**
+
+    - 对于每一个位置将计算的相似结果保存在结果矩阵（R）中；
+    - 如果输入图像的大小(WxH)且模板图像的大小(wxh)，则输出矩阵R的大小为(W-w+1,H-h+1)
+    - 将R显示为图像，如下图所示：
+
+    ![模板匹配比对结果](images/第三章/模板比对结果.jpg)
+
+  - **筛选匹配：**
+
+    - 获得上述图像后，查找最大值所在的位置，那么该位置对应的区域就被认为是最匹配的；
+    - **对应的区域就是以该点为顶点，长宽和模板图像一样大小的矩阵；**
+
+
+
+### 2.API实现
+
+- **API：**
+
+```python
+res = cv.matchTemplate(img,template,method)
+```
+
+- **参数：**
+
+  - img：要进行模板匹配的图像；
+
+  - Template：模板；
+
+  - method：实现模板匹配的算法，主要有：
+
+    - 平方差匹配(CV_TM_SQDIFF)：利用模板与图像之间的平方差进行匹配，最好的匹配是0，匹配越差，匹配的值越大；
+
+    - 相关匹配(CV_TM_CCORR)：利用模板与图像间的乘法进行匹配，数值越大表示匹配程度较高，越小表示匹配效果差；
+
+    - 利用相关系数匹配(CV_TM_CCOEFF)：利用模板与图像间的相关系数匹配，1表示完美的匹配，-1表示最差的匹配；
+
+- **结果选择：**
+  - **完成匹配后，使用cv.minMaxLoc()方法查找最大值所在的位置即可；**
+  - 如果使用平方差作为比较方法，则最小值位置是最佳匹配位置。
+
+
+
+### 3.上机实验
+
+```python
+# 模板匹配示例代码
+
+import cv2 as cv
+import numpy as np
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 图像和模板读取
+img = cv.imread('images/Chapter3/wulin.jpeg')
+template = cv.imread('images/Chapter3/bai.jpeg')
+h,w,l = template.shape
+
+# 2 模板匹配
+# 2.1 模板匹配
+res = cv.matchTemplate(img, template, cv.TM_CCORR)
+# 2.2 返回图像中最匹配的位置，确定左上角的坐标，并将匹配位置绘制在图像上
+min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+# 使用平方差时最小值为最佳匹配位置
+# top_left = min_loc
+top_left = max_loc
+bottom_right = (top_left[0] + w, top_left[1] + h)
+cv.rectangle(img, top_left, bottom_right, (0,255,0), 2)
+
+# 3 图像显示
+plt.imshow(img[:,:,::-1])
+plt.title('匹配结果'), plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![模板匹配效果图](images/第三章/模板匹配效果图.png)
 
 
 
