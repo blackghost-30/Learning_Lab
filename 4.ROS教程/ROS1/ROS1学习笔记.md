@@ -2525,17 +2525,94 @@ rosrun lidar_pkg lidar_node
 
 - 效果如下：
 
-![运行效果](images/26_激光雷达避障的C++节点/场景交互.gif)
-
-
+![运行效果](\images/26_激光雷达避障的C++节点/场景交互.gif)
 
 
 
 # 第二十七节课：激光雷达避障的Python节点
 
+## 1.整体思路
+
+![实现步骤](images/27_激光雷达避障的Python节点/实现步骤.png)
+
+
+
+## 2.项目开发
+
+- 在原来的lidar_py_pkg的lidar_node.py文件基础上完善：
+
+```python
+#!/usr/bin/env python3
+#coding=utf-8
+
+import rospy
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist
+
+count = 0
+
+def LidarCallback(msg):
+    global vel_pub
+    global count
+    
+    dist = msg.ranges[180]
+    rospy.loginfo("前方测距 range[180] = %f 米", dist)
+    
+    if count > 0:
+        count = count - 1
+        return
+    
+    vel_cmd = Twist()
+    if dist < 1.5:
+        vel_cmd.angular.z = 0.3
+    else:
+        vel_cmd.linear.x = 0.05
+    vel_pub.publish(vel_cmd)
+
+if __name__ == "__main__":
+    rospy.init_node("lidar_node")
+    lidar_sub = rospy.Subscriber("/scan", LaserScan, LidarCallback, queue_size=10)
+    vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+    rospy.spin()
+
+```
+
+
+
+## 3.运行
+
+- 启动仿真环境：
+
+```bash
+roslaunch wpr_simulation wpb_simple.launch
+```
+
+- 运行节点：
+
+```bash
+rosrun lidar_pkg lidar_node
+```
+
+- 效果如下：
+
+![运行效果](images/27_激光雷达避障的Python节点/场景交互.gif)
+
 
 
 # 第二十八节课：ROS中的IMU惯性测量单元的消息包
+
+- 在官网中搜索sensor_msgs，进入其Website，可以找到Imu，点进去可以看到它的数据格式描述：
+  - header里面也包含了时间戳等信息；
+  - orientation是其内部根据裸数据解读出来的姿态角，它是一个四元数；
+  - angular_velocity是三轴角速度；
+  - linear_acceleration是三轴加速度；
+  - 该数据包中还包含了各自的协方差矩阵，协方差矩阵有特殊用途；
+
+![IMU数据格式](images/28_ROS中IMU惯性测量单元消息包/官网中的IMU数据格式.png)
+
+- 中文翻译版如下：
+
+![中文翻译版](images/28_ROS中IMU惯性测量单元消息包/中文翻译版.png)
 
 
 
@@ -2555,9 +2632,35 @@ rosrun lidar_pkg lidar_node
 
 
 
+# 第三十三节课：标准消息包std_msgs
 
 
 
+# 第三十四节课：几何消息包geometry_msgs和传感器消息包sensor_msgs
+
+
+
+# 第三十五节课：自定义消息类型
+
+
+
+# 第三十六节课：自定义消息类型在C++节点中的应用
+
+
+
+# 第三十七节课：自定义消息类型在Python节点中的应用
+
+
+
+# 第三十八节课：栅格地图格式
+
+
+
+# 第三十九节课：C++节点发布地图
+
+
+
+# 第四十节课：Python节点发布地图
 
 
 
