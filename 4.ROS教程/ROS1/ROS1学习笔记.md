@@ -2525,7 +2525,7 @@ rosrun lidar_pkg lidar_node
 
 - 效果如下：
 
-![运行效果](\images/26_激光雷达避障的C++节点/场景交互.gif)
+![运行效果](images/26_激光雷达避障的C++节点/场景交互.gif)
 
 
 
