@@ -2618,9 +2618,227 @@ rosrun lidar_pkg lidar_node
 
 # 第二十九节课：获取IMU数据的C++节点
 
+## 1.IMU的三个话题
+
+- 在ROS官方规定中，IMU包含三个话题：
+  - data_raw：即原始的六轴数据；
+  - data：原始数据+数据融合后的四元数姿态角；
+  - mag：磁强计的磁强数据，只有九轴IMU才发布这个话题；
+- 一般而言，直接订阅data这个话题即可；
+
+![IMU的三个话题](images/29_获取IMU数据的C++节点/IMU的三个话题.png)
+
+
+
+## 2.整体框架与实现步骤
+
+- 整体框架如下：只需要实现一个节点订阅话题即可
+
+![整体床架](images/29_获取IMU数据的C++节点/整体框架.png)
+
+- 整个项目的实现步骤：
+
+![实现步骤](images/29_获取IMU数据的C++节点/实现步骤.png)
+
+
+
+## 3.项目开发
+
+- **终端中创建软件包：**
+
+```bash
+cd catkin_ws/src
+catkin_create_pkg imu_pkg roscpp rospy sensor_msgs
+```
+
+- **创建节点**
+  - 打开VsCode；
+  - 在imu_pkg下的src目录下创建文件imu_node.cpp；
+
+- **编辑imu_node.cpp文件**
+  - 注意这里的TF库提供的将四元数信息直接转换为欧拉角的数学功能；
+
+```cpp
+#include "ros/ros.h"
+#include "sensor_msgs/Imu.h"    // 引入消息包头文件
+#include "tf/tf.h"              // 引入TF的头文件
+
+void IMUCallback(sensor_msgs::Imu msg)
+{
+    if(msg.orientation_covariance[0] < 0)   // 协方差矩阵判断数据是否有效
+        return;
+    tf::Quaternion quaternion(          // 将消息包四元数转换为TF的四元数对象
+        msg.orientation.x,
+        msg.orientation.y,
+        msg.orientation.z,
+        msg.orientation.w
+    );
+
+    double roll, pitch, yaw;        // 用于存放欧拉角结果的变量
+
+    // 将四元数对象转换为矩阵然后再调用API获取欧拉角，TF库提供运算API
+    tf::Matrix3x3(quaternion).getRPY(roll, pitch, yaw);
+    
+    //将弧度的欧拉角转换为角度的欧拉角
+    roll = roll*180/M_PI;
+    pitch = pitch*180/M_PI;
+    yaw = yaw*180/M_PI;
+
+    ROS_INFO("滚转 = %.0f 俯仰 = %.0f 朝向 = %.0f", roll, pitch, yaw);  // 显示欧拉角
+}
+
+int main(int argc, char *argv[])
+{
+    setlocale(LC_ALL, "");
+    ros::init(argc, argv, "imu_node");      // 注册节点
+
+    ros::NodeHandle n;      // 创建大管家对象
+    ros::Subscriber imu_sub = n.subscribe("/imu/data", 10, IMUCallback);    // 获取话题订阅对象
+
+    ros::spin();
+
+    return 0;
+}
+
+```
+
+- **添加编译规则**
+  - CMakeList.txt文件中添加如下规则：
+
+```cpp
+add_executable(imu_node src/imu_node.cpp)
+add_dependencies(imu_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(imu_node
+  ${catkin_LIBRARIES}
+)
+```
+
+- **编译并运行**
+
+  - Ctrl+Shift+B进行编译；
+  - 运行仿真环境：
+
+  ```bash
+  roslaunch wpr_simulation wpb_simple.launch
+  ```
+
+  - 运行节点：
+
+  ```bash
+  rosrun imu_pkg imu_node
+  ```
+
+![运行效果](images/29_获取IMU数据的C++节点/场景交互.gif)
+
 
 
 # 第三十节课：获取IMU数据的Python节点
+
+## 1.IMU的三个话题
+
+- 在ROS官方规定中，IMU包含三个话题：
+  - data_raw：即原始的六轴数据；
+  - data：原始数据+数据融合后的四元数姿态角；
+  - mag：磁强计的磁强数据，只有九轴IMU才发布这个话题；
+- 一般而言，直接订阅data这个话题即可；
+
+![IMU的三个话题](images/30_获取IMU数据的Python节点/IMU的三个话题.png)
+
+
+
+## 2.整体框架与实现步骤
+
+- 整体框架如下：只需要实现一个节点订阅话题即可
+
+![整体床架](images/30_获取IMU数据的Python节点/整体框架.png)
+
+- 整个项目的实现步骤：
+  - 我创建的包名叫imu_py_pkg，主要是为了区分前面的imu_pkg；
+
+![实现步骤](images/30_获取IMU数据的Python节点/实现步骤.png)
+
+
+
+## 3.项目开发
+
+- 创建软件包并编译：
+
+```bash
+cd catkin_ws/src
+
+catkin_create_pkg imu_py_pkg roscpp rospy sensor_msgs
+
+cd ..
+
+catkin_make
+```
+
+- 新建节点：
+
+  - 打开VsCode；
+
+  - 在imu_py_pkg文件夹下，新建文件夹scripts，在此文件夹下新建文件imu_node.py；
+
+- 编程文件：
+
+```python
+#!/usr/bin/env python3
+#coding=utf-8
+
+import rospy
+from sensor_msgs.msg import Imu
+from tf.transformations import euler_from_quaternion
+import math
+
+def imu_callback(msg):
+    if msg.orientation_covariance[0] < 0:
+        return
+    
+    quaternion = [
+        msg.orientation.x,
+        msg.orientation.y,
+        msg.orientation.z,
+        msg.orientation.w
+    ]
+
+    (roll, pitch, yaw) = euler_from_quaternion(quaternion)
+    
+    roll = roll*180/math.pi
+    pitch = pitch*180/math.pi
+    yaw = yaw*180/math.pi
+
+    rospy.loginfo("滚转 = %.0f 俯仰 = %.0f 朝向 = %.0f", roll, pitch, yaw)
+
+if __name__ == "__main__":
+    rospy.init_node("imu_node")
+    imu_sub = rospy.Subscriber("/imu/data", Imu, imu_callback, queue_size=10)
+    rospy.spin()
+
+```
+
+- 添加可执行权限：
+
+```bash
+cd catkin_ws/src/imu_py_pkg/scripts
+
+chmod +x imu_node.py
+
+```
+
+- 执行文件：
+
+```bash
+cd ~
+
+roslaunch wpr_simulation wpb_simple.launch
+
+# Ctrl+Shift+O分屏
+
+rosrun imu_py_pkg imu_node.py
+
+```
+
+![效果图](images/30_获取IMU数据的Python节点/场景交互.gif)
 
 
 
