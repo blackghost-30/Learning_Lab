@@ -2844,29 +2844,690 @@ rosrun imu_py_pkg imu_node.py
 
 # 第三十一节课：IMU航向锁定的C++节点
 
+## 1.项目框架与实现步骤
+
+- 在原来节点的基础上，添加速度话题的发布，然后根据获取的姿态角调整机器人的朝向；
+
+![项目框架](images/31_IMU航向锁定的C++节点/整体框架.png)
+
+- 实现步骤：
+
+![实现步骤](images/31_IMU航向锁定的C++节点/实现步骤.png)
+
+
+
+## 2.项目开发与编译运行
+
+- 在原来的imu_pkg下的imu_node.cpp文件的基础上进行修改：
+  - 加入了速度话题的发布；
+  - 添加了PID参数的控制；
+
+```cpp
+#include "ros/ros.h"
+#include "sensor_msgs/Imu.h"    // 引入消息包头文件
+#include "tf/tf.h"              // 引入TF的头文件
+#include "geometry_msgs/Twist.h"
+
+ros::Publisher vel_pub;
+
+void IMUCallback(sensor_msgs::Imu msg)
+{
+    if(msg.orientation_covariance[0] < 0)   // 协方差矩阵判断数据是否有效
+        return;
+    tf::Quaternion quaternion(          // 将消息包四元数转换为TF的四元数对象
+        msg.orientation.x,
+        msg.orientation.y,
+        msg.orientation.z,
+        msg.orientation.w
+    );
+
+    double roll, pitch, yaw;        // 用于存放欧拉角结果的变量
+
+    // 将四元数对象转换为矩阵然后再调用API获取欧拉角
+    tf::Matrix3x3(quaternion).getRPY(roll, pitch, yaw);
+    
+    //将弧度的欧拉角转换为角度的欧拉角
+    roll = roll*180/M_PI;
+    pitch = pitch*180/M_PI;
+    yaw = yaw*180/M_PI;
+
+    ROS_INFO("滚转 = %.0f 俯仰 = %.0f 朝向 = %.0f", roll, pitch, yaw);  // 显示欧拉角
+
+    double target_yaw = 90;                     // 目标角度
+    double diff_angle = target_yaw - yaw;       // PID的误差
+    geometry_msgs::Twist vel_cmd;               // 速度变量
+    vel_cmd.angular.z = diff_angle * 0.01;      // 误差控制PID
+    vel_cmd.linear.x = 0.1;                     // 向前运动的速度
+    vel_pub.publish(vel_cmd);                   // 发布速度话题
+
+}
+
+int main(int argc, char *argv[])
+{
+    setlocale(LC_ALL, "");
+    ros::init(argc, argv, "imu_node");      // 注册节点
+
+    ros::NodeHandle n;      // 创建大管家对象
+    ros::Subscriber imu_sub = n.subscribe("/imu/data", 10, IMUCallback);    // 获取话题订阅对象
+
+    vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+
+    ros::spin();
+
+    return 0;
+}
+
+```
+
+- 编译
+
+  - Ctrl+Shift+B进行编译;
+
+- 运行
+
+  - 打开终端,运行仿真环境
+
+  ```bash
+  roslaunch wpr_simulation wpb_simple.launch
+  ```
+
+  - 运行节点
+
+  ```bash
+  rosrun imu_pkg imu_node
+  ```
+
+  - 最终运行效果如下所示：
+
+  ![效果](images/31_IMU航向锁定的C++节点/场景交互.gif)
+
 
 
 # 第三十二节课：IMU航向锁定的Python节点
+
+## 1.项目框架与实现步骤
+
+- 项目框架与实现步骤与前一小节保持一致，只是把C++节点改为了Python节点；
+
+![实现步骤](images/32_IMU航向锁定的Python节点/实现步骤.png)
+
+
+
+## 2.项目开发
+
+- 在原来的imu_node.py文件的基础上进行修改：
+
+```python
+#!/usr/bin/env python3
+#coding=utf-8
+
+import rospy
+from sensor_msgs.msg import Imu
+from tf.transformations import euler_from_quaternion
+import math
+from geometry_msgs.msg import Twist
+
+def imu_callback(msg):
+    if msg.orientation_covariance[0] < 0:
+        return
+    
+    quaternion = [
+        msg.orientation.x,
+        msg.orientation.y,
+        msg.orientation.z,
+        msg.orientation.w
+    ]
+
+    (roll, pitch, yaw) = euler_from_quaternion(quaternion)
+    
+    roll = roll*180/math.pi
+    pitch = pitch*180/math.pi
+    yaw = yaw*180/math.pi
+
+    rospy.loginfo("滚转 = %.0f 俯仰 = %.0f 朝向 = %.0f", roll, pitch, yaw)
+
+    target_yaw = 90
+    diff_angle = target_yaw - yaw
+    vel_cmd = Twist()
+    vel_cmd.angular.z = diff_angle * 0.01
+    vel_cmd.linear.x = 0.1
+    global vel_pub
+    vel_pub.publish(vel_cmd)
+
+if __name__ == "__main__":
+    rospy.init_node("imu_node")
+    imu_sub = rospy.Subscriber("/imu/data", Imu, imu_callback, queue_size=10)
+    vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+    rospy.spin()
+
+```
+
+- 运行环境和节点：
+
+  - 运行环境：
+
+  ```bash
+  roslaunch wpr_simulation wpb_simple.launch
+  ```
+
+  - 运行节点：
+
+  ```bash
+  rosrun imu_py_pkg imu_node.py
+  ```
+
+  - 效果如下：
+
+  ![运行效果](images/32_IMU航向锁定的Python节点/场景交互.gif)
 
 
 
 # 第三十三节课：标准消息包std_msgs
 
+## 1.ROS中的消息包分类
+
+![消息包分类](images/33_标准消息包std_msgs/ROS消息包分类.png)
+
+
+
+## 2.标准消息包std_msgs
+
+- std_msgs中的数据类型可单独使用，像前面使用String那样；
+- 也可以被其他消息包包含，构建更复杂的数据类型；
+
+![标准消息包的类型](images/33_标准消息包std_msgs/std_msgs消息包.png)
+
 
 
 # 第三十四节课：几何消息包geometry_msgs和传感器消息包sensor_msgs
+
+## 1.common消息包的组成
+
+- 主要用到的就是前面使用过的geometry_msgs和sensor_msgs消息包；
+
+![common消息包](images/34_几何消息包geometry_msgs和传感器消息包sensor_msgs/common消息包的组成.png)
+
+- 可以在ROS的官网中，搜索common_msgs，选择对应的版本，查看common_msgs消息包包含的内容
+  - 官网中只列出了其中的五种消息包；
+
+![官网的common消息包](images/34_几何消息包geometry_msgs和传感器消息包sensor_msgs/官网的common消息包.png)
+
+
+
+## 2.geometry_msgs几何消息包
+
+- 带有Stamped字样的都会包含header，带有时间戳和坐标系ID信息；
+
+![geometry_msgs消息包](images/34_几何消息包geometry_msgs和传感器消息包sensor_msgs/geometry_msgs消息包.png)
+
+
+
+## 3.sensor_msgs传感器消息包
+
+![sensor_msgs消息包](images/34_几何消息包geometry_msgs和传感器消息包sensor_msgs/sensor_msgs消息包.png)
 
 
 
 # 第三十五节课：自定义消息类型
 
+## 1.自定义消息类型的必要性
+
+- 在原来的“kuai_shang_che_kai_hei_qun”话题中，如果想要加上段位信息和星星数时，原来的string消息类型就无法满足了；
+- 可以在原来的基础上添加这两个信息，然后组成一个新的消息类型；
+
+![自定义消息类型的必要性](images/35_自定义消息类型/自定义消息类型的场景.png)
+
+
+
+## 2.自定义消息类型的实现
+
+- **创建消息包**
+  - 消息包的本质也是一个包；
+  - message_generation和message_runtime是消息包运行的依赖项；
+
+```bash
+cd ~/catkin_ws/src
+
+catkin_create_pkg qq_msgs roscpp rospy std_msgs message_generation message_runtime
+```
+
+- **创建文件**
+  - 创建完消息包后打开VsCode；
+  - 在qq_msgs文件夹下创建文件夹msg，然后在该文件夹下创建文件Carry.msg文件；
+
+- **可使用的基本消息类型**
+  - 可以在原来的已经定义过的消息包的数据类型上无限套娃；
+
+![可使用的基本消息类型](images/35_自定义消息类型/消息类型的定义来源.png)
+
+- **编程Carry.msg文件**
+  - 按照前面消息包的数据要求：段位、星星数和要说的话，封装好消息类型数据；
+
+```cpp
+string grade
+int64 star
+string data
+```
+
+- **添加编译规则**
+
+  - 编译规则1：
+    - **将add_message_files中的字段添加已经定义的文件名称；**
+    - **在generate_message字段中添加自己依赖的消息包；**
+
+  ![编译规则1](images/35_自定义消息类型/编译规则1.png)
+
+  - 编译规则2：
+    - 找到catkin_package字段，将第三行解除注释，同时需要全部里面包含了message_runtime；
+
+  ![编译规则2](images/35_自定义消息类型/编译规则2.png)
+
+- **编辑package.xml文件**
+  - 确保build_depend字段和exec_depend字段都包含了message_runtime和message_generation；
+  - 如果没有就手动补全；
+
+![.xml文件修改](images/35_自定义消息类型/编辑.xml文件.png)
+
+- **编译**
+
+```bash
+cd catkin_ws
+
+catkin_make
+
+```
+
+- **验证是否创建成功**
+
+```bash
+cd catkin_ws
+
+rosmsg show qq_msgs/Carry
+
+```
+
+![消息包验证](images/35_自定义消息类型/消息包验证.png)
+
+
+
+## 3.总结
+
+- 总结生成自定义消息类型的步骤如下：
+
+![生成自消息类型的步骤](images/35_自定义消息类型/生成自定义消息的步骤.png)
+
 
 
 # 第三十六节课：自定义消息类型在C++节点中的应用
 
+## 1.项目结构
+
+- 在原来的那个实验（第十三十四节课）的基础上，将原来的std_msgs中的string类型改为自己的Carry类型；
+
+![项目结构](images/36_自定义消息类型在C++节点中的应用/项目概括.png)
+
+
+
+## 2.项目开发
+
+### 2.1 修改发布节点
+
+- **修改发布者节点文件：**
+  - 在原来的ssr_pkg下的src下的chao_node.cpp文件的基础上修改数据类型：
+
+```cpp
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+#include <qq_msgs/Carry.h>
+
+int main(int argc, char *argv[])
+{
+    /* code */
+    ros::init(argc, argv, "chao_node");         // 初始化ROS核心
+    printf("我的枪去而复返，你的生命有去无回\n");
+
+    ros::NodeHandle nh;     // 创建一个ros中的NodeHandle类，这个类的节点的管家
+    ros::Publisher pub = nh.advertise<qq_msgs::Carry>("kuai_shang_che_kai_hei_qun", 10);  // 创建一个发布话题
+
+    ros::Rate loop_rate(10);    // ros的时间控制对象
+
+    while(ros::ok())
+    {
+        printf("我要开始刷屏了！\n");
+        qq_msgs::Carry msg;           // 定义一个Carry类型的消息
+        msg.grade = "王者";
+        msg.star = 50;
+        msg.data = "国服马超，带飞";      // 赋值给消息
+        pub.publish(msg);               // 发布消息
+        loop_rate.sleep();              // 延时阻塞
+    }
+    return 0;
+}
+
+```
+
+- **添加编译规则**
+
+  - 添加find_package字段的软件包依赖，加入qq_msgs
+
+  ```cpp
+  find_package(catkin REQUIRED COMPONENTS
+    roscpp
+    rospy
+    std_msgs
+    qq_msgs
+  )
+  ```
+
+  - 添加add_dependencies字段，指定先进行qq_msgs的编译；
+
+  ```cpp
+  target_link_libraries(chao_node
+     ${catkin_LIBRARIES}
+  )
+  add_dependencies(chao_node qq_msgs_generate_messages_cpp)
+  ```
+
+- **修改.xml文件**
+
+  - 同前面一样的，需要添加qq_msgs消息包的依赖
+
+  ```xml
+  <build_depend>qq_msgs</build_depend>
+  <exec_depend>qq_msgs</exec_depend>
+  ```
+
+- **编译**
+
+  - 回到终端中进行编译
+
+  ```bash
+  cd catkin_ws
+  catkin_make
+  ```
+
+### 2.2 修改订阅者节点
+
+- **修改订阅者节点文件**
+
+  - 在原来的atr_pkg下的ma_chao.cpp文件的基础上修改回调函数的内容：
+
+  ```cpp
+  #include <ros/ros.h>
+  #include <std_msgs/String.h>
+  #include <qq_msgs/Carry.h>
+  
+  void chao_callback(qq_msgs::Carry msg)
+  {
+      ROS_WARN(msg.grade.c_str());
+      ROS_WARN("%d 星", msg.star);
+      ROS_INFO(msg.data.c_str());
+  }
+  
+  void yao_callback(std_msgs::String msg)
+  {
+      ROS_WARN(msg.data.c_str());
+  }
+  
+  int main(int argc, char *argv[])
+  {
+      setlocale(LC_ALL, "");
+      ros::init(argc, argv, "ma_node");
+  
+      ros::NodeHandle nh;
+      ros::Subscriber sub = nh.subscribe("kuai_shang_che_kai_hei_qun", 10, chao_callback);
+  
+      ros::Subscriber sub2 = nh.subscribe("gie_gie_dai_wo", 10, yao_callback);
+      
+      while(ros::ok())
+      {
+          ros::spinOnce();
+      }
+  
+      return 0;
+  }
+  
+  ```
+
+- **添加编译规则**
+
+  - 添加find_package字段的软件包依赖，加入qq_msgs
+
+  ```cpp
+  find_package(catkin REQUIRED COMPONENTS
+    roscpp
+    rospy
+    std_msgs
+    qq_msgs
+  )
+  ```
+
+  - 添加add_dependencies字段，指定先进行qq_msgs的编译；
+
+  ```cpp
+  target_link_libraries(chao_node
+     ${catkin_LIBRARIES}
+  )
+  add_dependencies(ma_node qq_msgs_generate_messages_cpp)
+  ```
+
+- **修改.xml文件**
+
+  - 同前面一样的，需要添加qq_msgs消息包的依赖
+
+  ```xml
+  <build_depend>qq_msgs</build_depend>
+  <exec_depend>qq_msgs</exec_depend>
+  ```
+
+- **编译**
+
+  - 回到终端中进行编译
+
+  ```bash
+  cd catkin_ws
+  catkin_make
+  ```
+
+
+
+## 3.运行项目
+
+- 运行ROS核心
+
+```BASH
+roscore
+```
+
+- 运行发布节点
+
+```bash
+rosrun ssr_pkg chao_node
+```
+
+- 运行接收节点
+
+```bash
+rosrun atr_pkg ma_node
+```
+
+![运行效果](images/36_自定义消息类型在C++节点中的应用/运行效果.png)
+
+
+
+## 4.总结
+
+![C++节点中应用新消息类型的步骤](images/36_自定义消息类型在C++节点中的应用/步骤总结.png)
+
 
 
 # 第三十七节课：自定义消息类型在Python节点中的应用
+
+## 1.项目结构
+
+- 同样的只是在原来的实验（第十六、十七节课）的基础上将消息类型改为我们自己的就可以了；
+
+![项目结构](images/37_自定义消息类型在Python节点中的应用/项目概括.png)
+
+
+
+## 2.项目编程
+
+### 2.1 修改发布节点
+
+- **修改发布者节点文件：**
+  - 在原来的ssr_py_pkg下的scripts下的chao_node.py文件的基础上修改数据类型：
+
+```cpp
+#!/usr/bin/env python3
+#coding=utf-8
+
+import rospy
+from std_msgs.msg import String
+from qq_msgs.msg import Carry
+
+if __name__ == "__main__":
+    rospy.init_node("chao_node")
+    rospy.logwarn("我的枪去而复返，你的生命有去无回！")
+
+    pub = rospy.Publisher("kuai_shang_che_kai_hei_qun", Carry, queue_size=10)
+
+    rate = rospy.Rate(10)
+
+    while not rospy.is_shutdown():
+        rospy.loginfo("我要开始刷屏了")
+
+        msg = Carry()
+        msg.grade = "王者"
+        msg.star = 50
+        msg.data = "国服马超，带飞"
+        pub.publish(msg)
+        rate.sleep()
+
+```
+
+- **添加编译规则**
+
+  - 添加find_package字段的软件包依赖，加入qq_msgs
+
+  ```cpp
+  find_package(catkin REQUIRED COMPONENTS
+    rospy
+    std_msgs
+    qq_msgs
+  )
+  ```
+
+- **修改.xml文件**
+
+  - 同前面一样的，需要添加qq_msgs消息包的依赖
+
+  ```xml
+  <build_depend>qq_msgs</build_depend>
+  <exec_depend>qq_msgs</exec_depend>
+  ```
+
+- **编译**
+
+  - 回到终端中进行编译
+
+  ```bash
+  cd catkin_ws
+  catkin_make
+  ```
+
+### 2.2 修改订阅者节点
+
+- **修改订阅者节点文件**
+
+  - 在原来的atr_pkg下的ma_chao.cpp文件的基础上修改回调函数的内容：
+
+  ```cpp
+  #!/usr/bin/env python3
+  #coding=utf-8
+  
+  import rospy
+  from std_msgs.msg import String
+  from qq_msgs.msg import Carry
+  
+  def chao_callback(msg):
+      rospy.logwarn(msg.grade)
+      rospy.logwarn(str(msg.star)+'星')
+      rospy.loginfo(msg.data)
+  
+  def yao_callback(msg):
+      rospy.logwarn(msg.data)
+  
+  if __name__ == "__main__":
+      rospy.init_node("ma_node")
+  
+      sub = rospy.Subscriber("kuai_shang_che_kai_hei_qun", Carry, chao_callback, queue_size=10)
+  
+      sub2 = rospy.Subscriber("gie_gie_dai_wo", Carry, yao_callback, queue_size=10)
+  
+      rospy.spin()
+  
+  ```
+
+- **添加编译规则**
+
+  - 添加find_package字段的软件包依赖，加入qq_msgs
+
+  ```cpp
+  find_package(catkin REQUIRED COMPONENTS
+    rospy
+    std_msgs
+    qq_msgs
+  )
+  ```
+
+- **修改.xml文件**
+
+  - 同前面一样的，需要添加qq_msgs消息包的依赖
+
+  ```xml
+  <build_depend>qq_msgs</build_depend>
+  <exec_depend>qq_msgs</exec_depend>
+  ```
+
+- **编译**
+
+  - 回到终端中进行编译
+
+  ```bash
+  cd catkin_ws
+  catkin_make
+  ```
+
+
+
+## 3.运行项目
+
+- 运行ROS核心
+
+```BASH
+roscore
+```
+
+- 运行发布节点
+
+```bash
+rosrun ssr_py_pkg chao_node.py
+```
+
+- 运行接收节点
+
+```bash
+rosrun atr_py_pkg ma_node.py
+```
+
+![运行效果](images/37_自定义消息类型在Python节点中的应用/运行效果.png)
+
+
+
+## 3.总结
+
+![总结](images/37_自定义消息类型在Python节点中的应用/自消息类型在Python节点中应用的总结.png)
 
 
 
