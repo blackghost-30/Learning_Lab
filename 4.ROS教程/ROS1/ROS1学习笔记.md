@@ -2939,7 +2939,7 @@ int main(int argc, char *argv[])
 
   - 最终运行效果如下所示：
 
-  ![效果](images/31_IMU航向锁定的C++节点/场景交互.gif)
+  ![效果](images/31_IMU航向锁定的C++节点/运行效果.gif)
 
 
 
@@ -3533,13 +3533,690 @@ rosrun atr_py_pkg ma_node.py
 
 # 第三十八节课：栅格地图格式
 
+## 1.机器人导航数据格式
+
+- 机器人导航会用到**地图数据**；
+- **ROS导航软件包**里有一个**map_server节点**，节点会发布一个**/map话题**，话题中的消息类型就是**地图数据**；
+- 这个地图数据类型就是**nav_msgs下的OccupancyGrid**，即占据栅格；
+- 每个格子中填入一个数值，表示障碍物的占据情况；
+
+![机器人导航数据格式](images/38_栅格地图格式/导航数据包的层级关系.png)
+
+- 栅格地图数据类型是以**数组形式**存在的：
+  - 栅格的大小决定了**地图的分辨率**；
+  - ROS中栅格的大小默认是**0.05米**；
+
+![栅格地图意义](images/38_栅格地图格式/栅格信息的意义.png)
+
+
+
+## 2.官网描述
+
+- 搜索栏搜索**map_server**——>点击进入后点击Website——>在主页面中的目录中选择**Published Topics**——>选择nav_msgs/OccupancyGrid：
+
+![发布话题的消息类型](images/38_栅格地图格式/发布的话题.png)
+
+- **av_msgs/OccupancyGrid消息类型内容**
+
+  - **header：记录了时间戳和坐标系ID；**
+
+  ![header内容](images/38_栅格地图格式/header数据.png)
+
+  - **info：记录了地图的参数信息；**
+
+  ![info内容](images/38_栅格地图格式/info数据.png)
+
+  - **data：8位整型的数组，栅格位置的（0, 0）指的是左下角的位置；**
+
+![消息类型的内容](images/38_栅格地图格式/消息类型的内容.png)
+
 
 
 # 第三十九节课：C++节点发布地图
 
+## 1.项目结构
+
+- 项目结构：
+  - 自己用C++创建一个地图发布节点；
+  - 在地图发布节点中发布一个/map话题；
+  - 话题的消息类型就是nav_msgs::OccupancyGrid；
+
+![项目结构](images/39_C++节点发布地图/项目结构.png)
+
+- 要实现的地图如下：
+
+![要实现的地图](images/39_C++节点发布地图/要实现的地图.png)
+
+- 可将实现步骤总结如下：
+
+![实现步骤](images/39_C++节点发布地图/实现步骤.png)
+
+
+
+## 2.项目开发
+
+- **创建软件包：**
+
+```bash
+cd catkin_ws/src
+
+catkin_create_pkg map_pkg roscpp rospy nav_msgs
+```
+
+- **创建节点：**
+  - 打开VsCode；
+  - 在map_pkg/src目录创建节点文件：map_pub_node.cpp；
+
+- **文件编程：**
+
+  - 在map_pub_node.cpp文件中编程：
+
+  ```cpp
+  #include <ros/ros.h>
+  #include <nav_msgs/OccupancyGrid.h>     // 引入消息类型
+  
+  int main(int argc, char *argv[])
+  {
+      ros::init(argc, argv, "mao_pub_node");  // 注册节点
+      ros::NodeHandle n;
+      ros::Publisher pub = n.advertise<nav_msgs::OccupancyGrid>("/map", 10);  //获取发布对象
+  
+      ros::Rate r(1); // 速率控制对象
+  
+      while(ros::ok())
+      {
+          nav_msgs::OccupancyGrid msg;    // 定义发布消息变量
+  
+          // 赋值消息变量的header数据
+          msg.header.frame_id = "map";
+          msg.header.stamp = ros::Time::now();
+  
+          // 赋值消息变量的info数据
+          msg.info.origin.position.x = 0;
+          msg.info.origin.position.y = 0;
+          msg.info.resolution = 1.0;
+          msg.info.width = 4;
+          msg.info.height = 2;
+  
+          // 赋值消息变量的data数据
+          msg.data.resize(4*2);
+          msg.data[0] = 100;
+          msg.data[1] = 100;
+          msg.data[2] = 0;
+          msg.data[3] = -1;
+  
+          pub.publish(msg);   // 发布消息数据
+          r.sleep();
+      }
+      return 0;
+  }
+  
+  ```
+
+- **添加编译规则：**
+
+  - 在CMakeList.txt文件中添加如下内容：
+
+  ```CPP
+  add_executable(map_pub_node src/map_pub_node.cpp)
+  target_link_libraries(map_pub_node
+    ${catkin_LIBRARIES}
+  )
+
+- **编译：**
+
+  - 在终端中执行：
+
+  ```bash
+  cd catkin_ws
+  catkin_make
+  ```
+
+- **运行：**
+
+  - 先在终端启动ROS：
+
+  ```bash
+  roscore
+  ```
+
+  - 运行节点：
+
+  ```bash
+  rosrun map_pkg map_pub_node
+  ```
+
+  - 运行RViz：
+
+  ```bash
+  rviz
+  ```
+
+- **配置RViz来查看效果：**
+
+  - 确定世界坐标系的原点位置：
+    - 点击Add——>选择Axes——>OK——>出现一个标识的位置——>这个位置就是世界坐标系的原点；
+  - 添加地图显示：
+    - 点击Add——>选择Map——>将Map的话题名称选择为/map——>显示出地图；
+
+  ![最终效果](images/39_C++节点发布地图/最终效果.png)
+
+- **参数验证：**
+  - 在上一节介绍消息类型时，info数据的最后一个内容是地图远点和世界坐标系的偏移量；
+  - 在程序中设置的是0、0，所以在仿真结果中世界坐标系的原点和我们的栅格地图的左下角是重合的；
+
 
 
 # 第四十节课：Python节点发布地图
+
+## 1.项目结构
+
+- 项目结构：
+  - 自己用Python创建一个地图发布节点；
+  - 在地图发布节点中发布一个/map话题；
+  - 话题的消息类型就是nav_msgs::OccupancyGrid；
+
+![项目结构](images/40_Python节点发布地图/项目结构.png)
+
+- 要实现的地图如下：
+
+![要实现的地图](images/40_Python节点发布地图/要实现的地图.png)
+
+- 可将实现步骤总结如下：
+  - 为了区别前面的map_pkg，这里创建**map_py_pkg**；
+
+![实现步骤](images/40_Python节点发布地图/实现步骤.png)
+
+
+
+## 2.项目开发
+
+- **创建软件包：**
+
+```bash
+cd catkin_ws/src
+
+catkin_create_pkg map_py_pkg roscpp rospy nav_msgs
+
+cd ..
+
+catkin_make
+
+```
+
+- **创建节点：**
+  - 打开VsCode，在map_py_pkg下创建新文件夹scripts；
+  - 在scripts目录创建节点文件：map_pub_node.py；
+
+- **文件编程：**
+
+  - 在map_pub_node.py文件中编程：
+
+  ```cpp
+  #!/usr/bin/env python3
+  # coding=utf-8
+  
+  import rospy
+  from nav_msgs.msg import OccupancyGrid  # 引入消息类型
+  
+  if __name__ == "__main__":
+      rospy.init_node("map_pub_node") # 注册节点
+  
+      pub = rospy.Publisher("/map", OccupancyGrid, queue_size=10) # 获取发布对象
+  
+      rate = rospy.Rate(1)
+  
+      while not rospy.is_shutdown():
+          msg = OccupancyGrid()   # 定义发布数据变量
+  
+          # 赋值header数据
+          msg.header.frame_id = "map"
+          msg.header.stamp = rospy.Time.now()
+  
+          # 赋值info数据
+          msg.info.origin.position.x = 0
+          msg.info.origin.position.y = 0
+          msg.info.resolution = 1.0
+          msg.info.width = 4
+          msg.info.height = 2
+  
+          # 赋值data数据
+          msg.data = [0]*4*2
+          msg.data[0] = 100
+          msg.data[1] = 100
+          msg.data[2] = 0
+          msg.data[3] = -1
+  
+          pub.publish(msg)    # 发布数据
+          rate.sleep()
+  
+  ```
+
+- **添加可执行权限：**
+
+  - 在终端中执行如下内容：
+
+  ```bash
+  cd catkin_ws/src/map_py_pkg/scripts
+  
+  chmod +x map_pub_node.py
+  ```
+
+- **运行：**
+
+  - 先在终端启动ROS：
+
+  ```bash
+  roscore
+  ```
+
+  - 运行节点：
+
+  ```bash
+  rosrun map_py_pkg map_pub_node.py
+  ```
+
+  - 运行RViz：
+
+  ```bash
+  rviz
+  ```
+
+- **配置RViz来查看效果：**
+
+  - 确定世界坐标系的原点位置：
+    - 点击Add——>选择Axes——>OK——>出现一个标识的位置——>这个位置就是世界坐标系的原点；
+  - 添加地图显示：
+    - 点击Add——>选择Map——>将Map的话题名称选择为/map——>显示出地图；
+
+  ![最终效果](images/40_Python节点发布地图/最终效果.png)
+
+- **参数验证：**
+  - 在上一节介绍消息类型时，info数据的最后一个内容是地图远点和世界坐标系的偏移量；
+  - 在程序中设置的是0、0，所以在仿真结果中世界坐标系的原点和我们的栅格地图的左下角是重合的；
+
+
+
+# 第四十一节课：什么是SLAM
+
+## 1.SLAM的应用
+
+- 在ROS中，栅格地图是通过SLAM生成的；
+
+![栅格地图](images/41_什么是SLAM/栅格地图.png)
+
+
+
+## 2.SLAM的简介
+
+- SLAM的全称：**Simultaneous Localization And Mapping**，即同时定位与地图创建；
+- **定位：Localization**
+  - 在整个过程中完成了对主体的移动轨迹的定位问题；
+
+![定位问题](images/41_什么是SLAM/定位问题.png)
+
+- **建图：Mapping**
+  - 在整个过程中同时完成了对周围环境的建图过程；
+
+![建图问题](images/41_什么是SLAM/SLAM创建的特征地图.png)
+
+
+
+## 3.激光SLAM
+
+- 激光SLAM使用栅格地图，初始状态下全部栅格均为未知状态，值为-1：
+
+![未知状态](images/41_什么是SLAM/未知状态.png)
+
+- 激光雷达开始扫描，当遇到障碍物时标为100，没有障碍物则标为0：
+
+![激光扫描1](images/41_什么是SLAM/激光扫描1.png)
+
+- 机器人不断运动，在新的位置得到新的栅格地图，不同栅格地图进行基于障碍物栅格的排布形状的拼图组合：
+
+![SLAM拼图](images/41_什么是SLAM/SLAM拼图.png)
+
+- 不断进行激光雷达扫描，最后得到整个地图，其中探明的区域为0、障碍物区域为100、未知区域为-1：
+
+![建图效果](images/41_什么是SLAM/建图效果.png)
+
+
+
+# 第四十二节课：Hector_Mapping初体验
+
+## 1.项目结构
+
+- 在前面已经实现了**激光雷达数据话题/scan的订阅**；
+- 在前面中也实现了**栅格地图话题/map的订阅**；
+- 现在要做的就是在原来的节点上添加上**SLAM算法**，将激光雷达数据通过算法转换为栅格地图即可；
+- 从零编写一套SLAM算法是困难的，我们可以利用开源的SLAM算法完成项目，那就是**Hector_Mapping**；
+
+![项目结构](images/42_Hector_Mapping初体验/项目结构.png)
+
+
+
+## 2.Hector_Mapping的介绍
+
+- **官网中搜索hector_mapping——>noetic——>进入Website页面——>拉到ROS API部分**；
+- Hector_Mapping的输入输出：
+  - **输入：**
+    - scan话题(sensor_msgs/LaserScan)：即激光雷达数据话题；
+    - syscommand画图(std_msgs/String)：主要用于响应reset这类重新建图的系统指令；
+  - **输出：**
+    - map_metadata话题(nav_msgs/MapMetadata)：类似于前面的栅格地图消息格式中的header和info数据内容，即地图的描述信息；
+    - map话题(nav_msgs/OccupancyGrid)：真正的地图数据；
+    - slam_out_pose话题：原始的机器人定位信息；
+    - poseupdate话题：矫正后的机器人定位信息；
+
+![Hector_Mapping的页面介绍](images/42_Hector_Mapping初体验/Hector_Mapping的页面介绍.png)
+
+
+
+## 3.初次体验Hector_Mapping
+
+- **安装Hector_Mapping：**
+
+  - 终端中输入如下指令：（如果之前安装了wpr_simulation的话会将它一起下载）
+
+  ```bash
+  sudo apt install ros-noetic-hector-mapping
+  ```
+
+- **启动仿真环境：这是一个专门用于建图的环境**
+
+  - 终端中执行：
+
+  ```bash
+  roslaunch wpr_simulation wpb_stage_slam.launch
+  ```
+
+  ![仿真环境](images/42_Hector_Mapping初体验/仿真环境.png)
+
+- **运行SLAM节点：**
+
+  - 终端中执行：
+
+  ```bash
+  rosrun hector_mapping hector_mapping
+  ```
+
+- **运行RViz查看地图：**
+
+  - 终端中执行：
+
+  ```bash
+  rosrun rviz rviz
+  ```
+
+- **设置RViz查看数据：**
+
+  - 添加机器人模型：Add——>RobotModle；
+  - 添加激光雷达的扫描测距点：Add——>LaserScan——>Topic选择/scan；
+  - 添加地图：Add——>Map——>Topic选择/map；
+
+  ![RViz效果](images/42_Hector_Mapping初体验/RViz效果.png)
+
+- **运行速度控制，让机器人不断运动并扫描建图：**
+
+  - 终端运行：
+
+  ```bash
+  rosrun rqt_robot_steering rqt_robot_steering
+  ```
+
+- **最终运行效果如图所示：**
+
+![运行效果](images/42_Hector_Mapping初体验/场景交互.gif)
+
+
+
+# 第四十三节课：launch启动Hector_Mapping
+
+## 1.前情回顾
+
+- 在上一小节中，实现了SLAM算法；
+- 但是需要使用4条指令，非常麻烦；
+- 这一节课尝试写一个launch文件，来一次性启动这个SLAM算法；
+
+
+
+## 2.项目开发
+
+- **创建存放launch文件的软件包：**
+
+  - 在终端中执行：
+
+  ```bash
+  cd catkin_ws/src
+  
+  catkin_create_pkg slam_pkg roscpp rospy std_msgs
+  
+  ```
+
+- **新建文件：**
+
+  - 进入VsCode；
+  - 在slam_pkg文件夹下，创建子文件夹launch；
+  - 在该文件夹下新建文件hector.launch；
+
+- **编程文件：**
+
+  - 在hector.launch文件下写入如下内容：
+  - 注意第一行的在launch文件中执行另外一个launch文件的写法；
+
+  ```xml
+  <launch>
+  
+      <include file="$(find wpr_simulation)/launch/wpb_stage_slam.launch"/>
+  
+      <node pkg="hector_mapping" type="hector_mapping" name="hector_mapping"/>
+  
+      <node pkg="rviz" type="rviz" name="rviz"/>
+  
+      <node pkg="rqt_robot_steering" type="rqt_robot_steering" name="rqt_robot_steering"/>
+  
+  </launch>
+  
+  ```
+
+- **编译软件包：让hector.launch文件进入ROS的软件包**
+
+  - 终端中执行：
+
+  ```bash
+  cd catkin_ws
+  catkin_make
+  ```
+
+- **运行launch文件：**
+
+  - 终端执行下面指令，就可以一下子打开四个终端了；
+
+  ```bash
+  roslaunch slam_pkg hector.launch
+  ```
+
+- **保存RViz配置文件：**
+
+  - 在每次打开RViz中时都需要从零配置一遍，很麻烦；
+  - **可以将配置保存成文件形式，然后在launch文件中指定启动时加载的配置文件，就可以不用配置了**；
+  - 按上一节的选项配置好RViz；
+  - 然后选择File——>Save Config As——>**选择在slam_pkg目录下创建一个rviz文件夹**——>在该文件夹下保存配置文件为**slam.rviz**；
+
+- **重新启动RViz：**
+
+  - 关闭RViz；
+  - 然后在终端执行下面指令，即可直接配置好RViz；
+
+  ```bash
+  rosrun rviz rviz -d ~/catkin_ws/src/slam_pkg/rviz/slam.rviz
+  ```
+
+  - 在launch文件中指定配置文件：
+
+  ```xml
+  <launch>
+  
+      <include file="$(find wpr_simulation)/launch/wpb_stage_slam.launch"/>
+  
+      <node pkg="hector_mapping" type="hector_mapping" name="hector_mapping"/>
+  
+      <node pkg="rviz" type="rviz" name="rviz" args="-d $(find slam_pkg)/rviz/slam.rviz"/>
+  
+      <node pkg="rqt_robot_steering" type="rqt_robot_steering" name="rqt_robot_steering"/>
+  
+  </launch>
+  
+  ```
+
+- **重新运行launch文件：**
+
+  - 在终端执行：
+
+  ```bash
+  roslaunch slam_pkg hector.launch
+  ```
+
+- **文件兼容：**
+
+  - **在后续的开发中，如果机器人变成了真实机器人，只需要将launch文件的第一句修改为启动实体机器人激光雷达和底盘控制的launch文件即可；**
+  - **或者只启动激光雷达，然后自己手动推着机器人建图也是可以的；**
+
+
+
+# 第四十四节课：Hector_Mapping的参数设置
+
+## 1.Hector_Mapping的参数
+
+- 在官网的Website页面中，翻到3.1.4小节，即可看到所有的参数；
+- 首先关注三个参数：
+  - **map_update_distance_thresh**：更新的距离；
+  - map_update_angle_thresh：更新的角度；
+  - map_pub_period：更新的时间；
+
+![参数](images/44_Hector_Mapping的参数设置/hector的参数.png)
+
+
+
+## 2.修改launch文件
+
+- 在原来的launch文件中修改：
+
+```xml
+<launch>
+
+    <include file="$(find wpr_simulation)/launch/wpb_stage_slam.launch"/>
+
+    <node pkg="hector_mapping" type="hector_mapping" name="hector_mapping">
+        <param name="map_update_distance_thresh" value="0.1"/>
+        <param name="map_update_angle_thresh" value="0.1"/>
+        <param name="map_pub_period" value="0.1"/>
+    </node>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find slam_pkg)/rviz/slam.rviz"/>
+
+    <node pkg="rqt_robot_steering" type="rqt_robot_steering" name="rqt_robot_steering"/>
+
+</launch>
+
+```
+
+
+
+## 3.启动两个机器人查看差异
+
+- 在上面修改参数后，看起来SLAM建模并没有快多少；
+- 可以运行wpr_simulation中的wpb_hector_comparison.launch文件来查看差异；
+- 可修改文件中的参数，让两者看起来更明显；
+- 终端中运行：
+
+```bash
+roslaunch wpr_simulation wpb_hector_comparison.launch
+```
+
+![两台机器人](images/44_Hector_Mapping的参数设置/hector的两台机器程序.png)
+
+
+
+# 第四十五节课：初始ROS的TF系统
+
+
+
+# 第四十六节课：里程计在激光雷达SLAM中的作用
+
+
+
+# 第四十七节课：Gmapping的使用
+
+
+
+# 第四十八节课：launch启动Gmapping建图
+
+
+
+# 第四十九节课：Gmapping的参数设置
+
+
+
+# 第五十节课：地图的保存和加载
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
