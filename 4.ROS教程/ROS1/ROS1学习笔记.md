@@ -4140,27 +4140,677 @@ roslaunch wpr_simulation wpb_hector_comparison.launch
 
 # 第四十五节课：初始ROS的TF系统
 
+## 1.前情回顾
+
+- 在前面的SLAM中，已经可以获得了栅格地图数据；
+- 但SLAM除了栅格地图数据之外，还应该有定位数据；
+
+
+
+## 2.定位数据的描述
+
+- **为了确定定位信息，需要确定两个坐标系：**
+
+  - map坐标系：是父坐标系，原点在机器人的起始位置，坐标系遵循右手法则；
+  - base_frrtprint坐标系：是子坐标系，原点在机器人的底盘中心，也遵循右手法则；
+
+- **定位信息就是描述两个坐标系的相对关系：**
+
+  - **距离关系：**
+    - 需要确定子坐标系相对于父坐标系的X、Y、Z轴的距离偏移量；
+    - 由于地面机器人无法在Z轴上移动，所以一般Z=0；
+
+  ![距离偏移量](images/45_初始ROS的TF系统/距离偏移量.png)
+
+  - **角度关系：**
+    - 还需要确定子坐标系相对于父坐标系的X、Y、Z轴的角度偏移量；
+    - 由于地面机器人没有俯仰运动和滚转运动，所以一般X=Y=0，即只有绕着Z轴的角度偏移量；
+
+  ![角度偏移量](images/45_初始ROS的TF系统/角度偏移量.png)
+
+- **描述定位的数据格式：**
+
+  - 由前面讨论可知，可以用子坐标系相对于父坐标系的X、Y、Z轴的距离分量和角度分量，一共六个量描述定位信息；
+  - 由于地面机器人只能在地面运动，最后就退化为了只需要**X、Y轴的距离分量和Z轴的角度分量**；
+
+![定位信息描述](images/45_初始ROS的TF系统/定位数据格式.png)
+
+
+
+## 3.TF系统
+
+### 3.1 TF系统的基本介绍
+
+- Transform的缩写，描述两个坐标系的相对关系，可理解为**坐标系变换**；
+
+### 3.2 ROS中的TF关系
+
+- 在ROS中，会存在一个**TF发布节点，它会发布一个/tf话题**；
+- 其他节点可以订阅该话题，获得TF数据；
+- **在RViz中，能够显示定位信息就是因为它订阅了/tf话题**；
+
+![ROS中的TF关系](images/45_初始ROS的TF系统/ROS中的TF关系.png)
+
+### 3.3 在RViz中查看TF系统
+
+- **在终端中先运行SLAM建图程序：**
+
+```bash
+roslaunch wpr_simulation wpb_hector.launch
+```
+
+- **添加TF显示项目：**
+  - 在RViz中添加TF系统 ：Add——>TF；
+  - 修改坐标系的大小：展开TF——>Marker Scale——>5；
+  - 修改显示的坐标系：展开TF——>Frames——>只选择base_footprint和map；
+
+![RViz中的定位显示](images/45_初始ROS的TF系统/RViz中的定位显示.png)
+
+### 3.4 TF的数据格式
+
+- **查看话题：**
+  - 在新终端中执行：可以看到**/tf话题；**
+
+```bash
+rostopic list
+```
+
+- **查看/tf话题的数据格式：**
+  - 终端执行下面指令，输出为**tf2_msgs/TFMessage**
+
+```bash
+rostopic type /tf
+```
+
+- **官网查看具体的数据格式：**
+
+  - 官网搜索**tf2_msgs**，可见是一个**TransformStamped类型的transform数组；**
+
+  ![TFMessage消息](images/45_初始ROS的TF系统/TFMessage消息.png)
+
+  - **TransformStamped类型**
+    - 包含了header、child_frame_id和transform三个数据；
+    - header中包含了父坐标系的名称frame_id；
+    - child_frame_id就是子坐标系的名称；
+    - transform数据中包含了距离变量和角度变量的四元数；
+
+  ![数组内部数据](images/45_初始ROS的TF系统/TFMessage内部数据.png)
+
+### 3.5 查看TF的具体内容
+
+- **终端中执行：**
+
+```bash
+rostopic echo /tf
+```
+
+![获取数据](images/45_初始ROS的TF系统/获取数据.png)
+
+- **可视化工具：TF树**
+
+  - 在之前提到的TransformStamped类型的transform数组中，它会包含很多坐标系之间的数据；
+  - 上图中的map和base_footprint只是数组中的一个元素而已；
+  - 可以通过**tf树来查看tf系统中所包含的坐标关系**；
+  - 终端中执行：
+
+  ```bash
+  rosrun rqt_tf_tree rqt_tf_tree
+  ```
+
+  - 最后的整个tf_tree如下图所示：
+  
+  
+  
+  
+  
+  ![TF_Tree](images/45_初始ROS的TF系统/tf_tree.png)
+
+
 
 
 # 第四十六节课：里程计在激光雷达SLAM中的作用
+
+## 1.矛盾点
+
+### 1.1 Hector建图
+
+- 在终端中启动一个Hector Mapping的建图程序：
+
+  - ```bash
+    roslaunch wpr_simulation wpb_corridor_hector.launch
+    ```
+
+  - 仍然是使用hector建图，只是周围的仿真环境不同而已；
+
+  ![效果1](images/46_里程计在激光雷达SLAM中的作用/运行效果1.gif)
+
+- 可以看到，在经过长长的走廊时，仿真环境的机器人在走，但是RViz中的建图机器人却卡住了；
+
+### 1.2 Gmapping建图
+
+- 在终端中启动一个Gmapping的建图程序
+
+  - ```bash
+    roslaunch wpr_simulation wpb_corridor_gmapping.launch
+    ```
+
+  - 仿真环境仍然是上面那个，但是SLAM算法换成了Gmapping；
+
+  ![效果2](images/46_里程计在激光雷达SLAM中的作用/运行效果2.gif)
+
+- 在这个建图中，在经过长廊时，仿真机器人和RViz机器人是都移动的；
+
+
+
+## 2.里程计
+
+### 2.1 机理解释
+
+- 在SLAM建图中时，经过长廊时，因为周围没有任何纹理的变化，之前基于特征的SLAM建图拼接就无法起效了，机器人感觉自己没有在动过；
+- 但是机器人的轮子是在转动的，即使周围没有纹理的变化，通过机器人轮子的转动速度也是可以知道它走过的距离的，这就是电机里程计；
+- 里程计不是一个硬件设备，而是一个软件算法，在ROS系统中，它的关系如下：
+  - 里程计软件算法在驱动节点中；
+  - 里程计计算出来的位移数据在驱动节点中发布到/tf话题中；
+
+![里程计关系](E:\Learning_Lab\4.ROS教程\ROS1\images\46_里程计在激光雷达SLAM中的作用\里程计关系.png)
+
+### 2.2 里程计的输出信息
+
+- 在之前的SLAM建图中，它在/tf中输出的是map坐标系和base_footprint坐标系之间的关系；
+- 而对于里程计而言，它在/tf中输出的是odom坐标系到base_footprint坐标系之间的关系，odom即odometry里程计的缩写；
+
+![里程计输出的数据](images/46_里程计在激光雷达SLAM中的作用/里程计输出的数据.png)
+
+### 2.3 SLAM和里程计配合的意义：
+
+- 里程计的劣势：
+
+  - 里程计可以直接得到机器人的位置；
+  - 但是它的数据完全是靠轮子的转动速度计算的，当出现打滑等情况时将出现误差；
+
+- SLAM障碍物点云配对的补充：
+
+  - 为了解决这个误差，可以将SLAM的障碍物点云匹配和里程计综合起来；
+  - 如下图所示，红色线段就是里程计输出的数据，而SLAM可以基于点云匹配在前面补充绿色线段的数据，这样两段加起来就是真实的机器人的位置，这就是Gmapping的核心算法：
+
+  ![SLAM与里程计的配合](images/46_里程计在激光雷达SLAM中的作用/SLAM与里程计的配合.png)
+
+
+
+## 3.Hector与Gmapping的区别
+
+### 3.1 Hector建图的机理
+
+- 在Hector中，输出的/tf关系是map和scanmacher_frame的关系；
+- 但为了RViz中能显示出map与base_footprint之间的关系，它必须输出一段map和odom之间的关系，好让scanmacher_frame和base_footprint是重合的；
+- 但是Hector中map和odom这段关系不是为了修正里程计误差，而是为了让scanmacher_frame和base_footprint是重合的；
+- 即Hector是以扫描为准的，它并不考虑里程计，它输出的里程计信息只是为了抵消里程计带来的数据；
+
+![Hector建图](images/46_里程计在激光雷达SLAM中的作用/坐标演示1.gif)
+
+### 3.2 Gmapping建图的机理
+
+- 在Gmapping中，输出的是里程计和激光点云匹配的双重配合结果；
+- 它输出的里程计信息是真实利用的，而不是Hector中的只是让两个坐标系重合；
+
+![Gmapping建图](images/46_里程计在激光雷达SLAM中的作用/坐标演示2.gif)
 
 
 
 # 第四十七节课：Gmapping的使用
 
+## 1.Gmapping的数据格式
+
+- 在官网中搜索gmapping，注意需要选择noetic，否则后续的更新版本中已经没有这个软件包了；
+
+- 在官网中可以看到它的**节点：slam_gmapping**；
+
+- 在这个节点中**订阅的话题即需要的数据**有两个：
+
+  - **tf**：即需要一些坐标系转换关系，包括：
+
+    - 雷达坐标系到地盘坐标系的base_link的TF关系，其中雷达坐标系的名称需要与/scan话题中的父坐标系名称保持一致；
+    - base_link到odom的坐标系关系，即上一节课提到的里程计输出的TF关系；
+
+    ![必须的坐标系关系](images/47_Gmapping的使用/必须的坐标系关系.png)
+
+  - **scan**：即需要订阅激光雷达的数据话题；
+
+- 在这个节点中**发布的话题即输出的数据**有三个：
+
+  - **map_metadata**：即输出的地图信息；
+  - **map**：栅格地图数据；
+  - **entropy**：机器人误差，值越大表明越不可信；
+
+  ![Gmapping的节点](images/47_Gmapping的使用/Gmapping节点.png)
+
+- **输出的TF关系：**
+
+  - Gmapping还输出了一个地图map到里程计odom的TF关系；
+
+  ![输出的TF关系](images/47_Gmapping的使用/Gmapping输出的TF关系.png)
+
+
+
+## 2.运行Gmapping并进行建图
+
+### 2.1 查看所需数据是否都已存在
+
+- 运行仿真环境：
+
+```bash
+roslaunch wpr_simulaton wpb_stage_robocup.launch
+```
+
+![仿真环境](images/47_Gmapping的使用/仿真环境.png)
+
+- 查看仿真机器人提供的话题
+
+```bash
+rostopic list
+```
+
+- 获取激光雷达的父坐标系
+
+```bash
+rostopic echo /scan --noarr
+```
+
+![查看话题并查看父坐标系名称](images/47_Gmapping的使用/查看话题并查看父坐标系名称.png)
+
+- 查看是否存在必须的TF关系
+
+```bash
+rosrun rqt_tf_tree rqt_tf_tree
+```
+
+![TF树](images/47_Gmapping的使用/确认TF关系是否存在.png)
+
+- 可见在启动仿真环境后，已经准备好了所有的关系，接下来就可以运行仿真环境并建图了；
+
+### 2.2 运行Gmapping并进行建图
+
+- 运行Gmapping节点：
+
+```bash
+rosrun gmapping slam_gmapping
+```
+
+- 启动RViz：
+
+```bash
+rosrun rviz rviz
+```
+
+- 然后在RViz中添加机器人模型、激光雷达和地图数据即可显示初始状态；
+- 启动速度控制程序：
+
+```bash
+rosrun wpr_simulation keyboard_vel_ctrl
+```
+
+- 最后效果如下：
+
+![Gmapping建图效果](images/47_Gmapping的使用/建图效果.gif)
+
 
 
 # 第四十八节课：launch启动Gmapping建图
+
+## 1.课程目标
+
+- 实现一条指令启动Gmapping建图；
+
+
+
+## 2.项目开发
+
+- **创建软件包**
+
+```bash
+cd catkin_ws/src
+catkin_create_pkg slam_gmapping_pkg rospy roscpp std_msgs
+```
+
+- **新建文件**
+  - 在slam_gmapping_pkg文件夹下创建文件夹launch；
+  - 在launch文件夹下创建文件gmapping.launch；
+
+- **编写gmapping.launch文件**
+
+```xml
+<launch>
+    
+    <include file="$(find wpr_simulation)/launch/wpb_stage_robocup.launch"/>
+    
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping"/>
+    
+    <node pkg="rviz" type="rviz" name="rviz"/>
+    
+     <node pkg="wpr_simulation" type="keyboard_vel_ctrl" name="keyboard_vel_ctrl"/>
+    
+</launch>
+```
+
+- **编译该软件包：将该软件包添加入ROS的软件包列表**
+
+```bash
+cd catkin_ws
+catkin_make
+```
+
+- **运行launch文件**
+
+```bash
+roslaunch slam_gmapping_pkg gmapping.launch
+```
+
+- **新加地图的保存和打开：**
+  - 如果只是像上面那样编写，每次打开RViz都是空的；
+  - 运行launch文件后，在RViz中按上一节课配置好RViz，然后将其保存；
+  - 保存至slam_gmapping_pkg文件下的rviz文件夹(自己新建)，起名gmapping.rviz；
+
+- **更改launch文件：**
+
+```xml
+<launch>
+    
+    <include file="$(find wpr_simulation)/launch/wpb_stage_robocup.launch"/>
+    
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping"/>
+    
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find slam_gmapping_pkg)/rviz/gmapping.rviz"/>
+    
+     <node pkg="wpr_simulation" type="keyboard_vel_ctrl" name="keyboard_vel_ctrl"/>
+    
+</launch>
+```
+
+- **再次运行：**
+  - 再次运行launch文件，一开始即可配置好RViz，再像前面一样建图即可；
+
+![仿真页面](images/48_launch启动Gmapping建图/仿真页面.png)
 
 
 
 # 第四十九节课：Gmapping的参数设置
 
+## 1.Gmapping的参数
+
+- 在官网中可以看到Gmapping的所有参数，可将其分类如下：
+
+![Gmapping的参数](images/49_Gmapping的参数设置/Gmapping的参数.png)
+
+- 第一类接口相关参数：
+  - 即base_frame、map_frame、odom_frame三个TF坐标系；
+  - 它主要是用于当我们实际机器人的TF树和之前的三个TF坐标系不同时，可以直接在这里改以告诉Gmapping实际的TF树；
+
+- 第二类性能相关参数：
+  - 这类参数是直接影响实际运算量的参数；
+  - 可分为如下四类：
+
+![性能相关参数](images/49_Gmapping的参数设置/性能相关参数.png)
+
+- 第三类算法相关参数：
+  - 这类参数是与粒子算法有关的，难度系数较大，一般不更改；
+
+
+
+## 2.实际参数修改
+
+- 修改gmapping.launch文件：
+
+```xml
+<launch>
+    
+    <include file="$(find wpr_simulation)/launch/wpb_stage_robocup.launch"/>
+    
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
+    	
+        <param name="maxUrange" value="3.0"/>
+        
+    </node>
+    
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find slam_gmapping_pkg)/rviz/gmapping.rviz"/>
+    
+     <node pkg="wpr_simulation" type="keyboard_vel_ctrl" name="keyboard_vel_ctrl"/>
+    
+</launch>
+```
+
 
 
 # 第五十节课：地图的保存和加载
 
+## 1.map_server软件包
 
+- 在前面的Gmapping建图中，已经得到了栅格地图，可以用map_server软件包将其保存；
+- map_server软件包介绍：
+  - 在官网中搜索map_server；
+  - 找到下面的map_saver，这就是map_server软件包中用于保存地图的节点；
+  - 其基本用法已列举在下面，我们只需要运行即可将地图保存；
+
+![map_saver](images/50_地图的保存和加载/map_server的map_saver.png)
+
+
+
+## 2.实际操作
+
+- 先运行之前的**gmapping.launch**完成建图；
+- 在完成建图后，**在保持建图程序运行的前提下，再打开一个终端**，执行：
+
+```bash
+cd ~
+rosrun map_server map_saver -f map
+```
+
+- 在上面的执行中，我们处在主目录下，所以会在主目录中**生成map.pgm和map.yaml文件**；
+
+![地图的保存](images/50_地图的保存和加载/地图的保存.png)
+
+- **map.pgm文件：**
+
+  - 这个文件就是一个图片文件：
+
+  ![map.pgm文件](images/50_地图的保存和加载/map.pgm文件.png)
+
+- **map.yaml文件：**
+
+  - 这个文件中记录了地图的基本信息：
+
+  ![map.yaml文件](images/50_地图的保存和加载/map.yaml文件.png)
+
+
+
+## 3.地图的使用
+
+### 3.1 map_server节点介绍
+
+- 在前面已经保存了地图，地图主要用于**导航作用**；
+- 我们可以用**map_server的map_server节点**来启用地图；
+- **该节点发布的话题是map，在加载地图后需用RViz来查看地图，即添加map然后Topic选择map；**
+
+![map_server节点](images/50_地图的保存和加载/map_server节点.png)
+
+### 3.2 map_server节点的使用
+
+- **启动ROS核心**
+
+```bash
+roscore
+```
+
+- **加载地图**
+
+```bash
+rosrun map_server map_server map.yaml
+```
+
+- **RViz显示地图**
+
+```bash
+rosrun rviz rviz
+```
+
+- **然后在RViz中添加map并订阅话题map即可得到地图：**
+
+![加载地图](images/50_地图的保存和加载/加载地图.png)
+
+
+
+# 第五十一节课：Navigator导航系统
+
+
+
+# 第五十二节课：move_base节点
+
+
+
+# 第五十三节课：全局规划器
+
+
+
+# 第五十四节课：AMCL定位算法
+
+
+
+# 第五十五节课：代价地图Costmap
+
+
+
+# 第五十六节课：代价地图的参数设置
+
+
+
+# 第五十七节课：恢复行为Recovery Behaviour
+
+
+
+# 第五十八节课：恢复行为的参数设置
+
+
+
+# 第五十九节课：局部规划器Local Planner
+
+
+
+# 第六十节课：DWA规划器
+
+
+
+# 第六十一节课：TEB规划器
+
+
+
+# 第六十二节课：导航的Action编程接口
+
+
+
+# 第六十三节课：坐标导航的C++编程实现
+
+
+
+# 第六十四节课：坐标导航的Python编程实现
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 第六十五节课：航点导航插件介绍
+
+
+
+# 第六十六节课：航点导航插件的集成和启动
+
+
+
+# 第六十七节课：航点导航功能的C++实现
+
+
+
+# 第六十八节课：航点导航功能的Python实现
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 第六十九节课：ROS中的相机话题
+
+
+
+# 第七十节课：相机图像获取的C++实现
+
+
+
+# 第七十一节课：颜色目标识别与定位的C++实现
+
+
+
+# 第七十二节课：颜色目标跟随的C++实现
+
+
+
+# 第七十三节课：人脸检测的C++实现
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 第七十四节课：相机图像获取的Python实现
+
+
+
+# 第七十五节课：颜色目标识别与定位的Python实现
+
+
+
+# 第七十六节课：颜色目标跟随的Python实现
+
+
+
+# 第七十七节课：人脸检测的Python实现
 
 
 
