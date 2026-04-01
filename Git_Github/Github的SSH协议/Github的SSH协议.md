@@ -119,7 +119,7 @@
     export HOME="/e/Github_SSH"
     
     # 指定 SSH 配置文件路径
-    export SSH_CONFIG="/e/Github_SSH/.ssh/config"
+    export SSH_CONFIG="/e/Github_SSH/.ssh/config.txt"
     
     # 让 SSH 命令默认使用自定义配置
     alias ssh='ssh -F $SSH_CONFIG'
