@@ -3446,37 +3446,584 @@ plt.show()
 
 ## 第五十四节课：4-4_FAST算法原理
 
+### 1.FAST算法的原理
+
+#### 1.1 背景
+
+- 前面介绍的几个特征检测器，它们的效果都很好，但是从实时处理的角度来看，效率还是太低了；
+- 为了解决这个问题，FAST算法可以解决上面的问题；
+
+#### 1.2 FAST的介绍
+
+- **FAST**，全称Features from accelerated segment test，是一种用于角点检测的算法；
+- 该算法的原理是取图像中检测点，以该点为圆心的周围邻域内像素点判断检测点是否为角点；
+- 通俗的讲就是**若一个像素周围有一定数量的像素与该点像素值不同，则认为其为角点**；
+
+#### 1.3 FAST算法的基本流程
+
+- 在图像中选取一个像素点 p，来判断它是不是关键点，$$I_p$$等于像素点 p的灰度值；
+
+- 以r为半径画圆，覆盖p点周围的**M个像素**，通常情况下，设置**r=3，则M=16**，如下图所示：
+
+![像素示意](images/第四章/4-4FAST与ORB算法/FAST算法基本示意.jpg)
+
+- **阈值判断：**
+  - 设置一个阈值t，用于比较像素及其周围情况；
+  - 若16个像素点中存在**n个连续像素点**灰度值都高于$$I_p + t$$或低于$$I_p - t$$，则像素点p被认为是角点；
+  - 如上图中的虚线所示，n一般取值为12；
+
+- **效率优化：**
+  - 图像大部分不是特征点，若全部像素都计算，仍然无法满足实时性的要求 ；
+  - 因此采用一种进行**非特征点判别**的方法：
+    - 首先对候选点的周围每个90度的点：1，9，5，13进行测试；
+    - 先测试1和19, 如果它们符合阈值要求再测试5和13；
+    - 如果p是角点，那么这四个点中至少有3个要符合阈值要求，否则直接剔除；
+    - 对保留下来的点再继续进行测试（是否有12的点符合阈值要求）； 
+
+#### 1.4 FAST算法的缺点
+
+虽然这个检测器的效率很高，但它有以下几条缺点：
+
+- 获得的候选点比较多；
+- 特征点的选取不是最优的，因为它的效果取决与要解决的问题和角点的分布情况；
+- 进行非特征点判别时大量的点被丢弃；
+- 检测到的很多特征点都是相邻的；
+
+前 3 个问题可以通过机器学习的方法解决，最后一个问题可以使用非最大值抑制的方法解决；且注意，**FAST算法只有角点检测，没有特征描述**。
+
+
+
+### 2.机器学习的角点检测器
+
+- 选择一组训练图片（最好是跟最后应用相关的图片）；
+
+- 使用FAST算法找出每幅图像的特征点，图像中每一个特征点，将其周围的16个像素存储构成一个向量P：
+
+![特征向量](images/第四章/4-4FAST与ORB算法/特征向量.png)
+
+- 每一个特征点的 16 像素点都属于下列三类中的一种
+
+![像素点的分类](images/第四章/4-4FAST与ORB算法/像素点的分类.jpg)
+
+- 根据这些像素点的分类，特征向量 P 也被分为 3 个子集：Pd ，Ps ，Pb；
+
+- 定义一个新的布尔变量$$K_p$$，如果 p 是角点就设置为 Ture，如果不是就设置为 False；
+
+- 利用特征值向量p，目标值是$K_p$，训练ID3 树（决策树分类器）；
+
+- 将构建好的决策树运用于其他图像的快速的检测；
+
+
+
+### 3.非极大值抑制
+
+- 在筛选出来的候选角点中有很多是紧挨在一起的，需要通过非极大值抑制来消除这种影响；
+
+- **解决方法：**
+
+  - 为所有的候选角点都确定一个打分函数$$V $$ ， $$V $$的值可这样计算：
+
+    - 先计算$$I_p$$与圆上16个点的像素值差值，取绝对值，再将这16个绝对值相加，就得到了$$V $$的值：
+
+    $$
+    V = \sum_{i}^{16}|I_p-I_i|
+    $$
+
+  - 最后比较毗邻候选角点的V值，把V值较小的候选角点pass掉；
+
 
 
 ## 第五十五节课：4-4_FAST算法实现
+
+OpenCV中的FAST检测算法是**用传统方法实现的**，即没有使用机器学习的方法。
+
+### 1.实例化fast
+
+```python
+fast = =cv.FastFeatureDetector_create(threshold, nonmaxSuppression)
+```
+
+- **参数：**
+  - threshold：阈值t，有默认值10；
+  - nonmaxSuppression：是否进行非极大值抑制，默认值True；
+
+- **返回：**
+  - Fast：创建的FastFeatureDetector对象；
+
+
+
+### 2.利用fast.detect检测关键点，没有对应的关键点描述
+
+```python
+kp = fast.detect(grayImg, None)
+```
+
+- **参数：**
+  - ray：进行关键点检测的图像，注意是灰度图像；
+
+- **返回：**
+  - kp：关键点信息，包括位置，尺度，方向信息；
+
+
+
+### 3.将关键点检测结果绘制在图像上
+
+```python
+cv.drawKeypoints(image, keypoints, outputimage, color, flags)
+```
+
+
+
+### 4.上机实验
+
+```python
+# FAST算法的示例代码
+
+import numpy as np
+import cv2 as cv
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread('../../images/Chapter4/tv.jpg')
+
+# 2 Fast角点检测
+# 2.1 创建一个Fast对象，传入阈值，注意：可以处理彩色空间图像
+fast = cv.FastFeatureDetector_create(threshold=30)
+
+# 2.2 检测图像上的关键点
+kp = fast.detect(img,None)
+
+# 2.3 在图像上绘制关键点
+img2 = cv.drawKeypoints(img, kp, None, color=(0,0,255))
+
+# 2.4 输出默认参数
+print( "Threshold: {}".format(fast.getThreshold()) )
+print( "nonmaxSuppression:{}".format(fast.getNonmaxSuppression()) )
+print( "neighborhood: {}".format(fast.getType()) )
+print( "Total Keypoints with nonmaxSuppression: {}".format(len(kp)) )
+
+# 2.5 关闭非极大值抑制
+fast.setNonmaxSuppression(0)
+kp = fast.detect(img,None)
+print( "Total Keypoints without nonmaxSuppression: {}".format(len(kp)) )
+
+# 2.6 绘制为进行非极大值抑制的结果
+img3 = cv.drawKeypoints(img, kp, None, color=(0,0,255))
+
+# 3 绘制图像
+fig,axes=plt.subplots(nrows=1,ncols=2,figsize=(10,8),dpi=100)
+axes[0].imshow(img2[:,:,::-1])
+axes[0].set_title("加入非极大值抑制")
+axes[1].imshow(img3[:,:,::-1])
+axes[1].set_title("未加入非极大值抑制")
+plt.show()
+
+```
+
+![FAST算法效果](E:\Learning_Lab\3.OpenCV教程\3.Python调用OpenCV教程\images\第四章\4-4FAST与ORB算法\FAST算法效果.png)
 
 
 
 ## 第五十六节课：4-4_ORB算法原理
 
+- SIFT和SURF算法是**受专利保护**的，在使用他们时我们是要付费的；
+- ORB（Oriented Fast and Rotated Brief）不需要收费；
+- 它可以用来**对图像中的关键点快速创建特征向量**，并用这些特征向量来识别图像中的对象；
+
+### 1.ORB算法原理
+
+- ORB算法**结合了Fast和Brief算法**，提出了构造金字塔，**为Fast特征点添加了方向**，从而使得关键点具有了尺度不变性和旋转不变性；
+
+- **具体流程描述如下：**
+
+  - **构造尺度金字塔：**
+
+    - 金字塔共有n层，与SIFT不同的是，**每一层仅有一幅图像**，第s层的尺度为：
+
+    $$
+    \sigma_s=\sigma_0^s
+    $$
+
+  - **图像的尺度关系：**
+
+    - $$\sigma_0$$是初始尺度，默认为1.2，原图在第0层；
+    - 第s层图像的大小为：
+
+    $$
+    SIZE = (H*\frac{1}{\sigma_s})\times(W*\frac{1}{\sigma_s})
+    $$
+
+  ![图像金字塔](images/第四章/4-4FAST与ORB算法/图像金字塔.png)
+
+  - **图像的操作：**
+    - 在不同的尺度上利用Fast算法检测特征点，采用Harris角点响应函数，根据角点的响应值排序，选取前N个特征点，作为本尺度的特征点；
+    - 计算特征点的主方向，计算以特征点为圆心半径为r的圆形邻域内的灰度质心位置，将从特征点位置到质心位置的方向做特征点的主方向；
+  - **上述的计算方法如下：**
+    - $m_{pq}=\sum_{x,y}x^py^qI(x,y)$
+    - 质心的位置：$C=(\frac{m_{10}}{m_{00}},\frac{m_{01}}{m_{10}})$；
+    - 主方向：$\theta = arctan(m_{01},m_{10})$；
+  - **旋转不变性问题：**
+    - 为了解决旋转不变性，将特征点的邻域旋转到主方向上利用Brief算法构建特征描述符；
+    - 至此就得到了ORB的特征描述向量；
+
+
+
+### 2.BRIEF算法
+
+#### 2.1 背景
+
+- **FAST的缺点：**
+  - **FAST没有旋转不变性**，在前面中已经解决了这个问题；
+  - 除此之外，**FAST算法还没有特征描述**；
+- **BRIEF算法的作用：**
+  - BRIEF是一种**特征描述子提取算法**，非特征点提取算法，一种生成**二值**化描述子的算法，不提取代价低；
+  - 匹配只需要使用简单的**汉明距离(Hamming Distance)**，利用比特之间的异或操作就可以完成；
+
+#### 2.2 BRIEF算法的步骤
+
+- **图像滤波**
+
+  - 原始图像中存在噪声时，会对结果产生影响，所以需要对图像进行滤波，去除部分噪声；
+
+- **选取点对**
+
+  - 以特征点为中心，取S*S的邻域窗口，在窗口内随机选取N组点对，一般N=128,256,512，默认是256；
+  - 随机点对选取，提供了五种形式，结果如下图所示：
+    - x,y方向平均分布采样；
+    - x,y均服从Gauss(0,S^2/25)各向同性采样；
+    - x服从Gauss(0,S^2/25)，y服从Gauss(0,S^2/100)采样；
+    - x,y从网格中随机获取；
+    - x一直在(0,0)，y从网格中随机选取；
+  - 各种形式的效果如图所示：
+    - 图中**一条线段的两个端点就是一组点对，其中第二种方法的结果比较好**；
+
+  ![点对的选取方法](images/第四章/4-4FAST与ORB算法/点对的选取方法.png)
+
+- **构建描述符**
+
+  - 假设x,y是某个点对的两个端点，p(x),p(y)是两点对应的像素值，则有：
+
+  $$
+  t(x,y)=\begin{cases}1	&if p(x)>p(y)\\
+  0&	else\end{cases}
+  $$
+
+  
+
+  - 对每一个点对都进行上述的二进制赋值，形成BRIEF的关键点的描述特征向量；
+  - 该向量一般为128-512位的字符串，其中仅包含 1 和 0，如下图所示：
+
+  ![描述符](images/第四章/4-4FAST与ORB算法/描述符.png)
+
 
 
 ## 第五十七节课：4-4_ORB算法实现
+
+### 1.实例化ORB
+
+- **API：**
+
+```python
+orb = cv.xfeatures2d.orb_create(nfeatures)
+```
+
+- **参数：**
+  - nfeatures：特征点的最大数量；
+
+
+
+### 2.利用orb.detectAndCompute()检测关键点并计算
+
+```python
+kp,des = orb.detectAndCompute(gray,None)
+```
+
+- **参数：**
+  - gray：进行关键点检测的图像，注意是灰度图像；
+
+- **返回：**
+  - **kp：关键点信息，包括位置，尺度，方向信息；**
+  - **des：关键点描述符，每个关键点BRIEF特征向量，二进制字符串；**
+
+
+
+### 3.将关键点检测结果绘制在图像上
+
+```python
+cv.drawKeypoints(image, keypoints, outputimage, color, flags)
+```
+
+
+
+### 4.上机实验
+
+```Python
+# ORB算法的示例代码
+
+import numpy as np
+import cv2 as cv
+from matplotlib import pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1 读取图像
+img = cv.imread('../../images/Chapter4/tv.jpg')
+
+# 2 ORB角点检测
+# 2.1 实例化ORB对象
+orb = cv.ORB_create(nfeatures=500)
+
+# 2.2 检测关键点,并计算特征描述符
+kp,des = orb.detectAndCompute(img,None)
+
+print(des.shape)
+
+# 3 将关键点绘制在图像上
+img2 = cv.drawKeypoints(img, kp, None, color=(0,0,255), flags=0)
+
+# 4. 绘制图像
+plt.figure(figsize=(10,8),dpi=100)
+plt.imshow(img2[:,:,::-1])
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+![ORB算法效果](images/第四章/4-4FAST与ORB算法/ORB算法的效果图.png)
 
 
 
 ## 第五十八节课：4-4_FAST和ORB算法总结
 
+- **Fast算法**
+  - 原理：若一个像素周围有一定数量的像素与该点像素值不同，则认为其为角点；
+  - API：cv.FastFeatureDetector_create()
+
+- **ORB算法**
+  - 原理：是FAST算法和BRIEF算法的结合；
+  - API：cv.ORB_create()
+
 
 
 # 第五章：视频操作
+
+本章主要讲解OpenCV中的视频操作，主要内容有：
+
+- 视频文件的读取和存储；
+- **视频追踪中的meanshift和camshift算法**；
 
 
 
 ## 第五十九节课：5-1_视频读取与显示
 
+### 1.视频读取和显示的步骤
+
+在OpenCV中要获取一个视频并播放，一般通过如下步骤：
+
+- **创建读取视频的对象**
+
+  - **API：**
+
+  ```python
+  cap = cv.VideoCapture(filepath)
+  ```
+
+  - **参数：**
+    - filepath：视频文件路径；
+    - **如果参数写0即为电脑摄像头的视频文件；**
+
+- **视频的属性信息**
+
+  - **API：**
+
+  ```python
+  retval = cap.get(propId)
+  ```
+
+  - **参数：**
+
+    - pId：从0到18的数字，每个数字表示视频的属性；
+    - 常用属性有：
+
+    ![常用属性](images/第五章/5-1视频文件的读取和保存/获取视频的属性.png)
+
+- **修改视频的属性信息**
+
+  - **API：**
+
+  ```python
+  cap.set(propId，value)
+  ```
+
+  - **参数：**
+    - proid：属性的索引，与上面的表格相对应；
+    - value：修改后的属性值；
+
+- **判断图像是否读取成功**
+
+  - **API：**
+
+  ```python
+  isornot = cap.isOpened()
+  ```
+
+  - **返回值：**
+    - 若读取成功则返回true，否则返回False；
+
+- **获取视频的一帧图像**
+
+  - **API：**
+
+  ```python
+  ret, frame = cap.read()
+  ```
+
+  - **参数：**
+    - ret：若获取成功返回True，获取失败，返回False；
+    - Frame：获取到的某一帧的图像；
+
+- **视频的显示**
+
+  - 调用**cv.imshow()**显示图像，在显示图像时使用cv.waitkey()设置适当的持续时间；
+  - 如果太低视频会播放的非常快，如果太高就会播放的非常慢；
+  - 通常情况下我们设置25ms就可以了；
+
+- **视频文件的关闭**
+
+  - 最后，调用cap.realease()将视频释放掉；
+
+
+
+### 2.上机实验
+
+```python
+# 视频读取和显示的示例代码
+
+import numpy as np
+import cv2 as cv
+
+# 1.获取视频对象
+cap = cv.VideoCapture('../../images/Chapter5/DOG.wmv')
+# cap = cv.VideoCapture(0)
+
+# 2.判断是否读取成功
+while(cap.isOpened()):
+    # 3.获取每一帧图像
+    ret, frame = cap.read()
+
+    # 4. 获取成功显示图像
+    if ret == True:
+        cv.imshow('frame',frame)
+
+    # 5.每一帧间隔为25ms
+    if cv.waitKey(25) & 0xFF == ord('q'):
+        break
+
+# 6.释放视频对象
+cap.release()
+cv.destoryAllWindows()
+
+```
+
 
 
 ## 第六十节课：5-1_视频文件保存
 
+### 1.API介绍
+
+#### 1.1 创建视频写入对象的API
+
+- API：
+
+```python
+out = cv2.VideoWriter(filename,fourcc, fps, frameSize)
+```
+
+- 参数：
+  - filename：视频保存的位置；
+  - fourcc：指定视频编解码器的4字节代码；
+  - fps：帧率；
+  - frameSize：帧大小；
+
+#### 1.2 设置视频的编解码器的API
+
+- API：
+
+```
+retval = cv2.VideoWriter_fourcc(c1, c2, c3, c4)
+```
+
+- 参数：
+  - c1,c2,c3,c4：是视频编解码器的4字节代码；
+  - 在[fourcc.org](http://www.fourcc.org/codecs.php)中找到可用代码列表，与平台紧密相关，常用的有：
+    - 在Windows中：DIVX（.avi）；
+    - 在OS中：MJPG（.mp4）、DIVX（.avi）、X264（.mkv）；
+
+#### 1.3 视频的写入
+
+- **读取：**
+  - 利用**cap.read()**获取视频中的每一帧图像；
+  - 并使用**out.write()**将某一帧图像写入视频中；
+
+- **释放：**
+  - 使用**cap.release()和out.release()**释放资源；
+
+
+
+### 2.上机实验
+
+```python
+import cv2 as cv
+import numpy as np
+
+# 1. 读取视频
+cap = cv.VideoCapture("DOG.wmv")
+
+# 2. 获取图像的属性（宽和高，）,并将其转换为整数
+frame_width = int(cap.get(3))
+frame_height = int(cap.get(4))
+
+# 3. 创建保存视频的对象，设置编码格式，帧率，图像的宽高等
+out = cv.VideoWriter('outpy.avi',cv.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
+
+while(True):
+    # 4.获取视频中的每一帧图像
+    ret, frame = cap.read()
+    if ret == True: 
+        # 5.将每一帧图像写入到输出文件中
+        out.write(frame)
+    else:
+        break 
+
+# 6.释放资源
+cap.release()
+out.release()
+cv.destroyAllWindows()
+
+```
+
 
 
 ## 第六十一节课：5-1_视频读写总结
+
+- **读取视频：**
+  - 读取视频：cap = cv.VideoCapture()；
+  - 判断读取成功：cap.isOpened()；
+  - 读取每一帧图像：ret,frame = cap.read()；
+  - 获取属性：cap.get(proid)；
+  - 设置属性：cap.set(proid,value)；
+  - 资源释放：cap.release()；
+
+- **保存视频：**
+  - 保存视频： out = cv.VideoWrite()；
+  - 视频写入：out.write()；
+  - 资源释放：out.release()；
 
 
 
