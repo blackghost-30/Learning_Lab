@@ -4029,45 +4029,424 @@ cv.destroyAllWindows()
 
 ## 第六十二节课：5-2_meanshift原理
 
+### 1.meanshift原理
+
+- **meanshift算法的作用**
+
+  - **meanshift算法就是不断跟踪图像中点密度追踪的位置；**
+
+  - 假设有一堆点集，还有一个小的圆形窗口，现在可能要**移动这个窗口到点集密度最大**的区域当中：
+
+  ![meanshift的通俗理解](images/第五章/5-2视频追踪/点密度示意图.jpg)
+
+  - **其整个过程可以描述如下：**
+    - 初始窗口是蓝色圆环区域，命名为C1，其圆心用一个蓝色的矩形标注，命名为C1_o；
+    - 此时窗口中**所有点的点集构成的质心**在蓝色圆形点C1_r处，显然**圆环的形心和质心**并不重合；
+    - 所以，移动蓝色的窗口，使得**形心与之前得到的质心**重合；
+    - 在新移动后的圆环的区域当中再次寻找圆环当中所包围点集的质心，然后再次移动；
+    - 不断执行上面的移动过程，直到形心和质心大致重合结束；
+    -  这样，最后圆形的窗口会落到像素分布最大的地方，也就是图中的绿色圈，命名为C2；
+
+- **meanshift在视频跟踪中的思路流程：**
+  - 首先在图像上选定一个目标区域；
+  - 计算选定区域的**直方图分布**，一般是**HSV色彩空间**的直方图；
+  - 对下一帧图像b**同样计算直方图分布**；
+  - 计算图像b当中与**选定区域直方图分布**最为相似的区域；
+  - 使用meanshift算法**将选定区域沿着最为相似的部分进行移动**，直到找到最相似的区域；
+  - 重复3到4的过程，就完成整个视频目标追踪；
+
+- **meanshift算法在视频跟踪中的实际优化：**
+
+  - **meanshift算法只能追踪点集密度最大的地方，但是对于图像而言，只有像素，没有所谓的点集；**
+  - 通常情况下使用**直方图反向投影**得到图像和第一帧目标对象的起始位置，即用直方图反向投影获得**相似度点集**；
+  - 目标对象的移动会反映到**直方图反向投影图**中，meanshift 算法就把我们的窗口移动到反向投影图像中灰度密度最大的区域了；
+  - 如下图所示：
+
+  ![meanshift算法的跟踪过程](images/第五章/5-2视频追踪/meanshift算法的跟踪过程.gif)
+
+
+
+### 2.直方图反向投影的流程
+
+假设我们有一张100x100的输入图像，有一张10x10的模板图像，查找的过程是这样的：
+
+- 从输入图像的左上角(0,0)开始，切割一块(0,0)至(10,10)的临时图像；
+- 用临时图像的直方图和模板图像的直方图对比，对比结果记为c；
+- 直方图对比结果c，就是结果图像(0,0)处的像素值；
+- 切割输入图像从(0,1)至(10,11)的临时图像，对比直方图，并记录到结果图像；
+- 重复1～5步直到输入图像的右下角，就形成了直方图的反向投影。
+
 
 
 ## 第六十三节课：5-2_meanshift实现
+
+### 1.API介绍
+
+- **API：**
+
+```python
+cv.meanShift(probImage, window, criteria)
+```
+
+- **参数：**
+  - probImage：ROI区域，即**目标的直方图的反向投影**；
+  - window：初始搜索窗口，就是定义ROI的rect；
+  - criteria：窗口搜索停止准则，主要有迭代次数达到设置最大值、窗口中心漂移值大于某个设定值等；
+
+- **实现meanshift算法的主要流程：**
+  - 读取视频文件：cv.videoCapture()；
+  - 感兴趣区域设置：获取第一帧图像，并设置目标区域，即感兴趣区域，一般是矩形区域；
+  - 计算直方图：计算感兴趣区域的HSV直方图，并进行归一化；
+  - **对每一帧图像进行直方图反向投影，然后把这个反向投影图输入到meanshfit算法API中；**
+  - 目标追踪：设置窗口搜索停止条件，直方图反向投影，进行目标追踪，并在目标位置绘制矩形框；
+
+
+
+### 2.上机实验
+
+```python
+# meanshift算法的示例代码
+
+import numpy as np
+import cv2 as cv
+
+# 1.获取图像
+cap = cv.VideoCapture('../../images/Chapter5/DOG.wmv')
+
+# 2.获取第一帧图像，并指定目标位置
+ret,frame = cap.read()
+# 2.1 目标位置（行，高，列，宽）
+r,h,c,w = 197,141,0,208
+track_window = (c,r,w,h)
+# 2.2 指定目标的感兴趣区域
+roi = frame[r:r+h, c:c+w]
+
+# 3. 计算直方图
+# 3.1 转换色彩空间（HSV）
+hsv_roi =  cv.cvtColor(roi, cv.COLOR_BGR2HSV)
+# 3.2 去除低亮度的值
+# mask = cv.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
+# 3.3 计算直方图
+roi_hist = cv.calcHist([hsv_roi],[0],None,[180],[0,180])
+# 3.4 归一化
+cv.normalize(roi_hist,roi_hist,0,255,cv.NORM_MINMAX)
+
+# 4. 目标追踪
+# 4.1 设置窗口搜索终止条件：最大迭代次数，窗口中心漂移最小值
+term_crit = ( cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1 )
+
+while(True):
+    # 4.2 获取每一帧图像
+    ret ,frame = cap.read()
+    if ret == True:
+        # 4.3 计算直方图的反向投影
+        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        dst = cv.calcBackProject([hsv],[0],roi_hist,[0,180],1)
+
+        # 4.4 进行meanshift追踪
+        ret, track_window = cv.meanShift(dst, track_window, term_crit)
+
+        # 4.5 将追踪的位置绘制在视频上，并进行显示
+        x,y,w,h = track_window
+        img2 = cv.rectangle(frame, (x,y), (x+w,y+h), 255,2)
+        cv.imshow('frame',img2)
+
+        if cv.waitKey(60) & 0xFF == ord('q'):
+            break
+    else:
+        break
+
+# 5. 资源释放
+cap.release()
+cv.destroyAllWindows()
+
+```
 
 
 
 ## 第六十四节课：5-2_camshift算法及总结
 
+### 1.meanshift的局限性
+
+- **meanshift的检测窗口的大小是固定的**，狗狗由近及远是一个逐渐变小的过程，固定的窗口不合适；
+- 所以我们需要**根据目标的大小和角度来对窗口的大小和角度进行修正**；
+- CamShift可以帮我们解决这个问题；
+
+
+
+### 2.camshift算法介绍
+
+- CamShift算法全称是Continuously Adaptive Mean-Shift，即**连续自适应MeanShift算法**；
+- 可随着跟踪目标的大小变化实时调整搜索窗口的大小，具有较好的跟踪效果；
+
+- **camshift算法的演示：**
+
+  - Camshift算法首先应用meanshift，**一旦meanshift收敛，它就会更新窗口的大小**；
+  - 还计算**最佳拟合椭圆的方向，从而根据目标的位置和大小更新搜索窗口**；
+  - 如下图所示：
+
+  ![camshift算法的演示](images/第五章/5-2视频追踪/camshift算法演示图.gif)
+
+
+
+### 3.camshift算法的实现
+
+- camshift在OpenCV中实现时，只需将上述的meanshift函数改为Camshift函数即可：
+
+  - 即将下面代码：
+
+  ```python
+  # 4.4 进行meanshift追踪
+          ret, track_window = cv.meanShift(dst, track_window, term_crit)
+  
+          # 4.5 将追踪的位置绘制在视频上，并进行显示
+          x,y,w,h = track_window
+          img2 = cv.rectangle(frame, (x,y), (x+w,y+h), 255,2)
+  ```
+
+  - 改为下面代码：
+
+  ```python
+    #进行camshift追踪
+      ret, track_window = cv.CamShift(dst, track_window, term_crit)
+  
+          # 绘制追踪结果
+          pts = cv.boxPoints(ret)
+          pts = np.intp(pts)
+          img2 = cv.polylines(frame,[pts],True, 255,2)
+  ```
+
+
+
+### 4.算法总结
+
+- **meanshift：**
+  - **原理：**
+    - 一个迭代的步骤，即先算出当前点的偏移均值，移动该点到其偏移均值；
+    - 然后以此为新的起始点，继续移动，直到满足一定的条件结束；
+  - **API：**
+    - cv.meanshift()；
+  - **优缺点：**
+    - 简单，迭代次数少，但无法解决目标的遮挡问题并且不能适应运动目标的的形状和大小变化；
+
+- **camshift：**
+  - **原理：**
+    - 首先应用meanshift，一旦meanshift收敛，它就会更新窗口的大小；
+    - 还计算最佳拟合椭圆的方向，从而根据目标的位置和大小更新搜索窗口；
+  - **API：**
+    - cv.camshift()
+  - **优缺点：**
+    - 可适应运动目标的大小形状的改变，具有较好的跟踪效果；
+    - 但当背景色和目标颜色接近时，容易使目标的区域变大，最终有可能导致目标跟踪丢失；
+
 
 
 # 第六章：案例
+
+本章通过一个人脸检测案例实现OpenCV的工程开发，主要内容有：
+
+- 了解opencv进行人脸检测的流程；
+- 了解**Haar特征分类器**的内容；
 
 
 
 ## 第六十五节课：6-1_人脸检测基础
 
+### 1.Haar特征的介绍
+
+- **Haar特征的介绍：**
+
+  - Haar特征是一组模板，可以将其理解为**卷积核**，**Haar特征的值反映了图像的灰度变化情况，尤其是和脸部的特征有关系**；
+  - 如脸部的一些特征能由矩形特征简单的描述，眼睛要比脸颊颜色要深，鼻梁两侧比鼻梁颜色要深；
+  - **当Haar特征在图像中不断扫描时，可以得到Haar特征值，这个值等于黑色矩形中的像素值之和减去白色矩形中的像素值之和；**
+
+  <img src="images/第六章/haar特征.png" alt="Haar特征" style="zoom:50%;" />
+
+- **Haar特征的物理意义：**
+
+  - Haar特征可用于图像任意位置，大小也可以任意改变；
+  - 所以矩形特征值是**矩形模版类别、矩形位置和矩形大小**这三个因素的函数；
+  - 故类别、大小和位置的变化，使得很小的检测窗口含有非常多的矩形特征；
+
+  <img src="images/第六章/Haar检测示意.png" alt="Haar检测示意" style="zoom:50%;" />
+
+- **人脸检测的一般思路：**
+
+  - 人脸检测一般通过**机器学习的方式**实现；
+
+  - **先用Haar特征不断扫描大量的图片，提取出大量图片的脸部特征，图片包括了面部图片和非面部图像；**
+  - 然后再将提取的特征**用来训练分类器**，从而实现整个人脸检测机器学习的模型建立；
+
+
+
+### 2.分类器的训练
+
+- 得到**图像的特征**后，训练一个决策树构建的**adaboost级联决策器**来识别是否为人脸：
+
+<img src="images/第六章/决策器.png" alt="决策树" style="zoom:50%;" />
+
 
 
 ## 第六十六节课：6-2_人脸检测实现
+
+### 1.实现思路
+
+- OpenCV中**自带已训练好的检测器**，包括面部，眼睛，猫脸等；
+- 训练好的检测器都保存在**XML文件**中，我们可以通过以下程序找到他们：
+
+```python
+import cv2 as cv
+print(cv.__file__)
+```
+
+- **检测器背后做的工作：**
+  - 不断用Haar特征扫描图片，将检测出来的特征送给分类器进行判断是否为人脸；
+  - 在不同的检测器中使用的Haar特征也会不同；
+- 找到的文件如下所示：
+  - **若运行程序没有输出，可直接到库文件目录中找到cv2，下面的data文件夹就是这些文件；**
+
+![OpenCv中的分类器](images/第六章/OpenCV中的分类器.png)
+
+- **后续的程序就是利用这些.xml文件中的分类器实现的**；
+
+
+
+### 2.人脸检测的流程
+
+- **读取图片：**
+  - 读取图片，并转换成灰度图；
+
+- **实例化人脸和眼睛检测的分类器对象**
+
+```python
+# 实例化级联分类器
+classifier =cv.CascadeClassifier( "haarcascade_frontalface_default.xml" ) 
+# 加载分类器
+classifier.load('haarcascade_frontalface_default.xml')
+```
+
+- **进行人脸和眼睛的检测**
+
+  - **API：**
+
+  ```python
+  rect = classifier.detectMultiScale(gray, scaleFactor, minNeighbors, minSize,maxsize)
+  ```
+
+  - **参数：**
+    - Gray：要进行检测的人脸图像；
+    - scaleFactor：前后两次扫描中，搜索窗口的比例系数；
+    - minneighbors：目标至少被检测到minNeighbors次才会被认为是目标；
+    - minsize和maxsize：目标的最小尺寸和最大尺寸；
+
+- **结果：**
+  - 将检测结果绘制出来就可以了；
+
+
+
+### 3.上机实验
+
+- **图片的人脸检测**
+
+```python
+# 人脸检测示例代码
+
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 设置字体为微软雅黑
+plt.rcParams['font.family'] = 'Microsoft YaHei'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1.以灰度图的形式读取图片
+img = cv.imread("../../images/Chapter6/yangzi.jpg")
+gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+
+# 2.实例化OpenCV人脸和眼睛识别的分类器
+face_cas = cv.CascadeClassifier("haarcascade_frontalface_default.xml")
+face_cas.load('haarcascade_frontalface_default.xml')
+
+eyes_cas = cv.CascadeClassifier("haarcascade_eye.xml")
+eyes_cas.load("haarcascade_eye.xml")
+
+# 3.调用识别人脸
+faceRects = face_cas.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=3, minSize=(32, 32))
+for faceRect in faceRects:
+    x, y, w, h = faceRect
+    # 框出人脸
+    cv.rectangle(img, (x, y), (x + h, y + w),(0,255,0), 3)
+    # 4.在识别出的人脸中进行眼睛的检测
+    roi_color = img[y:y+h, x:x+w]
+    roi_gray = gray[y:y+h, x:x+w]
+    eyes = eyes_cas.detectMultiScale(roi_gray)
+    for (ex,ey,ew,eh) in eyes:
+        cv.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+
+# 5. 检测结果的绘制
+plt.figure(figsize=(8,6),dpi=100)
+plt.imshow(img[:,:,::-1]),plt.title('检测结果')
+plt.xticks([]), plt.yticks([])
+plt.show()
+
+```
+
+- **视频的人脸检测**
+
+```python
+import cv2 as cv
+import matplotlib.pyplot as plt
+
+# 1.读取视频
+cap = cv.VideoCapture("movie.mp4")
+
+# 2.在每一帧数据中进行人脸识别
+while(cap.isOpened()):
+    ret, frame = cap.read()
+    if ret==True:
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        
+        # 3.实例化OpenCV人脸识别的分类器 
+        face_cas = cv.CascadeClassifier( "haarcascade_frontalface_default.xml" ) 
+        face_cas.load('haarcascade_frontalface_default.xml')
+        
+        # 4.调用识别人脸 
+        faceRects = face_cas.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=3, minSize=(32, 32)) 
+        for faceRect in faceRects: 
+            x, y, w, h = faceRect 
+            # 框出人脸 
+            cv.rectangle(frame, (x, y), (x + h, y + w),(0,255,0), 3) 
+        cv.imshow("frame",frame)
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+# 5. 释放资源
+cap.release()  
+cv.destroyAllWindows()
+
+```
 
 
 
 ## 第六十七节课：6-3_人脸检测总结
 
+- **opencv中人脸识别的流程：**
 
+  - 读取图片，并转换成灰度图；
+  - 实例化人脸和眼睛检测的分类器对象
 
+  ```python
+  # 实例化级联分类器
+  classifier =cv.CascadeClassifier( "haarcascade_frontalface_default.xml" ) 
+  # 加载分类器
+  classifier.load('haarcascade_frontalface_default.xml')
+  ```
 
+  - 进行人脸和眼睛的检测
 
+  ```python
+  rect = classifier.detectMultiScale(gray, scaleFactor, minNeighbors, minSize,maxsize)
+  ```
 
+  - 将检测结果绘制出来就可以了；
 
-
-
-
-
-
-
-
-
-
-
-
-
+- **也可以在视频中进行人脸识别；**
