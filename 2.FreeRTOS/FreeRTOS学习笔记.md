@@ -2,8 +2,13 @@
 
 本笔记是基于B站韦东山的《FreeRTOS入门与工程实践》课程整理的：
 
-- 视频链接：[视频链接](【FreeRTOS入门与工程实践 --由浅入深带你学习FreeRTOS（FreeRTOS教程 基于STM32，以实际项目为导向）】https://www.bilibili.com/video/BV1Jw411i7Fz?p=4&vd_source=b7453c324b64db9c455fd1d20572810d)；
+- 视频链接：[视频链接](https://www.bilibili.com/video/BV1Jw411i7Fz?p=4&vd_source=b7453c324b64db9c455fd1d20572810d)；
 - 官网资源：[官网资源](https://rtos.100ask.net/zh/FreeRTOS/DShanMCU-F103/)；
+
+本笔记的组织形式：
+
+- 与课程不完全一致，对于一些推销类课时不做记录，且对于一些课程的标题进行了更清晰的描述；
+- 每个课时的标号与课程保持一致，采用**x-x**的形式；
 
 ---
 
@@ -435,27 +440,208 @@ void main()
   }
   ```
 
+
+---
+
+
+
+# 1-2 项目展示
+
+- 整个工程包括3个项目：音乐播放、打砖块游戏、汽车游戏；
+
+- 最后整个项目完成的程序的整体框架如下图所示：
+
+![程序框架](3.images/1-2项目展示/程序框架.png)
+
+---
+
+
+
+# 2-1 开发板使用
+
+## 1.内容介绍
+
+- 本节内容对应了**教程资料的第三章和第四章；**
+- 本节内容涉及的工程有：
+  - **00_FreeRTOS_Template**
+    - 由STM32CubeMX创建的添加了DshanMCU-F103驱动代码的空白的FreeRTOS工程；
+    - 这个工程主要提供给学者学习由STM32CubeMX创建的FreeRTOS的工程结构；
+  - **00_Driver_Test**
+    - 开发板测试的FreeRTOS工程；
+    - 这个工程是本节的主要工程，用于测试开发板的各个模块；
+    - 这个工程只是在00_FreeRTOS_Template工程的基础上，在freertos.c文件中添加了驱动代码；
+
+
+
+## 2.开发板介绍与硬件连接
+
+- DshanMCU-103上有4个插针，它们分别是GND、SWCLK、SWDIO、3.3V；
+- ST-Link上有10个插针，它们的功能在外壳上有标注；接线方法如下图所示：
+
+![连接STLink](3.images/2-1开发板使用/STLink连接.png)
+
+- 连接好的实物图如下（ST-Link的USB口要插到电脑上）：
+
+![连接好的实物图](3.images/2-1开发板使用/连接好的实物图.png)
+
+
+
+## 3.打开工程
+
+- 测试开发板的项目工程是**00_Driver_Test**；
+- 打开文件夹，选择MDK-ARM，然后用Keil打开：
+
+![工程项目](3.images/2-1开发板使用/工程项目.png)
+
+
+
+## 4.修改代码
+
+- 本工程主要涉及的文件是freertos.c，除了这个文件外，其他文件与空白工程的文件完全相同；
+- 在该文件中有一个默认任务，这个任务由STM32CubeMX自动生成；
+- 这个任务主要做的事情是初始化LCD，然后在循环中添加了驱动的测试代码；
+- 由于每个测试函数内部都是一个死循环（可自己打开驱动源码查看），所以在测试开发板时，只能取消注释一个测试函数，逐个完成模块的测试；
+
+![工程修改](3.images/2-1开发板使用/工程使用.png)
+
+
+
+## 5.注意事项
+
+- 有些模块的引脚是共用的，所以它们要么不能同时接，要么不能同时使用；
+
+- 可参照教程资料的第四章，里面有详细的说明，可将它们列表如下：
+
+| 模块1            | 模块2                | 备注                       |
+| ---------------- | -------------------- | -------------------------- |
+| M2(DS18B20)      | M10(DHT11温湿度模块) | 不能同时接                 |
+| M4(红外发射模块) | M9(蜂鸣器)           | 不能同时接                 |
+| M6(超声波模块)   | M12(Flash模块)       | 可以同时接，但是要互斥访问 |
+
+![冲突模块](3.images/2-1开发板使用/冲突模块.png)
+
+
+
+# 2-2 模块使用说明与STM32CubeMX配置
+
+## 1.内容介绍
+
+- 本节内容对应**课程资料的第五章——模块使用说明与 STM32CubeMX 配置；**
+- **前面的00_Driver_Test工程就是这个课程的模板教程，可在这个工程的基础上跟着教程一步步完善工程；**
+- 本小节的内容主要是讲解整个项目从零搭建的思路，具体的搭建过程见2-3节；
+
+
+
+## 2.项目搭建的思路说明
+
+- **驱动代码**
+
+  - 在这个开发板上，要使用各个模块，需要用到各个模块的驱动代码；
+  - 对于每一个模块，课程都提供了对应的驱动代码，路径在：`.\2.Project\01_Driver_Test\Project\Drivers\DshanMCU-F103`；
+
+- **外设**
+
+  - 要使用上面的驱动代码来驱动模块，需要用到STM32的各个外设和它们打交道；
+  - 比如对于OLED而言，它需要用到I2C1，那就需要对I2C1这个外设进行配置；
+
+- **初始化**
+
+  - 初始化指的是初始化外设，这个工作由STM32CubeMX来做；
+  - 由于驱动代码底层是用HAL库来写的，所以需要用STM32CubeMX来做初始化；
+
+  ![驱动代码的底层HAL依赖](3.images/2-2模块使用说明与STM32CubeMX配置/驱动代码的HAL库依赖.png)
+
+
+
+# 2-3 自己创建FreeRTOS工程
+
+## 1.内容介绍
+
+- 本节内容对应课程资料的：
+  - **第五章——模块使用说明与 STM32CubeMX 配置；**
+  - **第六章——创建FreeRTOS工程；**
+
+- 本节主要介绍如何基于STM32CubeMX创建一个FreeRTOS工程，包括驱动代码的移植和默认任务的改写；
+
+
+
+## 2.工程创建
+
+具体如何创建一个工程请详细查看教程资料，在此不再赘述。
+
+![工程结构](3.images/2-3自己创建FreeRTOS工程/工程结构.png)
+
+
+
+## 3.工程移植
+
+在完成空白的FreeRTOS项目的创建后，接下来移植LED和OLED的驱动代码，这里已经假设前面的工程创建中完成了GPIO和I2C的初始化，具体见教程第六章。
+
+- **LED的移植**
+
+  - 首先需要添加驱动文件driver_led.c和driver_led.h文件，其具体过程见教程；
+  - 接着就可以在freertos.c文件中添加测试代码：
+
+  ```c
+  /* USER CODE BEGIN Header */
+  #include "driver_led.h"
   
+  /* USER CODE END Header_StartDefaultTask */
+  void StartDefaultTask(void *argument)
+  {
+    /* USER CODE BEGIN StartDefaultTask */
+    /* Infinite loop */
+    for(;;)
+    {
+      //osDelay(1);
+  	  Led_Test();
+    }
+    /* USER CODE END StartDefaultTask */
+  }
+  
+  ```
+
+- **OLED的移植**
+
+  - LCD的项目移植与LED相同，只是需要添加的驱动文件较多；
+  - 驱动文件有：ascii_font.c、driver_lcd.c、driver_lcd.h、driver_led.c、driver_led.h、driver_timer.c和driver_timer.h；
+  - 接着就可以在上面的基础上测试OLED的测试函数：
+
+  ```c
+  /* USER CODE BEGIN Header */
+  #include "driver_led.h"
+  #include "driver_lcd.h"
+  
+  /* USER CODE END Header_StartDefaultTask */
+  void StartDefaultTask(void *argument)
+  {
+    /* USER CODE BEGIN StartDefaultTask */
+    /* Infinite loop */
+    for(;;)
+    {
+      //osDelay(1);
+  	//LCD_Test();
+  	  Led_Test();
+    }
+    /* USER CODE END StartDefaultTask */
+  }
+  
+  ```
+
+- 本完整工程对应着Project文件夹下的**01_FreeRTOS_Create_LCD_LED**；
 
 
 
+## 4.说明
+
+- 强烈建议就在**00_FreeRTOS_Template**或**00_Driver_Test**工程的基础上进行开发；
+- 两者的区别主要就是freertos.c文件中是否加入了驱动代码；
+- 对于想要从零构建这个项目的学者，需要具有一定的STM32基础以及STM32CubeMX的基础；
+- 若在原来两个工程的基础上开发，只需要创建一个新的文件夹，该文件夹以项目名称命名，然后把前面任何一个项目的整个Project文件夹拷贝下来即可；
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# 3-1 创建第一个多任务程序
 
 
 
