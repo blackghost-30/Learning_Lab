@@ -520,6 +520,8 @@ void main()
 
 ![冲突模块](3.images/2-1开发板使用/冲突模块.png)
 
+---
+
 
 
 # 2-2 模块使用说明与STM32CubeMX配置
@@ -550,6 +552,8 @@ void main()
   - 由于驱动代码底层是用HAL库来写的，所以需要用STM32CubeMX来做初始化；
 
   ![驱动代码的底层HAL依赖](3.images/2-2模块使用说明与STM32CubeMX配置/驱动代码的HAL库依赖.png)
+
+---
 
 
 
@@ -639,10 +643,532 @@ void main()
 - 对于想要从零构建这个项目的学者，需要具有一定的STM32基础以及STM32CubeMX的基础；
 - 若在原来两个工程的基础上开发，只需要创建一个新的文件夹，该文件夹以项目名称命名，然后把前面任何一个项目的整个Project文件夹拷贝下来即可；
 
+---
+
 
 
 # 3-1 创建第一个多任务程序
 
+## 1.内容介绍
+
+- 本节内容主要介绍如何创建一个多任务的程序；
+- 本节内容对应课程资料的**第九章第二节——任务创建与删除；**
+
+- 本节所完成的工程项目为**02_Chapter9_First_FreeRTOS_App；**
+
+
+
+## 2.FreeRTOS中创建任务的API介绍
+
+### 2.1 接口层提供的函数
+
+- **接口层**
+
+  - 在嵌入式的RTOS中存在一个接口层，这个接口层提供了一个适配不同RTOS操作系统的**任务创建函数——osThreadNew()；**
+  - 这个接口层对应的文件是**cmsis_os2.c**，它由STM32CubeMX在初始化时生成；
+
+- **默认任务**
+
+  - 前面分析过，在STM32CubeMX中生成的空白的FreeRTOS工程会存在一个默认的任务——**defaultTask；**
+  - 在这个默认任务的创建中就是用了osThreadNew()函数创建的：
+
+  ![默认任务的创建](3.images/3-1创建第一个多任务程序/默认任务的创建.png)
+
+- **源码分析**
+
+  - 可以打开cmsis_os2.c文件查看osThreadNew()函数的源码：
+
+  ```c
+  osThreadId_t osThreadNew (...) {
+    // ... 省略参数处理 ...
+  
+    // ==============================================
+    // 关键：这里只分 FreeRTOS 的 静态/动态 创建
+    // 根本没有其他操作系统的分支！
+    // ==============================================
+    if (mem == 1) {
+      // FreeRTOS 静态创建任务（唯一调用）
+      hTask = xTaskCreateStatic(...);
+    } else {
+      if (mem == 0) {
+        // FreeRTOS 动态创建任务（唯一调用）
+        xTaskCreate(...);
+      }
+    }
+  
+    return ((osThreadId_t)hTask);
+  }
+  ```
+
+  - 在函数实现内部，通过条件判断来选取不同的任务创建函数——**xTaskCreateStatic()或xTaskCreate()**，这两个函数是原生的FreeRTOS函数；
+  - 在STM32CubeMX初始化时，它会根据我们选择的操作系统，**在osThreadNew()函数底层调用不同操作系统的任务创建函数；**
+  - 这样，无论我们使用的是什么操作系统，在实际开发中都可以统一用这个函数进行任务的创建；
+  - **在本课程中，统一使用FreeRTOS原生的API创建任务，即xTaskCreateStatic()或xTaskCreate()；**
+
+### 2.2 原生FreeRTOS函数
+
+- **动态分配内存创建任务**
+
+  - **API介绍：**
+
+  ```c
+  BaseType_t xTaskCreate( TaskFunction_t pxTaskCode, // 函数指针, 任务函数
+                          const char * const pcName, // 任务的名字
+                          const configSTACK_DEPTH_TYPE usStackDepth, // 栈大小,单位为word,10表示40字节
+                          void * const pvParameters, // 调用任务函数时传入的参数
+                          UBaseType_t uxPriority,    // 优先级
+                          TaskHandle_t * const pxCreatedTask ); // 任务句柄, 以后使用它来操作这个任务
+  ```
+
+  - **参数说明：**
+
+  | **参数**      | **描述**                                                     |
+  | ------------- | ------------------------------------------------------------ |
+  | pvTaskCode    | 函数指针，任务对应的 C 函数。任务应该永远不退出，或者在退出时调用 "vTaskDelete(NULL)"。 |
+  | pcName        | 任务的名称，仅用于调试目的，FreeRTOS 内部不使用。pcName 的长度为 configMAX_TASK_NAME_LEN。 |
+  | usStackDepth  | 每个任务都有自己的栈，usStackDepth 指定了栈的大小，单位为 word。例如，如果传入 100，表示栈的大小为 100 word，即 400 字节。最大值为 uint16_t 的最大值。确定栈的大小并不容易，通常是根据估计来设定。精确的办法是查看反汇编代码。 |
+  | pvParameters  | 调用 pvTaskCode 函数指针时使用的参数：pvTaskCode(pvParameters)。 |
+  | uxPriority    | 任务的优先级范围为 0~(configMAX_PRIORITIES – 1)。数值越小，优先级越低。如果传入的值过大，xTaskCreate 会将其调整为 (configMAX_PRIORITIES – 1)。 |
+  | pxCreatedTask | 用于保存 xTaskCreate 的输出结果，即任务的句柄（task handle）。如果以后需要对该任务进行操作，如修改优先级，则需要使用此句柄。如果不需要使用该句柄，可以传入 NULL。 |
+  | 返回值        | 成功时返回 pdPASS，失败时返回 errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY（失败原因是内存不足）。请注意，文档中提到的失败返回值是 pdFAIL 是不正确的。pdFAIL 的值为 0，而 errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY 的值为 -1。 |
+
+- **静态分配内存创建任务：**
+
+  - **API介绍：**
+
+  ```c
+  TaskHandle_t xTaskCreateStatic ( 
+      TaskFunction_t pxTaskCode,   // 函数指针, 任务函数
+      const char * const pcName,   // 任务的名字
+      const uint32_t ulStackDepth, // 栈大小,单位为word,10表示40字节
+      void * const pvParameters,   // 调用任务函数时传入的参数
+      UBaseType_t uxPriority,      // 优先级
+      StackType_t * const puxStackBuffer, // 静态分配的栈，就是一个buffer
+      StaticTask_t * const pxTaskBuffer // 静态分配的任务结构体的指针，用它来操作这个任务
+  );
+  ```
+
+  - **参数说明：**
+
+  | **参数**       | **描述**                                                     |
+  | -------------- | ------------------------------------------------------------ |
+  | pvTaskCode     | 函数指针，可以简单地认为任务就是一个C函数。 它稍微特殊一点：永远不退出，或者退出时要调用"vTaskDelete(NULL)" |
+  | pcName         | 任务的名字，FreeRTOS内部不使用它，仅仅起调试作用。 长度为：configMAX_TASK_NAME_LEN |
+  | usStackDepth   | 每个任务都有自己的栈，这里指定栈大小。 单位是word，比如传入100，表示栈大小为100 word，也就是400字节。 最大值为uint16_t的最大值。 怎么确定栈的大小，并不容易，很多时候是估计。 精确的办法是看反汇编码。 |
+  | pvParameters   | 调用pvTaskCode函数指针时用到：pvTaskCode(pvParameters)       |
+  | uxPriority     | 优先级范围：0~(configMAX_PRIORITIES – 1) 数值越小优先级越低， 如果传入过大的值，xTaskCreate会把它调整为(configMAX_PRIORITIES – 1) |
+  | puxStackBuffer | 静态分配的栈内存，比如可以传入一个数组， 它的大小是usStackDepth*4。 |
+  | pxTaskBuffer   | 静态分配的StaticTask_t结构体的指针                           |
+  | 返回值         | 成功：返回任务句柄； 失败：NULL                              |
+
+
+
+## 3.任务函数
+
+### 3.1 什么是任务
+
+- 在FreeRTOS中，任务就是一个函数，一个任务执行的东西本质就是在创建任务时传入的**pvTaskCode函数**；
+- 在FreeRTOS中，**函数的格式是固定的，必须按照固定的格式封装函数，否则会报错；**
+- 即我们平时写的驱动函数不能直接传入任务创建函数中，需要再按照固定格式封装一个函数，把这个函数的指针传递给任务创建函数；
+
+### 3.2 任务函数的格式
+
+- FreeRTOS中，**pvTaskCode()函数**原型如下：
+
+```c
+void ATaskFunction( void *pvParameters);
+```
+
+- **参数说明：**
+  - 这个函数不能有返回值；
+  - 同一个函数，可以用来创建多个任务，即多个任务可以运行同一个函数；
+  - 函数内部，尽量使用局部变量，这是因为：
+    - 每个任务都有自己的栈；
+    - 每个任务运行这个函数时，任务A的局部变量放在任务A的栈里、任务B的局部变量放在任务B的栈里；
+    - 不同任务的局部变量，有自己的副本；
+    - 函数使用全局变量、静态变量的话，只有一个副本：多个任务使用的是同一个副本，要防止冲突；
+- **实例说明：**
+
+```c
+void ATaskFunction( void *pvParameters )
+{
+	/* 对于不同的任务，局部变量放在任务的栈里，有各自的副本 */
+	int32_t lVariableExample = 0;
+	
+    /* 任务函数通常实现为一个无限循环 */
+	for( ;; )
+	{
+		/* 任务的代码 */
+	}
+
+    /* 如果程序从循环中退出，一定要使用vTaskDelete删除自己
+     * NULL表示删除的是自己
+     */
+	vTaskDelete( NULL );
+    
+    /* 程序不会执行到这里, 如果执行到这里就出错了 */
+}
+```
+
+
+
+## 4.创建第一个多任务程序
+
+### 4.1 工程说明
+
+本工程项目在工程**00_Driver_Test**的基础上修改：
+
+- 进入原来的**00_Driver_Test**文件夹；
+- 复制整个**Project**文件夹；
+- 将其复制到新创建的文件夹**02_Chapter9_First_FreeRTOS_App**下；
+- 再打开Keil文件进行编辑即可；
+
+### 4.2 工程开发
+
+- **创建任务**
+
+  - 首先在freertos.c文件中创建任务；
+  - 先定义任务函数：
+
+  ```c
+  /* USER CODE BEGIN FunctionPrototypes */
+  void MyTask(void *argument)
+  {
+  	while(1)
+  	{
+  		Led_Test();
+  	}
+  }
+  /* USER CODE END FunctionPrototypes */
+  ```
+
+  - 创建任务：
+
+  ```c
+    /* USER CODE BEGIN RTOS_THREADS */
+    /* add threads, ... */
+    xTaskCreate(MyTask, "myfirsttask", 128, NULL, osPriorityNormal, NULL);
+    /* USER CODE END RTOS_THREADS */
+  ```
+
+- **修改默认任务**
+
+  - 在原来的默认任务的任务函数中，添加LCD的测试程序；
+
+  ```c
+  /* USER CODE END Header_StartDefaultTask */
+  void StartDefaultTask(void *argument)
+  {
+    /* USER CODE BEGIN StartDefaultTask */
+    /* Infinite loop */
+    LCD_Init();
+    LCD_Clear();
+    
+    for(;;)
+    {
+      LCD_Test();
+    }
+    /* USER CODE END StartDefaultTask */
+  }
+  ```
+
+- **修改驱动程序**
+
+  - 在原来的LCD测试程序中，只有打印字符串的程序；
+  - 现在在原来的基础上，添加打印变量数据的程序；
+
+  ```c
+  void OLED_Test(void)
+  {
+  	int cnt = 0;
+      OLED_Init();
+  	// 清屏
+  	OLED_Clear();
+      
+  	while (1)
+  	{
+  		// 在(0, 0)打印'A'
+  		OLED_PutChar(0, 0, 'A');
+  		// 在(1, 0)打印'Y'
+  		OLED_PutChar(1, 0, 'Y');
+  		// 在第0列第2页打印一个字符串"Hello World!"
+  		OLED_PrintString(0, 2, "Hello World!");
+  		OLED_PrintSignedVal(0, 4, cnt++);
+  	}
+  }
+  ```
+
+- **注意：工程基于STM32CubeMX生成，所以一定要在代码沙盒中写，否则重新生成初始化代码后添加的代码将被删除；**
+
+
+
+## 5.编译下载
+
+- 在完成上面的程序开发后，可点击Keil中的Build按钮进行编译，然后将其下载到单片机中；
+- 最后的运行效果如下图所示：
+
+![运行效果](3.images/3-1创建第一个多任务程序/运行效果.gif)
+
+---
+
+
+
+# 3-2-1 ARM架构简明教程_硬件架构与汇编指令
+
+## 1.内容简介
+
+- 上一节创建任务时指定了**栈**，想要了解RTOS就得理解栈，要理解栈就必须对处理器的架构有一定的了解；
+- 本节对处理器的结构的讲解与**微机原理的内容**是相似的，只是**微机原理中的89C51的架构和ARM架构**不一样而已；
+
+
+
+## 2.电脑与单片机
+
+- 电脑：通过主板连接，CPU、内存条、硬盘等全部接在主板上；
+- 单片机：SOC，片上系统，CPU、内存、Flash都集成在了一块芯片上面，这块芯片就是单片机；
+
+![单片机与电脑的区别](3.images/3-2-1ARM架构简明教程_硬件架构与汇编指令/单片机与电脑的区别.png)
+
+
+
+## 3.ARM芯片的RISC架构 
+
+- **RISC架构：**
+  - ARM芯片属于精简指令集计算机(RISC：Reduced Instruction Set Computing)，它所用的指令比较简单；
+- **特点：**
+  - 对内存只有读、写指令；
+  - 对于数据的运算是在CPU内部实现；
+  -  使用RISC指令的CPU复杂度小一点，易于设计；
+- **RISC架构的运算逻辑：**
+  - 以乘法运算a = a * b为例；
+  - 在RISC中要使用4条汇编指令：① 读内存a、② 读内存b、③ 计算a*b、④ 把结果写入内存；
+
+![RISC的计算过程](3.images/3-2-1ARM架构简明教程_硬件架构与汇编指令/RISC的计算过程.png)
+
+
+
+## 4.CPU内部寄存器
+
+- **CPU的内部寄存器结构**
+
+  - 无论是cortex-M3/M4，还是cortex-A7，CPU内部都有R0、R1、……、R15、xPSR寄存器，它们可以用来**“暂存”数据**；
+  - 对于R13、R14、R15、xPSR，还另有用途：
+    - **R13：别名SP(Stack Pointer)，栈指针；**
+    - **R14：别名LR(Link Register)，用来保存返回地址；**
+    - **R15：别名PC(Program Counter)，程序计数器，表示当前指令地址，写入新值即可跳转；**
+    - **xPSR：寄存器是程序状态寄存器；**
+
+  ![ARM架构的CPU的内部结构](3.images/3-2-1ARM架构简明教程_硬件架构与汇编指令/ARM架构CPU的内部结构.png)
+
+- **CPU的计算过程**
+
+  - 下图即为CPU的真实计算过程；
+  - 在CPU中，只有计算单元ALU具有计算功能；
+  - R0~R15寄存器都只是起到存数据的作用；
+  - 临时的变量存在内存中，代码存在Flash中，通过PC指针取指令；
+
+![CPU计算过程](3.images/3-2-1ARM架构简明教程_硬件架构与汇编指令/CPU计算过程.png)
+
+
+
+## 5. 汇编指令
+
+- **数据传输三要素**
+  - 数据传输只需要确定三个要素：
+  - 目的、源和长度；
+
+* **读内存：Load**
+
+  ```shell
+  # 示例
+  LDR  R0, [R1, #4]	; 读地址"R1+4", 得到的4字节数据存入R0
+  
+  LDRB  R0, [R1, #4]	; 读地址"R1+4", 得到的1字节数据存入R0
+  
+  LDRH  R0, [R1, #4]	; 读地址"R1+4", 得到的2字节数据存入R0
+  ```
+
+* **写内存：Store**
+
+  ```shell
+  # 示例
+  STR  R0, [R1, #4]	; 把R0的4字节数据写入地址"R1+4"
+  
+  STRB  R0, [R1, #4]	; 把R0的1字节数据写入地址"R1+4"
+  
+  STRH  R0, [R1, #4]	; 把R0的2字节数据写入地址"R1+4"
+  ```
+
+* **加减**
+
+  ```shell
+  ADD R0, R1, R2  ; R0=R1+R2
+  ADD R0, R0, #1  ; R0=R0+1
+  SUB R0, R1, R2  ; R0=R1-R2
+  SUB R0, R0, #1  ; R0=R0-1
+  ```
+
+* **比较**
+
+  ```shell
+  CMP R0, R1  ; 结果保存在PSR(程序状态寄存器)
+  ```
+
+* **跳转**
+
+  - B指令是直接让R15寄存器为main函数的地址，就是执行main函数；
+  - BL指令需要先让R14寄存器为返回地址，再让R15为main函数的地址，这样执行完main函数后跳回到原来的地址（类似于嵌套中所讲的保护现场）；
+
+  ```shell
+  B  main  ; Branch, 直接跳转
+  BL main  ; Branch and Link, 先把返回地址保存在LR寄存器里再跳转
+  ```
+
+
+
+
+# 3-2-2 ARM架构简明教程_汇编实例
+
+## 1.内容简介
+
+- 本节内容主要是基于上一小节的内容，即在上一节的基础上添加代码，生成反汇编，并分析它的汇编代码；
+- 本节内容的完整工程是项目——**03_ARM_ASM；**
+- 本项目在上一个项目**02_Chapter9_First_FreeRTOS_App**的基础上修改，直接将上一个项目的Project文件复制到新文件夹03_ARM_ASM即可；
+
+
+
+## 2.汇编代码的生成
+
+- 在User栏中的最后两行选择一行写入下面的指令：
+
+```c
+fromelf --text -a -c --output=test.dis xxx.axf
+```
+
+- 接着打开Linker栏，把最后面部分替换dis后面的xxx；
+- 点击编译即可实现反汇编的生成，生成文件在**MDK-ARM**文件夹下，文件名为**test.dis**；
+
+![生成反汇编](3.images/3-2-2ARM架构简明教程_汇编实例/生成反汇编.png)
+
+
+
+## 3.修改项目
+
+- 在driver_oled.c文件中添加如下函数：
+
+```c
+int add(volatile int a, volatile int b)
+{
+	volatile int sum;
+    sum = a + b;
+    return sum;
+}
+```
+
+- 然后把先前的变量自增改为函数实现：
+
+```c
+void OLED_Test(void)
+{
+	int cnt = 0;
+    OLED_Init();
+	// 清屏
+	OLED_Clear();
+    
+	while (1)
+	{
+		// 在(0, 0)打印'A'
+		OLED_PutChar(0, 0, 'A');
+		// 在(1, 0)打印'Y'
+		OLED_PutChar(1, 0, 'Y');
+		// 在第0列第2页打印一个字符串"Hello World!"
+		OLED_PrintString(0, 2, "Hello World!");
+		OLED_PrintSignedVal(0, 4, cnt);
+		
+		cnt = add(cnt, 1);
+	}
+}
+```
+
+
+
+## 4.查看反汇编
+
+- 完成上面的工程修改后，直接编译，就会在MDK-ARM目录下生成一个文件**test.axf**；
+- 将其用记事本打开，并搜索**add**，可得到add()函数的汇编实现：
+
+![add的汇编实现](3.images/3-2-2ARM架构简明教程_汇编实例/add的汇编实现.png)
+
+- 可结合主函数main的汇编代码以及原本的C代码的调用关系分析C函数在汇编层面的实现；
+- 这部分内容与微机原理内容重叠，我本人能够完全理解，故不再记录笔记；
+
+
+
+# 3-3-1 堆的概念
+
+## 1.堆的概念
+
+- 堆即使一片连续的空闲内存，可以对这块内存进行管理；
+- 从堆里面取出一部分内存，用完之后再把它释放回去，这就是堆；
+- 本节内容对应的程序为**04_Heap_Stack**；
+
+
+
+## 2.堆的普通管理——索引实现
+
+- 假如用以下的函数实现堆的管理：
+
+```c
+char heap_buf[1024];
+int pos = 0;
+int g_cnt = 0;
+
+void *my_malloc(int size)
+{
+	int old_pos = pos;
+	pos += size;
+	return &heap_buf[old_pos];
+}
+
+void my_free(void *buf)
+{
+	/* err */
+}
+```
+
+- 上面的代码实现可以用下图演示：
+  - 如下图所示，可以用简单的malloc函数开辟一片内存出来，然后对这块内存进行管理，但是无法实现free函数；
+  - 因为使用free函数时，它并不知道我们要释放多大的内存，所以malloc没有对应的free函数，也就是无法释放内存；
+
+<img src="3.images/3-3-1堆的概念/索引定义堆.png" alt="索引定义堆" style="zoom:50%;" />
+
+
+
+## 3.堆的管理函数——添加头部信息
+
+- 前面提到普通的malloc无法实现对应的free函数，一般使用堆的管理函数，能够实现内存的释放；
+
+- 可以采用如下方法：
+
+  - 在实现my_malloc()函数时，不仅仅只是分配100个字节，而是分配了100个字节加上一个头部；
+  - 这个头部里面记录了可以存数据的大小，而堆返回的首地址是可以存储数据的首地址；
+  - 接着在my_free()函数中，其内部可以实现从首地址减去头部的大小，读取头部的内容，知道堆的大小是多少；
+  - 然后再减去对应的堆的大小，就可以实现free()释放函数了；
+
+  <img src="3.images/3-3-1堆的概念/头部定义堆.png" alt="malloc函数实现堆" style="zoom:50%;" />
+
+ 
+
+## 4.堆的管理函数——用链表实现
+
+- 在分配多块内存后，需要释放中间内存时，通过链表的方式指定下一个空闲地址的首位置，再通过链表的方式将空闲内存连起来，可实现碎片堆的管理
+- 这样通过这些操作，我们就能够实现开辟一块内存空间——>取出一部分内存使用——>用完之后再释放回去的操作了；
+
+<img src="3.images/3-3-1堆的概念/链表定义堆.png" alt="链表实现堆"  />
+
+
+
+# 3-3-2 栈的概念_函数调用
 
 
 
@@ -650,30 +1176,11 @@ void main()
 
 
 
+# 3-3-3 栈的概念_局部变量
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# 3-3-4 栈的概念_RTOS如何使用栈
 
 
 

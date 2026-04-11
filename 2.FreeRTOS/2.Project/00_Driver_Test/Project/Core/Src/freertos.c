@@ -143,11 +143,11 @@ void StartDefaultTask(void *argument)
     //Led_Test();
     //LCD_Test();
 	//MPU6050_Test(); 
-	DS18B20_Test();
+	//DS18B20_Test();
 	//DHT11_Test();
 	//ActiveBuzzer_Test();
 	//PassiveBuzzer_Test();
-	//ColorLED_Test();
+	ColorLED_Test();
 	//IRReceiver_Test();
 	//IRSender_Test();
 	//LightSensor_Test();

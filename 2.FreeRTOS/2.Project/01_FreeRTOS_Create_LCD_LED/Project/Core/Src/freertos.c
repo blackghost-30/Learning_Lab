@@ -120,8 +120,8 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
     //osDelay(1);
-	//LCD_Test();
-	  Led_Test();
+	LCD_Test();
+	//Led_Test();
   }
   /* USER CODE END StartDefaultTask */
 }
