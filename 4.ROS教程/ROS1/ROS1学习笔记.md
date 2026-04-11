@@ -1,4 +1,4 @@
-第一节课：ROS是什么
+# 第一节课：ROS是什么
 
 ## 1.手机操作系统
 
@@ -31,11 +31,12 @@
 - **“模块化”的开发方式：**
   - 每个传感器对应一个特定的程序模块、每个执行器对应一个特定的程序模块、每个算法对应一个特定的程序模块;
   - 下次再开发机器人时，只需要把它们组合起来就可以跑了；
+  
 - **“分布式”的开发方式：**
   - 每个模块可以独立运行在不同的电脑;
   - 比如用单独的电脑运行视觉算法，这样整体的效率就大大提高了；
-
-![ROS与安卓的比较](images/01_ROS是什么/ROS与安卓的比较.png)
+  
+  <img src="images/01_ROS是什么/ROS与安卓的比较.png" alt="ROS与安卓的比较" style="zoom:150%;" />
 
 ### 2.3 ROS的介绍
 
@@ -51,7 +52,7 @@
   - 从**Github**中下载源码；
   - 自己按照**接口规范**写源码并编译运行；
 
-  ![ROS的开发方式](images/01_ROS是什么/ROS的开发方式.png)
+  <img src="images/01_ROS是什么/ROS的开发方式.png" alt="ROS的开发方式" style="zoom:150%;" />
 
 
 
@@ -484,7 +485,7 @@ git clone https://github.com/6-robot/wpr_simulation.git
 
 ![Git克隆源代码](images/07_开源自由市场Github/克隆Github源代码.png)
 
- 
+
 
 ## 5 查看下载内容并进行编译
 
@@ -492,14 +493,14 @@ git clone https://github.com/6-robot/wpr_simulation.git
 
 - **wpr_simulation目录：**
   - 如下图所示即为我们从GitHub上clone下来的文件，全部文件在wpr_simulation文件夹下；
-
-<img src="images/07_开源自由市场Github/wpr_simulation结构目录.png" alt="包的结构目录" style="zoom:150%;" />
+  
+  <img src="images/07_开源自由市场Github/wpr_simulation结构目录.png" alt="包的结构目录" style="zoom:150%;" />
 
 - **scripts文件夹：**
   - 先看**scripts**文件夹，可以看到它里面放了一些**脚本文件(.sh文件)和python程序**；
   - 这些文件主要是完成**依赖包的安装和为机器人映射端口**，这类操作一般进行**一次**即可；
-
-<img src="images/07_开源自由市场Github/scripts目录.png" alt="scripts目录" style="zoom: 150%;" />
+  
+  <img src="images/07_开源自由市场Github/scripts目录.png" alt="scripts目录" style="zoom: 150%;" />
 
 ### 5.2 安装依赖包
 
@@ -606,8 +607,8 @@ source ~/catkin_ws/devel/setup.bash
   - 由于下载默认是ROS2的版本，需要将它切换为ROS1版本，否则会编译报错，依次进行如下操作：
     - 先进入小海龟的文件夹：**cd ros_tutorials/**；
     - 然后切换版本：**git checkout noetic-devel**；
-
-![切换版本](images/07_开源自由市场Github/切换版本.png)
+    
+    ![切换版本](images/07_开源自由市场Github/切换版本.png)
 
 - 编译
   - 切换版本后我们可以进行编译，同样的执行下面代码：
@@ -618,8 +619,8 @@ source ~/catkin_ws/devel/setup.bash
   - 编译完成后我们既可以运行这个小海龟了：
     - 先是启动ros内核：**roscore**；
     - 然后新开窗口，运行小海龟：**rosrun turtlesim turtlesim_node**；
-
-![运行小乌龟](images/07_开源自由市场Github/运行小乌龟.png)
+    
+    ![运行小乌龟](images/07_开源自由市场Github/运行小乌龟.png)
 
 - 修改源代码
 
@@ -633,7 +634,7 @@ source ~/catkin_ws/devel/setup.bash
 
   ![再次运行小乌龟](images/07_开源自由市场Github/再次运行小乌龟.png)
 
- 
+
 
 ## 9 总结
 
