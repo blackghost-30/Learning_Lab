@@ -1316,15 +1316,254 @@ void my_free(void *buf)
 
 # 4-1 Free RTOS源码概述
 
+## 1.内容介绍
+
+- 本节内容主要介绍**FreeRTOS项目的目录结构**；
+- 本节内容主要基于**00_FreeRTOS_Tamplate**工程讲解；
+- 这节内容对应课程资料的**第七章——FreeRTOS源码概述；**
 
 
 
+## 2.FreeRTOS目录结构
+
+### 2.1 FreeRTOS工程目录结构
+
+使用STM32CubeMX创建的FreeRTOS工程中，FreeRTOS相关的源码如下：
+
+- 左图为列出文件后的目录结构；
+- 右图为实际的项目中文件的包含关系；
+
+![项目结构](3.images/4-1FreeRTOS源码概述/空白工程的工程目录.png)
+
+### 2.2 FreeRTOS的主要目录
+
+FreeRTOS工程主要涉及两个文件目录：
+
+- **Core目录**
+  - Inc目录下的**FreeRTOSConfig.h**：
+    - 是配置文件，对应着在STM32CubeMX中对FreeRTOS的配置；
+  - Src目录下的**freertos.c**：
+    - 是STM32CubeMX创建的默认任务，后续的任务创建都是在这个文件上进行的；
+    - 它的主要函数是**MX_FREERTOS_Init()**，用于创建任务；
+- **Middlewares\Third_Party\FreeRTOS\Source**
+  - 根目录下是核心文件，这些文件是通用的；
+  - portable目录下是移植时需要实现的文件：
+    - 目录名为：[compiler]/[architecture]；
+    - 比如：RVDS/ARM_CM3，这表示cortexM3架构在RVDS工具上的移植文件；
 
 
+
+## 3.FreeRTOS的核心文件
+
+- FreeRTOS工程必须的核心文件主要有两个：
+  - **FreeRTOS/Source/tasks.c；**
+  - **FreeRTOS/Source/list.c；**
+
+- 其他文件的作用也一起列表如下：
+
+  - 在这些文件中，**提供了开发FreeRTOS工程必须的API；**
+  - 比如前面创建工程时提到的**xTaskCreate()**就是在tasks.c文件定义的；
+
+  ![核心文件](3.images/4-1FreeRTOS源码概述/FreeRTOS的核心文件.png)
+
+
+
+## 4.移植时涉及的文件
+
+- 移植FreeRTOS时涉及的文件放在 **FreeRTOS/Source/portable/[compiler]/[architecture]** 目录下；
+- 这个目录的文件是与**IDE和芯片的架构**密切相关的；
+- 如RVDS/ARM_CM3，这**表示cortexM3架构在RVDS或Keil工具上的移植文件**，里面有2个文件：
+  - port.c文件；
+  - portmacro.h文件；
+
+
+
+## 5.头文件相关
+
+### 5.1 头文件目录
+
+FreeRTOS需要3个头文件目录：
+
+- FreeRTOS本身的头文件：
+  - **Middlewares/Third_Party/FreeRTOS/Source/include；**
+  - 这里面的是FreeRTOS的核心文件的头文件，如tasks.h等；
+
+- 移植时用到的头文件：
+  - **Middlewares/Third_Party/FreeRTOS/Source/portable/[compiler]/[architecture]；**
+  - 主要就是上面提到的移植相关的文件；
+
+- 含有配置文件FreeRTOSConfig.h的目录：
+  - **Core/Inc；**
+  - FreeRTOSConfig.h文件中记录了STM32CubeMX中对FreeRTOS的设置；
+
+### 5.2 头文件
+
+列表如下：
+
+![头文件](3.images/4-1FreeRTOS源码概述/头文件列表.png)
+
+
+
+## 6.内存管理
+
+- 文件在**Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang下；**
+- 它也是放在“portable”目录下，表示你**可以提供自己的函数**；
+- 源码中默认提供了5个文件，对应内存管理的5种方法：
+
+| 文件     | 优点                             | 缺点                     |
+| -------- | -------------------------------- | ------------------------ |
+| heap_1.c | 分配简单，时间确定               | 只分配、不回收           |
+| heap_2.c | 动态分配、最佳匹配               | 碎片、时间不定           |
+| heap_3.c | 调用标准库函数                   | 速度慢、时间不定         |
+| heap_4.c | 相邻空闲内存可合并               | 可解决碎片问题、时间不定 |
+| heap_5.c | 在 heap_4 基础上支持分隔的内存块 | 可解决碎片问题、时间不定 |
+
+
+
+## 7.入口函数
+
+- 所有的C工程的入口函数都是main函数，FreeRTOS工程也是如此；
+- 入口函数在Core\Src\main.c的main函数里，初始化了FreeRTOS环境、创建了任务，然后启动调度器；
+- 入口函数的源码如下：
+
+```c
+int main(void)
+{
+  HAL_Init();				// HAL库初始化
+
+  SystemClock_Config();		// 系统时钟配置
+
+  osKernelInitialize();		// 启动FreeRTOS的内核
+  
+  MX_FREERTOS_Init();		// 创建任务
+
+  osKernelStart();			// 启动调度器
+
+  while (1)
+  {
+      
+  }
+}
+```
+
+
+
+## 8.数据类型和编程规范
+
+### 8.1 数据类型
+
+每个移植的版本都含有自己的portmacro.h头文件，里面定义了2个数据类型：
+
+- **TickType_t变量类型：**
+
+  - FreeRTOS配置了一个**周期性的时钟中断：Tick Interrupt**，每发生一次中断，中断次数累加，这被称为**tick count**；
+  - tick count这个变量的类型就是TickType_t，**TickType_t可以是16位的，也可以是32位的**；
+  - FreeRTOSConfig.h中定义configUSE_16_BIT_TICKS时，TickType_t就是uint16_t，否则TickType_t就是uint32_t；
+  - 对于32位架构，建议把TickType_t配置为uint32_t；
+  - 可以打开portmacro.h文件查看是什么类型：
+
+  <img src="3.images/4-1FreeRTOS源码概述/TickType_t变量.png" alt="TickType_t变量" style="zoom:50%;" />
+
+- **BaseType_t变量类型：**
+
+  - 这是该架构最高效的数据类型：
+    - 32位架构中，它就是uint32_t；
+    - 16位架构中，它就是uint16_t；
+    - 8位架构中，它就是uint8_t；
+  - **BaseType_t通常用作简单的返回值的类型，还有逻辑值，比如pdTRUE/pdFALSE；**
+
+### 8.2 变量名
+
+- 在FreeRTOS的源码中，变量名的命名方式是有规律的；
+- 即可以在变量前面加前缀，以表示它是什么类型的变量，规律如下表所示：
+
+| 变量名前缀 | 含义                                                         |
+| ---------- | ------------------------------------------------------------ |
+| c          | char                                                         |
+| s          | int16_t, short                                               |
+| l          | int32_t, long                                                |
+| x          | BaseType_t，其他非标准的类型：结构体、task handle、queue handle 等 |
+| u          | unsigned                                                     |
+| p          | 指针                                                         |
+| uc         | uint8_t, unsigned char                                       |
+| pc         | char 指针                                                    |
+
+- 如下图即为例子：
+
+  - u表示unsigned的意思，而c表示是一个char形变量；
+
+  <img src="3.images/4-1FreeRTOS源码概述/变量名示例.png" alt="变量名示例" style="zoom:80%;" />
+
+### 8.3 函数名
+
+- 在FreeRTOS的源码中，函数名的命名方式是有规律的；
+- 即可以在变量前面加前缀，以表示它的返回值类型以及在哪个文件中定义，规律如下表所示：
+
+| 函数名前缀示例    | 含义                                          |
+| ----------------- | --------------------------------------------- |
+| vTaskPrioritySet  | 返回值类型：void；在 task.c 中定义            |
+| xQueueReceive     | 返回值类型：BaseType_t；在 queue.c 中定义     |
+| pvTimerGetTimerID | 返回值类型：pointer to void；在 tmer.c 中定义 |
+
+- 如下图即为例子：
+
+  - x表示它的返回值为BaseType_t，而Task便是它是在tasks.c文件中定义的；
+
+  <img src="3.images/4-1FreeRTOS源码概述/函数名示例.png" alt="函数名示例" style="zoom: 67%;" />
+
+### 8.4 宏的名
+
+- 在FreeRTOS的源码中，宏的名字的命名方式是有规律的；
+- 宏的名字是大写，可以添加小写的前缀；
+- 前缀是用来表示：宏在哪个文件中定义。规律如下表所示：
+
+| 宏的前缀（示例）                    | 含义：在哪个文件里定义    |
+| ----------------------------------- | ------------------------- |
+| port（比如 portMAX_DELAY）          | portable.h 或 portmacro.h |
+| task（比如 taskENTER_CRITICAL ()）  | task.h                    |
+| pd（比如 pdTRUE）                   | projdefs.h                |
+| config（比如 configUSE_PREEMPTION） | FreeRTOSConfig.h          |
+| err（比如 errQUEUE_FULL）           | projdefs.h                |
+
+- 通用的宏定义如下：
+
+| 宏      | 值   |
+| ------- | ---- |
+| pdTRUE  | 1    |
+| pdFALSE | 0    |
+| pdPASS  | 1    |
+| pdFAIL  | 0    |
 
 
 
 # 4-2 内存管理
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
