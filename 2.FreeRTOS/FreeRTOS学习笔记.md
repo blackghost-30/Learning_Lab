@@ -1538,11 +1538,404 @@ int main(void)
 
 # 4-2 内存管理
 
+## 1.内容介绍
+
+- 本节内容介绍FreeRTOS中是如何管理内存的，它是**3-3-1堆的概念的FreeRTOS版本；**
+- 本节内容以**00_Driver_Test**工程为基础进行讲解，其对应的内容在**课程资料的第八章——内存管理；**
 
 
 
+## 2.malloc函数与free函数
+
+- **malloc函数与free函数**
+
+  - 在3-3-1堆的概念中有提到了几种堆的管理方法，其中就有malloc函数和free函数；
+  - 对于malloc函数和free函数而言，它们是动态分配的，它有个致命问题那就是**内存的碎片化；**
+  - 在3-3-1堆的概念中的第四点——堆用链表实现管理，它就是malloc和free函数的本质；
+  - 当我们在中间释放一片内存时，多片空闲内存是不连续的，被头部隔离，导致了很多的碎片；
+  - **如果不断的malloc然后free，就会把内存切得稀巴烂；**
+
+  <img src="3.images/4-2内存管理/链表定义堆.png" alt="malloc函数和free函数" style="zoom:50%;" />
+
+- **堆和栈的区别**
+
+  - 堆，heap，就是一块空闲的内存，需要提供管理函数
+    - malloc：从堆里划出一块空间给程序使用；
+    - free：用完后，再把它标记为"空闲"的，可以再次使用；
+  - 栈，stack，函数调用时局部变量保存在栈中，当前程序的环境也是保存在栈中
+    - 可以从堆中分配一块空间用作栈；
+
+  <img src="3.images/4-2内存管理/堆和栈的区别.png" alt="堆和栈的区别" style="zoom:67%;" />
+
+- **FreeRTOS中的内存管理**
+  - FreeRtOS涉及的内核对象有：**task、queue、semaphores和event group**等；
+  - 为了让FreeRTOS更容易使用，这些内核对象一般都是**动态分配：用到时分配，不使用时释放；**
+  - 使用内存的动态管理功能，简化了程序设计：不再需要小心翼翼地提前规划各类对象，简化API函数的涉及，甚至可以减少内存的使用；
+  - **FreeRTOS的内存管理接口**
+    - 但是像前面说的，如果只是用malloc和free函数实现简单的动态分配，会存在严重的内存碎片；
+    - 所以FreeRTOS中的动态分配不是简单的malloc和free函数的封装，而是基于这些函数进行了优化，解决内存碎片化的问题；
+    - 在FreeRTOS中，提供的内存管理接口主要是：**pvPortMalloc() 、vPortFree()**；
 
 
+
+## 3.FreeRTOS的5中内存管理方法
+
+- FreeRTOS中内存管理的相关文件**FreeRTOS/Source/portable/MemMang**下，它放在portable目录下，表示你可以提供自己的函数；
+- 文件提供的接口函数为：**pvPortMalloc() 、vPortFree()，对应于C库的malloc()、free()；**
+
+- 源码中默认提供了5个文件，对应内存管理的5种方法：
+
+| **文件** | **优点**                       | **缺点**                 |
+| -------- | ------------------------------ | ------------------------ |
+| heap_1.c | 分配简单，时间确定             | 只分配、不回收           |
+| heap_2.c | 动态分配、最佳匹配             | 碎片、时间不定           |
+| heap_3.c | 调用标准库函数                 | 速度慢、时间不定         |
+| heap_4.c | 相邻空闲内存可合并             | 可解决碎片问题、时间不定 |
+| heap_5.c | 在heap_4基础上支持分隔的内存块 | 可解决碎片问题、时间不定 |
+
+### 3.1 Heap_1
+
+- **文件内容**
+  - 它只实现了pvPortMalloc，没有实现vPortFree；
+  - 如果程序不需要删除内核对象，齐不允许使用动态内存，那么可以使用heap_1；
+
+- **内存管理的实现**
+
+  - 它的实现原理很简单，首先定义一个大数组；
+  - 然后，对于pvPortMalloc调用时，从这个数组中分配空间；
+
+  ```c
+  /* Allocate the memory for the heap. */
+  ##if ( configAPPLICATION_ALLOCATED_HEAP == 1 )
+  
+  /* The application writer has already defined the array used for the RTOS
+  * heap -  probably so it can be placed in a special segment or address. */
+      extern uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+  ##else
+      static uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+  ##endif /* configAPPLICATION_ALLOCATED_HEAP */
+  ```
+
+- **实际的内存分配**
+
+  - FreeRTOS在创建任务时，需要2个内核对象：**task control block(TCB)、stack，即TCB结构体和每个任务自己的栈**；
+  -  使用heap_1时，内存分配过程如下图所示：
+    - A：创建任务之前整个数组都是空闲的；
+    - B：创建第1个任务之后，蓝色区域被分配出去了；
+    - C：创建3个任务之后的数组使用情况；
+
+![heap_1](3.images/4-2内存管理/heap_1内存管理.png)
+
+### 3.2 Heap_2
+
+**Heap_2之所以还保留，只是为了兼容以前的代码，新设计中不再推荐使用Heap_2；建议使用Heap_4来替代Heap_2，更加高效；**
+
+- **内存管理的实现**
+  - Heap_2也是**在数组上分配内存**，跟Heap_1不一样的地方在于：
+    - Heap_2使用**最佳匹配算法(best fit)**来分配内存；
+    - 它支持**vPortFree()**；
+
+- **最佳匹配算法**
+  - 假设heap有3块空闲内存：5字节、25字节、100字节；
+  - pvPortMalloc()想申请20字节；
+  - 找出最小的、能满足pvPortMalloc()的内存：25字节；
+  - 把它划分为20字节、5字节；
+    - 返回这20字节的地址
+    - 剩下的5字节仍然是空闲状态，留给后续的pvPortMalloc使用；
+
+- **缺点与优点**
+  - 与Heap_4相比，**Heap_2不会合并相邻的空闲内存**，所以Heap_2会导致严重的"碎片化"问题；
+  - 但是，**如果申请、分配内存时大小总是相同的，这类场景下Heap_2没有碎片化的问题**；
+  - 所以它适合这种场景频繁：创建、删除任务，但是**任务的栈大小都是相同的**(创建任务时，需要分配TCB和栈，TCB总是一样的)；
+  - 虽然不再推荐使用heap_2，但是它的效率还是远高于malloc、free；
+
+- **实际的内存分配**
+  - 使用heap_2时，内存分配过程如下图所示：
+    - A：创建了3个任务；
+    - B：删除了一个任务，空闲内存有3部分：顶层的、被删除任务的TCB空间、被删除任务的Stack空间；
+    - C：创建了一个新任务，因为TCB、栈大小跟前面被删除任务的TCB、栈大小一致，所以刚好分配到原来的内存；
+
+![heap_2](3.images/4-2内存管理/heap_2内存管理.png)
+
+### 3.3 Heap_3
+
+- **内存管理的实现**
+  - Heap_3使用**标准C库里的malloc、free函数；**
+  - **所以堆大小由链接器的配置决定，配置项configTOTAL_HEAP_SIZE不再起作用；**
+
+- **线程安全**
+  - C库里的malloc、free函数并非线程安全的；
+  - **Heap_3中先暂停FreeRTOS的调度器，再去调用这些函数**，使用这种方法实现了线程安全；
+
+### 3.4 Heap_4
+
+- **内存管理的实现**
+  - 跟Heap_1、Heap_2一样，Heap_4也是**使用大数组来分配内存**；
+  - Heap_4使用 **首次适应算法(first fit)来分配内存** ；
+  - 它还会**把相邻的空闲内存合并为一个更大的空闲内存**，这有助于较少内存的碎片问题。
+
+- **首次适应算法**
+  - 假设堆中有3块空闲内存：5字节、200字节、100字节；
+  - pvPortMalloc()想申请20字节；
+  - 找出第1个能满足pvPortMalloc()的内存：200字节；
+  - 把它划分为20字节、180字节，并返回这20字节的地址；
+  - 剩下的180字节仍然是空闲状态，留给后续的pvPortMalloc使用；
+
+- **优点和适用场景**
+  - Heap_4会把**相邻空闲内存合并为一个大的空闲内存**，可以较少内存的碎片化问题；
+  - 适用于这种场景：频繁地分配、释放**不同大小的内存**；
+  - **Heap_4执行的时间是不确定的**，但是它的效率高于标准库的malloc、free；
+
+- **实际的内存分配**
+  - Heap_4的使用过程举例如下：
+    - A：创建了3个任务；
+    - B：删除了一个任务，空闲内存有2部分：顶层的空闲内存、被删除任务的TCB空间和被删除任务的Stack空间合并起来的空闲内存；
+    - C：分配了一个Queue，从第1个空闲块中分配空间；
+    - D：分配了一个User数据，从Queue之后的空闲块中分配；
+    - E：释放的Queue，User前后都有一块空闲内存；
+    - F：释放了User数据，User前后的内存、User本身占据的内存，合并为一个大的空闲内存；
+
+![heap_4](3.images/4-2内存管理/heap_4内存管理.png)
+
+### 3.5 Heap_5
+
+- **内存管理的实现**
+  - Heap_5分配内存、释放内存的算法跟Heap_4是一样的；
+  - 相比于Heap_4，Heap_5并不局限于管理一个大数组：**它可以管理多块、分隔开的内存；**
+  - 在嵌入式系统中，**内存的地址可能并不连续，这种场景下可以使用Heap_5；**
+
+- **实际的内存分配**
+
+  - 既然内存是分隔开的，那么就需要进行初始化：确定这些内存块在哪、多大
+    - 在使用**pvPortMalloc()**之前，必须先指定内存块的信息；
+    - 实际中使用**vPortDefineHeapRegions()**来指定这些信息；
+  - **指定一块内存：HeapRegain_t结构体**
+
+  ```c
+  typedef struct HeapRegion
+  {
+      uint8_t * pucStartAddress; // 起始地址
+      size_t xSizeInBytes;       // 大小
+  } HeapRegion_t;
+  ```
+
+  - **指定多块内存：使用HeapRegion_t数组**
+
+  ```c
+  HeapRegion_t xHeapRegions[] =
+  {
+    { ( uint8_t * ) 0x80000000UL, 0x10000 }, // 起始地址0x80000000，大小0x10000
+    { ( uint8_t * ) 0x90000000UL, 0xa0000 }, // 起始地址0x90000000，大小0xa0000
+    { NULL, 0 } // 表示数组结束
+   };
+  ```
+
+  - **Heap_5的初始化：vPortDefineHeapRegions()函数**
+
+    - 把xHeapRegions数组传给vPortDefineHeapRegions函数，即可初始化Heap_5；
+
+    - vPortDefineHeapRegions()函数原型如下：
+
+    ```c
+    void vPortDefineHeapRegions( const HeapRegion_t * const pxHeapRegions);
+    ```
+
+
+
+## 4.Heap提供的函数API
+
+### 4.1 pvPortMalloc()/vPortFree()
+
+- **函数API原型**
+
+```c
+void * pvPortMalloc( size_t xWantedSize );
+void vPortFree( void * pv );
+```
+
+- **作用与返回值**
+  - 作用：分配内存、释放内存；
+  - 返回值：如果分配内存不成功，则返回值为NULL；
+
+### 4.2 xPortGetFreeHeapSize()
+
+- **函数API原型：**
+
+```c
+size_t xPortGetFreeHeapSize( void );
+```
+
+- **作用与返回值**
+  - 返回值：返回当前还有多少空闲内存；
+  - 作用：
+    - 这函数可以用来优化内存的使用情况；
+    - 如当所有内核对象都分配好后，执行此函数返回2000，那么configTOTAL_HEAP_SIZE就可减小2000；
+  - 注意：在heap_3中无法使用；
+
+### 4.3 xPortGetMinimumEverFreeHeapSize()
+
+- **函数API原型**
+
+```c
+size_t xPortGetMinimumEverFreeHeapSize( void );
+```
+
+- **返回值与注意事项**
+  - 返回：程序运行过程中，空闲内存容量的最小值；
+  - 注意：只有heap_4、heap_5支持此函数；
+
+### 4.4 malloc失败的钩子函数
+
+- **源码分析**
+
+  - 在pvPortMalloc()函数内部有一个**钩子函数vApplicationMallocFailedHook()：**
+
+  ```c
+  void * pvPortMalloc( size_t xWantedSize )vPortDefineHeapRegions
+  {
+      ......
+      #if ( configUSE_MALLOC_FAILED_HOOK == 1 )
+          {
+              if( pvReturn == NULL )
+              {
+                  extern void vApplicationMallocFailedHook( void );
+                  vApplicationMallocFailedHook();
+              }
+          }
+      #endif
+      
+      return pvReturn;        
+  }
+  ```
+
+  - 这个函数是一个弱函数，由cmsis_os2.c文件定义；
+
+  ```c
+  /**
+    Dummy implementation of the callback function vApplicationMallocFailedHook().
+  */
+  #if (configUSE_MALLOC_FAILED_HOOK == 1)
+  __WEAK void vApplicationMallocFailedHook (void){}
+  #endif
+  ```
+
+- **钩子函数的使用**
+  - 由源码分析可知，如果想使用这个钩子函数，必须完成如下设置：
+    - 在FreeRTOSConfig.h中，把configUSE_MALLOC_FAILED_HOOK定义为1；
+    - 需要自己重新提供vApplicationMallocFailedHook()函数；
+    - pvPortMalloc()失败时，才会调用此函数；
+  - 由于只有pvPortMalloc()失败时才会调用此函数，所以可以用这个钩子函数来打印一些提示信息；
+
+
+
+## 5.课外补充——回调函数与钩子函数的区别
+
+### 5.1 回调函数（Callback Function）
+
+- **基本定义**
+
+  - 回调函数是**由用户实现、通过函数指针注册给系统 / 驱动 / 第三方库**，在**特定事件触发时由系统主动调用**的函数；
+
+    核心逻辑：**用户定义 → 注册给别人 → 事件发生 → 别人调用用户函数**；
+
+- **核心用途**
+  - 处理**异步事件**：串口收发完成、定时器溢出、按键触发、网络数据到达；
+  - 实现解耦：库 / 驱动不关心上层业务，只在事件发生时 “通知” 上层；
+  - 模块化、可扩展设计；
+
+- **标准实现特征**
+  - 函数名**由用户自定义**，不强制固定；
+  - **必须手动注册**（将函数指针传入注册接口）；
+  - 一般**不使用 `__weak` 弱定义；**
+  - 同一模块可注册多个不同回调（灵活度高）；
+- **标准回调代码示例**
+
+```c
+// 驱动层提供注册接口
+typedef void (*UART_RxCallback)(uint8_t byte);
+void UART_SetRxCallback(UART_RxCallback cb);
+
+// 用户层自定义回调函数
+void My_UART_RxHandler(uint8_t data) {
+    // 业务处理
+}
+
+// 主动注册回调
+UART_SetRxCallback(My_UART_RxHandler);
+
+```
+
+### 5.2 钩子函数（Hook Function）
+
+- **基本定义**
+  - 钩子函数是**系统 / 内核预先定义好函数名与原型**，并预留为弱符号，用户只需**重新实现该函数**，系统在**固定执行流程节点自动调用**；
+  - 可以理解为：系统在运行流程中 “挖了一个坑”，用户把业务逻辑填进去，流程执行到此处就会 “勾” 一下用户函数；
+
+- **核心用途**
+  - 扩展 / 监控**系统内部流程**：空闲任务执行、系统时钟节拍、栈溢出检测、内存分配失败；
+  - 调试、追踪、系统状态统计；
+  - 不改变内核源码，实现外部逻辑注入；
+
+- **标准实现特征**
+  - 函数名**由系统强制固定**，用户不可修改；
+  - **无需手动注册**，实现即生效；
+  - 通常使用 `__weak` 弱定义，库提供空实现；
+  - 同一钩子只能有一个有效实现；
+
+- **标准钩子代码示例（FreeRTOS）**
+
+```c
+// 系统已通过 __weak 定义 vApplicationIdleHook
+// 用户直接重写实现
+void vApplicationIdleHook(void) {
+    // 空闲任务运行时执行
+}
+```
+
+### 5.3 回调函数与钩子函数核心对比
+
+|   对比项   |            回调函数 Callback             |            钩子函数 Hook             |
+| :--------: | :--------------------------------------: | :----------------------------------: |
+|  命名规则  |             用户自定义函数名             |            系统固定函数名            |
+|  注册方式  |           必须手动注册函数指针           |         无需注册，实现即生效         |
+| 关键字特征 |             一般无 `__weak`              |         常用 `__weak` 弱定义         |
+|  调用时机  | 异步事件触发（收发完成、中断、消息到达） | 系统固定流程节点（空闲、Tick、异常） |
+|  设计目的  |       事件通知、业务响应、模块解耦       |     流程扩展、系统监控、调试统计     |
+|   灵活度   |          高，可注册多个不同回调          |       低，同名钩子只能实现一次       |
+|  典型场景  |    串口、定时器、按键、队列、网络事件    |  空闲钩子、栈溢出钩子、内存失败钩子  |
+
+### 5.4 STM32的HAL库中的 “回调函数”—— 特殊混合形式
+
+- **STM32中的回调函数**
+
+  - STM32的HAL库中大量存在如下函数：
+
+  ```c
+  __weak void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc)
+  {
+    /* Prevent unused argument(s) compilation warning */
+    UNUSED(hadc);
+    /* NOTE : This function Should not be modified, when the callback is needed,
+              the HAL_ADC_InjectedConvCpltCallback could be implemented in the user file
+     */
+  }
+  ```
+
+  - 它们有如下特点：
+    - 函数名固定、带 `__weak` 弱定义、无需注册、用户重写后自动生效；
+    - 从**实现形式**看，这完全是**钩子函数**；但从**功能用途**看，它用于串口接收完成事件，属于**回调函数**；
+
+- **STM32的回调函数的本质**
+
+  - STM32 HAL 回调 = 用钩子的实现方式，实现回调的事件功能；
+  - 所以在STM32的HAL库开发中，只需要用钩子函数的方式实现对应中断的回调函数即可完成中断的逻辑业务；
+  - 可将区别总结如下：
+
+  |         类型         | 函数名 | 需注册 | __weak |       本质归类       |
+  | :------------------: | :----: | :----: | :----: | :------------------: |
+  |       标准回调       | 用户定 |   是   |   否   |       事件回调       |
+  | 标准钩子（FreeRTOS） | 系统定 |   否   |   是   |       流程扩展       |
+  | STM32 HAL 库回调函数 | 系统定 |   否   |   是   | 事件回调（钩子实现） |
 
 
 
