@@ -1939,8 +1939,266 @@ void vApplicationIdleHook(void) {
 
 
 
+# 5-1-1 创建任务_声光色影
 
+## 1.任务的三要素
 
+- **任务的三要素**
+
+  - 函数：即指定函数做什么事情，这个函数需要有固定的格式，但即使没有按固定格式也可以运行，只是编译有警告；
+  - 栈和TCB的分配：每个任务都需要有自己的栈和TCB结构体，用于恢复现场和保护现场以及切换任务；
+  - 优先级：优先级不是任务必须的，但是有优先级可以实现更灵活的结构；
+
+- **任务的切换**
+
+  - 当任务切换出去之后，只能通过**链表**找到**任务的控制结构体TCB**才能重新找到任务；
+  - 对于**栈和TCB**，它们有两种方式进行分配：
+    - 一种是通过**malloc**进行动态分配，对应xTaskCreate()函数；
+    - 一种是**事先静态分配**，对应xTaskCreateStatic()函数；
+
+  <img src="3.images/5-1-1任务创建_声光色影/任务的三要素.png" alt="任务的三要素" style="zoom:50%;" />
+
+ 
+
+## 2.任务的创建
+
+### 2.1 动态分配内存创建任务
+
+- **API介绍：**
+
+```c
+BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,					// 函数指针, 任务函数
+                        const char * const pcName,					// 任务的名字
+                        const configSTACK_DEPTH_TYPE usStackDepth,	// 栈大小,单位为word,10表示40字节
+                        void * const pvParameters,					// 调用任务函数时传入的参数
+                        UBaseType_t uxPriority,						// 优先级
+                        TaskHandle_t * const pxCreatedTask );		// 任务句柄, 以后使用它来操作这个任务
+```
+
+- **参数说明：**
+
+| **参数**      | **描述**                                                     |
+| ------------- | ------------------------------------------------------------ |
+| pvTaskCode    | 函数指针，任务对应的 C 函数。任务应该永远不退出，或者在退出时调用 "vTaskDelete(NULL)"。 |
+| pcName        | 任务的名称，仅用于调试目的，FreeRTOS 内部不使用。pcName 的长度为 configMAX_TASK_NAME_LEN。 |
+| usStackDepth  | 每个任务都有自己的栈，usStackDepth 指定了栈的大小，**单位为 word**。例如，如果传入 100，表示栈的大小为 100 word，即 400 字节。最大值为 uint16_t 的最大值。确定栈的大小并不容易，通常是根据估计来设定。精确的办法是查看反汇编代码。 |
+| pvParameters  | 调用 pvTaskCode 函数指针时使用的参数：pvTaskCode(pvParameters)。 |
+| uxPriority    | 任务的优先级范围为 0~(configMAX_PRIORITIES – 1)。数值越小，优先级越低。如果传入的值过大，xTaskCreate 会将其调整为 (configMAX_PRIORITIES – 1)。 |
+| pxCreatedTask | 用于保存 xTaskCreate 的输出结果，即任务的句柄（task handle）。如果以后需要对该任务进行操作，如修改优先级，则需要使用此句柄。如果不需要使用该句柄，可以传入 NULL。 |
+| 返回值        | 成功时返回 pdPASS，失败时返回 errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY（失败原因是内存不足）。请注意，文档中提到的失败返回值是 pdFAIL 是不正确的。pdFAIL 的值为 0，而 errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY 的值为 -1。 |
+
+### 2.2 静态分配内存创建任务
+
+- **API介绍：**
+
+```c
+TaskHandle_t xTaskCreateStatic ( 
+    TaskFunction_t pxTaskCode,				// 函数指针, 任务函数
+    const char * const pcName,				// 任务的名字
+    const uint32_t ulStackDepth,			// 栈大小,单位为word,10表示40字节
+    void * const pvParameters,				// 调用任务函数时传入的参数
+    UBaseType_t uxPriority,					// 优先级
+    StackType_t * const puxStackBuffer,		// 静态分配的栈，就是一个buffer
+    StaticTask_t * const pxTaskBuffer		// 静态分配的任务结构体的指针，用它来操作这个任务，即TCB结构体指针
+);
+```
+
+- **参数说明：**
+
+| **参数**       | **描述**                                                     |
+| -------------- | ------------------------------------------------------------ |
+| pvTaskCode     | 函数指针，可以简单地认为任务就是一个C函数。 它稍微特殊一点：永远不退出，或者退出时要调用"vTaskDelete(NULL)" |
+| pcName         | 任务的名字，FreeRTOS内部不使用它，仅仅起调试作用。 长度为：configMAX_TASK_NAME_LEN |
+| usStackDepth   | 每个任务都有自己的栈，这里指定栈大小。 单位是word，比如传入100，表示栈大小为100 word，也就是400字节。 最大值为uint16_t的最大值。 怎么确定栈的大小，并不容易，很多时候是估计。 精确的办法是看反汇编码。 |
+| pvParameters   | 调用pvTaskCode函数指针时用到：pvTaskCode(pvParameters)       |
+| uxPriority     | 优先级范围：0~(configMAX_PRIORITIES – 1) 数值越小优先级越低， 如果传入过大的值，xTaskCreate会把它调整为(configMAX_PRIORITIES – 1) |
+| puxStackBuffer | 静态分配的栈内存，比如可以传入一个数组， 它的大小是usStackDepth*4。 |
+| pxTaskBuffer   | 静态分配的StaticTask_t结构体的指针，**即TCB结构体的指针**    |
+| 返回值         | 成功：返回任务句柄； 失败：NULL                              |
+
+ 
+
+## 3.项目的开发
+
+本节课程内容对应的程序为**05_Chapter9_Create_Task**，它是在**00_Driver_Test**项目的基础上修改的，声光色影对应以下四个任务：
+
+- **任务1：声**
+  - 即蜂鸣器播放孤勇者，采用了**动态分配栈**的方式，参考了Github项目；
+  - 注意的是里面几个函数的修改，以及变量的定义；除此之外还有music.c文件的改造；
+
+- **任务2：光**
+  - 即LED的闪烁，采用**静态分配栈**的方式，需要注意的是几个变量的定义，函数直接使用的driver_led里面的函数；
+
+- **任务3：色**
+  - 即全彩LED的闪烁，采用**静态分配栈**的方式，需要注意的是几个变量的定义；
+  - 函数直接使用的driver_color_led里面的函数；**（注意注释这个函数里面调用的LCD的部分）**
+
+- **任务4：影**
+  - 监测遥控器并在LCD上显示；
+  - 默认任务中，只指定了栈的大小，不指定栈的地址，所以用的是**动态分配；**
+
+### 3.1 创建任务1：声
+
+- **创建任务**
+
+  - 声任务采用动态分配内存的方式创建任务：
+
+  ```c
+  void MX_FREERTOS_Init(void)
+  {
+      // 音乐任务的句柄和返回值
+      TaskHandle_t xMusicTaskHandle;
+  	BaseType_t ret;
+      
+      ret = xTaskCreate(PlayMusic, "MusicTask", 128, NULL, osPriorityNormal, &xMusicTaskHandle);
+  }
+  ```
+
+  - 其中xMusicTaskHandle是任务的返回句柄，ret是任务创建的返回状态；
+
+- **Music函数的实现**
+
+  - 现在文件系统中的Core目录下的Src目录新建问价music.c，然后在Keil中将其添加到Core目录下；
+  - 声任务是通过无源蜂鸣器实现音乐播放，它参考了Github的开源项目：
+
+  ```c
+  【用单片机吟唱孤勇者(STM32+无源蜂鸣器）】 
+  https://github.com/Lesterbor/GuYongZhe_PassiveBuzzer_STM32
+  https://www.bilibili.com/video/BV1TF411p78W
+  ```
+
+  - 该文件过大，无法直接将其代码复制到本笔记中，可直接参考工程项目中的文件；
+
+  - 对Github开源项目的移植主要做了以下事情：
+
+    - 复制music.h文件中必要的宏定义等；
+    - 将music.c文件中的代码完全复制；
+    - 改写music.c文件中MUSIC_Analysis()函数的蜂鸣器频率设置，将其更换为课程提供的函数PassiveBuzzer_Set_Freq_Duty()；
+    - 改写music.c文件中MUSIC_Analysis()函数的延时函数，将其更换为课程提供的函数mdelay()；
+    - 完成Playmusic()函数的封装：
+
+    ```c
+    void PlayMusic(void *params)
+    {
+    	PassiveBuzzer_Init();
+    	
+    	while(1)
+    	{
+    		MUSIC_Analysis();
+    	}
+    }
+    ```
+
+### 3.2 创建任务2：光
+
+- **创建任务**
+
+  - 光任务采用静态分配内存的方式创建任务：
+
+  ```c
+  // 光任务的栈、TCB和返回句柄
+  static StackType_t g_pucStackOfLightTask[128];
+  static StaticTask_t g_TCBOfLightTask;
+  static TaskHandle_t xLightTaskHandle;
+  
+  void MX_FREERTOS_Init(void)
+  {
+  	// 创建任务2：光
+    	xLightTaskHandle = xTaskCreateStatic(Led_Test, "LightTask", 128, NULL, 
+                                           osPriorityNormal, g_pucStackOfLightTask, &g_TCBOfLightTask);
+  }
+  ```
+
+  - 静态分配的方式创建任务需要实现静态的分配栈、TCB结构体以及句柄；
+  - **Led_Test()函数的实现并不符合FreeRTOS任务函数的格式，但可以勉强用，只是会有警告：**
+
+  ```c
+  void Led_Test(void)
+  {
+      Led_Init();
+  
+      while (1)
+      {
+          Led_Control(LED_GREEN, 1);
+          mdelay(500);
+  
+          Led_Control(LED_GREEN, 0);
+          mdelay(500);
+      }
+  }
+  ```
+
+### 3.3 创建任务3：色
+
+- **创建任务**
+
+  - 色任务采用静态分配内存的方式创建任务：
+
+  ```c
+  // 色任务的栈、TCB和返回句柄
+  static StackType_t g_pucStackOfColorTask[128];
+  static StaticTask_t g_TCBOfColorTask;
+  static TaskHandle_t xColorTaskHandle;
+  
+  void MX_FREERTOS_Init(void)
+  {
+  	// 创建任务3：色
+    	xColorTaskHandle = xTaskCreateStatic(ColorLED_Test, "ColorTask", 128, NULL, 
+                                           osPriorityNormal, g_pucStackOfColorTask, &g_TCBOfColorTask);
+  }
+  ```
+
+  - 静态分配的方式创建任务需要实现静态的分配栈、TCB结构体以及句柄；
+  - **ColorLED_Test()函数的实现并不符合FreeRTOS任务函数的格式，但可以勉强用，只是会有警告：**
+
+  ```c
+  void ColorLED_Test(void)
+  {
+      uint32_t color = 0;
+  
+      ColorLED_Init();
+  
+      while (1)
+      {
+          //LCD_PrintString(0, 0, "Show Color: ");
+          //LCD_PrintHex(0, 2, color, 1);
+          
+          ColorLED_Set(color);
+  
+          color += 200000;
+          color &= 0x00ffffff;
+          mdelay(1000);
+      }    
+  }
+  ```
+
+  - 除此之外，记得把这个测试函数中的LCD部分注释掉，防止与影任务的LCD冲突；
+
+### 3.4 创建任务4：影
+
+- 直接将原来的StartDefaultTask()函数的红外接收取消注释：
+
+```c
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN StartDefaultTask */
+  /* Infinite loop */
+  LCD_Init();
+  LCD_Clear();
+  
+  for(;;)
+  {
+	IRReceiver_Test();		// 任务4：影
+  }
+  /* USER CODE END StartDefaultTask */
+}
+```
+
+ 
+
+## 4.总结
+
+由于各个任务间的交叉，孤勇者会变得很慢，后面会有办法解决。
 
 
 
