@@ -1550,7 +1550,7 @@ int main(void)
 - **malloc函数与free函数**
 
   - 在3-3-1堆的概念中有提到了几种堆的管理方法，其中就有malloc函数和free函数；
-  - 对于malloc函数和free函数而言，它们是动态分配的，它有个致命问题那就是**内存的碎片化；**
+  - 对于malloc函数和free函数而言，它们是动态分配的，所谓动态分配就是可以不断释放然后又创建，它有个致命问题那就是**内存的碎片化；**
   - 在3-3-1堆的概念中的第四点——堆用链表实现管理，它就是malloc和free函数的本质；
   - 当我们在中间释放一片内存时，多片空闲内存是不连续的，被头部隔离，导致了很多的碎片；
   - **如果不断的malloc然后free，就会把内存切得稀巴烂；**
@@ -2224,13 +2224,263 @@ void StartDefaultTask(void *argument)
 
 ![估算栈大小](3.images/5-1-2任务创建_估算栈大小/估算栈大小.png)
 
+---
+
 
 
 # 5-2 创建任务_使用任务参数
 
+## 1.内容介绍
+
+- **本节内容介绍在不同任务中，调用同一个函数，并给不同的任务传入不同的参数；**
+- 本节内容对应的程序为**06_Chapter9_Create_Task_Use_Params**，该工程在**05_Chapter9_Create_Task**的基础上修改；
+- 本节内容对应课程资料的**108页——9.2.4示例2：使用任务参数；**
+
+
+
+## 2.任务参数的介绍
+
+在FreeRTOS中，能够用同一个函数创建不同的任务，原因如下：
+
+- 不同的任务使用不同的栈；
+- 创建任务时传入的参数不同；
+- 对于局部变量，各个任务的同一个参数有不同的版本；
+- 对于全局变量需要考虑互斥问题，防止任务间的冲突；
+
+
+
+## 3.项目开发
+
+### 3.1 项目目的
+
+- 本节内容通过**使用同一个LCD显示函数来理解任务参数**的作用，其效果如下图所示：
+
+<img src="3.images/5-2创建任务_使用任务参数/像素示意图 .png" alt="显示像素图" style="zoom: 80%;" />
+
+### 3.2 源工程的移植
+
+- 05_Chapter9_Create_Task工程打开后，需要先将原先创建的4个任务全部注释，包括默认任务；
+
+### 3.3 定义显示结构体
+
+- 要实现的用三个任务分别在OLED的不同位置显示一个变量，就需要给每个任务的函数传入坐标位置信息；
+- 可以提供一个如上图右下角定义的打印信息结构体：
+
+```c
+struct TaskPrintInfo {
+	uint8_t x;
+	uint8_t y;
+	char name[16];
+};
+```
+
+### 3.4 定义任务函数
+
+- 接下来需要按照FreeRTOS中对任务函数的规定来实现一个任务函数；
+- 任务函数的原型如下：使用打印信息结构体作为参数，控制不同任务信息打印的位置；
+
+```c
+void Lcd_PrintTask(void *params)
+{
+	struct TaskPrintInfo *pInfo = params;
+	uint32_t cnt = 0;
+	int len;
+	
+	while (1)
+	{
+		// 打印信息
+		len = LCD_PrintString(pInfo->x, pInfo->y, pInfo->name);
+		len = LCD_PrintString(len, pInfo->y, ":");
+		LCD_PrintSignedVal(len, pInfo->y, cnt++);
+	}
+}
+```
+
+### 3.5 创建任务
+
+- 使用上面实现的任务函数创建3个不同的任务；
+- 其中创建每个任务时传入的是不同的全局结构体变量；
+
+```c
+static struct TaskPrintInfo g_Task1Info = {0, 0, "Task1"};
+static struct TaskPrintInfo g_Task2Info = {0, 3, "Task2"};
+static struct TaskPrintInfo g_Task3Info = {0, 6, "Task3"};
+
+xTaskCreate(Lcd_PrintTask, "task1", 128, &g_Task1Info, osPriorityNormal, NULL);
+xTaskCreate(Lcd_PrintTask, "task2", 128, &g_Task2Info, osPriorityNormal, NULL);
+xTaskCreate(Lcd_PrintTask, "task3", 128, &g_Task3Info, osPriorityNormal, NULL);
+```
+
+### 3.6 全局变量保护I2C通信及任务切换的保证
+
+- **全局变量保护I2C通信**
+
+  - 由于任务随时可能切换，可能会导致I2C的通信的中断；
+  - 本节课先通过全局变量g_LCDCanUse状态来实现I2C通信的不中断；
+  - **后续会通过FreeRTOS提供的API来实现互斥的访问，这里用全局变量仍然可能出问题；**
+
+- **任务切换问题**
+
+  - 在整个任务函数中，由于I2C操作占了绝大多数时间，所以任务的切换大概率会出现在这几行代码中；
+  - 这是的g_LCDCanUse为0，即使切换到其他任务也无法访问OLED的资源，这将导致其他任务的信息无法打印；
+  - 所以可以在if执行完后添加一段delay来降低在I2C操作时发生切换的概率；
+
+- **最终代码**
+
+  - 在前任务函数的基础上，添加互斥操作保护和任务切换保证：
+
+  ```c
+  static int g_LCDCanUse = 1;
+  
+  /* 任务函数 */
+  void Lcd_PrintTask(void *params)
+  {
+  	struct TaskPrintInfo *pInfo = params;
+  	uint32_t cnt = 0;
+  	int len;
+  	
+  	while (1)
+  	{
+  		// 打印信息
+  		if (g_LCDCanUse)
+  		{
+  			g_LCDCanUse = 0;
+  			len = LCD_PrintString(pInfo->x, pInfo->y, pInfo->name);
+  			len = LCD_PrintString(len, pInfo->y, ":");
+  			LCD_PrintSignedVal(len, pInfo->y, cnt++);
+  			g_LCDCanUse = 1;
+  		}
+          mdelay(500);
+  	}
+  }
+  ```
+
+
+
+## 4.编译烧录与问题总结
+
+- 在完成上面的项目开发后，就可以编译并且烧录了；
+- 由于任务的切换是随机的，所以在实际运行中，数字的增加是不规律的；
+- **在实际运行中会发现，总是Task3先运行，这个问题留到后面解答；**
+
+---
+
 
 
 # 5-3 删除任务_用遥控器控制音乐
+
+## 1.内容介绍
+
+- 本节课程要学习的是如何删除任务；
+- 本节内容对应课程资料的——**9.2.5 任务的删除和9.2.6 示例3: 删除任务**；
+- 本节内容对应的工程程序为**07_Chapter9_Delete_Task，该工程在05_Chapter9_Create_Task的基础上修改；；**
+
+- 本节课要完成的内容现象是：按下遥控器的播放键时创建任务并播放音乐，按下遥控器的电源键时删除任务；
+
+
+
+## 2.任务删除API介绍
+
+- **删除任务API**
+
+```c
+void vTaskDelete( TaskHandle_t xTaskToDelete );
+```
+
+- **参数说明**
+
+| **参数**   | **描述**                                                     |
+| ---------- | ------------------------------------------------------------ |
+| pvTaskCode | 任务句柄，使用xTaskCreate创建任务时可以得到一个句柄。 也可传入NULL，这表示删除自己。 |
+
+- **任务删除的三种方式**
+  - **自杀**：vTaskDelete(NULL)；
+  - **被杀**：别的任务执行vTaskDelete(pvTaskCode)，pvTaskCode是自己的句柄；
+  - **杀人**：执行vTaskDelete(pvTaskCode)，pvTaskCode是别的任务的句柄；
+
+
+
+## 3.项目开发
+
+### 3.1 源工程的移植
+
+- 本工程使用蜂鸣器播放音乐，并用默认任务创建音乐播放；
+- 即不单独创建音乐播放任务，而是由默认任务来选择是否创建任务；
+- 所以先注释源工程中的任务1：声，其他两个任务和默认任务保持不变；
+
+```c
+  // 创建任务1：声
+  //extern void PlayMusic(void *params);
+  //ret = xTaskCreate(PlayMusic, "MusicTask", 128, NULL, osPriorityNormal, &xMusicTaskHandle);
+```
+
+### 3.2 任务的修改
+
+- 接着修改默认任务，即修改默认任务函数内部的操作；
+- **StartDefaultTask()函数中原本为红外遥控器的测试程序；**
+- **现在改变其逻辑，改为判断遥控器的键值并进行任务的创建和删除进而控制音乐的播放；**
+
+```c
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN StartDefaultTask */
+  /* Infinite loop */
+	uint8_t dev, data;
+	int len;
+	
+	TaskHandle_t xSoundTaskHandle = NULL;
+	BaseType_t ret;
+	
+	LCD_Init();
+	LCD_Clear();
+	
+	IRReceiver_Init();
+	LCD_PrintString(0, 0, "Waiting Control");
+
+	while (1)
+	{
+		/* 读取红外遥控器 */
+		if (0 == IRReceiver_Read(&dev, &data))
+		{
+			if (data == 0xa8)		// play，表示按下播放键
+			{
+				/* 创建播放音乐的任务 */
+				extern void PlayMusic(void *params);
+				if (xSoundTaskHandle == NULL)	// 只有没了任务才创建
+				{
+					LCD_ClearLine(0, 0);
+					LCD_PrintString(0, 0, "Create Task");
+					ret = xTaskCreate(PlayMusic, "SoundTask", 128, NULL, osPriorityNormal, &xSoundTaskHandle);
+				}
+			}
+		}
+		else if (data == 0xa2)		// power，表示按下电源键
+		{
+			/* 删除播放音乐的任务 */
+			if (xSoundTaskHandle != NULL)	//只有存在任务才创建
+			{
+				LCD_ClearLine(0, 0);
+				LCD_PrintString(0, 0, "Delete Task");
+				vTaskDelete(xSoundTaskHandle);
+				PassiveBuzzer_Control(0);        /* 停止蜂鸣器 */
+				xSoundTaskHandle = NULL;
+			}
+		}
+	}
+  /* USER CODE END StartDefaultTask */
+}
+
+```
+
+
+
+## 4.问题总结
+
+- 无论使用什么内存管理方法，都只是能把相邻的空闲块合并而已；
+- **所以频繁的创建、删除任务但又不去清理遗留工作，必然导致存在大量的内存碎片，可能导致后面再次创建无法分配内存；**
+- 关于如何在删除任务后清理遗留工作，留在后面回答；
+
+---
 
 
 
