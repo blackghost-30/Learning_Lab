@@ -2486,9 +2486,113 @@ void StartDefaultTask(void *argument)
 
 # 5-4 优先级与阻塞_改善播放效果
 
+## 1.内容介绍
+
+- 在前面的任务中，播放的音乐都是比较卡顿的；
+- 本节课的内容就是解决音乐卡顿的问题，同时不影响其他任务的运行；
+- 本节课对应的项目工程为**08_Chapter9_Task_Priority**，它在**07_Chapter9_Delete_Task**基础上进行修改；
+
+- 本节课对应的课程资料为**9.3——任务优先级和Tick；**
+
+
+
+## 2.项目开发
+
+- **修改音乐播放任务的优先级**
+
+  - 在上一个工程的freertos.c文件中，默认任务接受按键创建音乐播放时把音乐播放的优先级＋1；
+  - 修改后的StartDefaultTask()函数如下：
+
+  ```c
+  void StartDefaultTask(void *argument)
+  {
+    /* USER CODE BEGIN StartDefaultTask */
+    /* Infinite loop */
+  	uint8_t dev, data;
+  	int len;
+  	
+  	TaskHandle_t xSoundTaskHandle = NULL;
+  	BaseType_t ret;
+  	
+  	LCD_Init();
+  	LCD_Clear();
+  	
+  	IRReceiver_Init();
+  	LCD_PrintString(0, 0, "Waiting Control");
+  
+  	while (1)
+  	{
+  		/* 读取红外遥控器 */
+  		if (0 == IRReceiver_Read(&dev, &data))
+  		{
+  			if (data == 0xa8)		// play，表示按下播放键
+  			{
+  				/* 创建播放音乐的任务 */
+  				extern void PlayMusic(void *params);
+  				if (xSoundTaskHandle == NULL)		// 只有没了任务才创建
+  				{
+  					LCD_ClearLine(0, 0);
+  					LCD_PrintString(0, 0, "Create Task");
+  					ret = xTaskCreate(PlayMusic, "SoundTask", 128, NULL, osPriorityNormal+1, &xSoundTaskHandle);
+  				}
+  			}
+  		}
+  		else if (data == 0xa2)		// power，表示按下电源键
+  		{
+  			/* 删除播放音乐的任务 */
+  			if (xSoundTaskHandle != NULL)		//只有存在任务才创建
+  			{
+  				LCD_ClearLine(0, 0);
+  				LCD_PrintString(0, 0, "Delete Task");
+  				vTaskDelete(xSoundTaskHandle);
+  				PassiveBuzzer_Control(0);        /* 停止蜂鸣器 */
+  				xSoundTaskHandle = NULL;
+  			}
+  		}
+  	}
+    /* USER CODE END StartDefaultTask */
+  }
+  ```
+
+- **修改延时函数**
+
+  - 接着只需在music.c文件中修改MUSIC_Analysis()函数中的延时：mdelay()——>vTaskDelay()，让CPU主动放弃调度；
+  - 如果这里还用的是之前的mdelay()函数，会存在如下问题：
+    - 音乐播放优先级最高，且用mdelay导致没有释放CPU资源，所以创建音乐播放后，任何其他任务都无法运行，包括默认任务接收指令删除任务；
+    - 若用vTaskDelay()，这个函数会在延时时将任务挂起，这样其他任务就可以运行了，也就可以删除音乐任务了；
+  - 修改后的函数如下：
+
+  ```c
+  void MUSIC_Analysis(void){
+  	//切换数组即可更改音乐
+  	uint16_t MusicBeatNum = ((((sizeof(Music_Lone_Brave))/2)/3)-1);
+  	
+  	uint16_t MusicSpeed = Music_Lone_Brave[0][2];
+  	for(uint16_t i = 1;i<=MusicBeatNum;i++)
+  	{
+  		// 改写原来工程的频率设置函数
+  		//BSP_Buzzer_SetFrequency(Tone_Index[Music_Lone_Brave[i][0]][Music_Lone_Brave[i][1]]);
+  		PassiveBuzzer_Set_Freq_Duty(Tone_Index[Music_Lone_Brave[i][0]][Music_Lone_Brave[i][1]], 50);
+  		
+  		// 改写原来工程的延时函数
+  		//HAL_Delay(MusicSpeed/Music_Lone_Brave[i][2]);
+  		//mdelay(MusicSpeed/Music_Lone_Brave[i][2]);
+  		vTaskDelay(MusicSpeed/Music_Lone_Brave[i][2]);
+  	}
+  }
+  ```
+
+---
+
 
 
 # 5-5-1 任务状态_改进播放控制
+
+
+
+
+
+
 
 
 
