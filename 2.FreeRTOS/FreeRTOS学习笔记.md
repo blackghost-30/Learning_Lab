@@ -2500,7 +2500,7 @@ void StartDefaultTask(void *argument)
 
 - **修改音乐播放任务的优先级**
 
-  - 在上一个工程的freertos.c文件中，默认任务接受按键创建音乐播放时把音乐播放的优先级＋1；
+  - 在上一个工程的freertos.c文件中，默认任务接受按键创建音乐播放时把**音乐播放的优先级＋1；**
   - 修改后的StartDefaultTask()函数如下：
 
   ```c
@@ -2556,7 +2556,7 @@ void StartDefaultTask(void *argument)
 
 - **修改延时函数**
 
-  - 接着只需在music.c文件中修改MUSIC_Analysis()函数中的延时：mdelay()——>vTaskDelay()，让CPU主动放弃调度；
+  - 接着只需在music.c文件中修改MUSIC_Analysis()函数中的延时：**mdelay()——>vTaskDelay()**，让CPU主动放弃调度；
   - 如果这里还用的是之前的mdelay()函数，会存在如下问题：
     - 音乐播放优先级最高，且用mdelay导致没有释放CPU资源，所以创建音乐播放后，任何其他任务都无法运行，包括默认任务接收指令删除任务；
     - 若用vTaskDelay()，这个函数会在延时时将任务挂起，这样其他任务就可以运行了，也就可以删除音乐任务了；
@@ -2588,19 +2588,288 @@ void StartDefaultTask(void *argument)
 
 # 5-5-1 任务状态_改进播放控制
 
+## 1.内容介绍
+
+- 本节内容介绍任务的四种状态，并在**08_Chapter9_Task_Priority**的基础上修改出**09_Chapter9_Task_Suspend_Learning_State**程序；
+- 源程序只能停止并从头播放音乐，该程序在原来程序的基础上添加了音乐的播放和暂停功能；
+- 本节内容对应的课程资料为**9.4——任务状态**；
 
 
 
+## 2.任务的四种状态
+
+### 2.1 四种状态
+
+- **Ready状态**：就绪状态，有机会就可运行；
+- **Running状态**：运行状态；
+- **Suspended状态**：暂停状态（挂起），这时候它不是等待事件的，就是单纯的暂停了；
+- **Blocked状态**：阻塞状态，此时它需要等到某个事件的带来，是事件驱动的；
+
+<img src="3.images/5-5-1任务状态_改进播放控制/任务的四种状态.png" alt="四种状态" style="zoom:67%;" />
+
+### 2.2 任务的运转过程
+
+- 所有任务创建后都处于Ready状态；
+
+- 处于Ready状态的任务，根据优先级，只要有机会马上进入Running状态；
+
+- 当调用某个等待函数时，它将进入Blocked状态即阻塞状态，等待某个事件的到来，如上一节中音乐播放中添加的**vTaskDelay()函数；**
+
+- 要进入Suspend状态，有如下方法：
+  - **处于Running状态由自己调用vTaskSuspend()函数，或是处于Ready状态和Blocked状态时由其他任务调用vTaskSuspend()函数；**
+  - 进入Suspend状态后，可以调用vTaskResume()函数重新回到Ready状态，然后执行前面逻辑；
 
 
+
+## 3.项目开发
+
+- 改工程主要在源工程的基础上进行音乐暂停和继续播放的功能；
+
+- 复制源Project文件夹到新的文件夹下，然后打开freertos.c文件，只需要将原StartDefaultTask()函数修改即可：
+
+  - 添加标志位，判断上一个状态是否处于Suspend状态；
+  - 根据bRunning状态位，执行vTaskSuspend()和vTaskResume()函数；
+
+  ```c
+  void StartDefaultTask(void *argument)
+  {
+    /* USER CODE BEGIN StartDefaultTask */
+    /* Infinite loop */
+  	uint8_t dev, data;
+  	int len;
+  	int bRunning;
+  	
+  	TaskHandle_t xSoundTaskHandle = NULL;
+  	BaseType_t ret;
+  	
+  	LCD_Init();
+  	LCD_Clear();
+  	
+  	IRReceiver_Init();
+  	LCD_PrintString(0, 0, "Waiting Control");
+  
+  	while (1)
+  	{
+  		/* 读取红外遥控器 */
+  		if (0 == IRReceiver_Read(&dev, &data))
+  		{
+  			if (data == 0xa8)		// play，表示按下播放键
+  			{
+  				/* 创建播放音乐的任务 */
+  				extern void PlayMusic(void *params);
+  				if (xSoundTaskHandle == NULL)		// 只有没了任务才创建
+  				{
+  					LCD_ClearLine(0, 0);
+  					LCD_PrintString(0, 0, "Create Task");
+  					ret = xTaskCreate(PlayMusic, "SoundTask", 128, NULL, osPriorityNormal+1, &xSoundTaskHandle);
+  					bRunning = 1;
+  				}
+  				else
+  				{
+  					// 要么Suspend要么Resume
+  					if (bRunning)
+  					{
+  						LCD_ClearLine(0, 0);
+  						LCD_PrintString(0, 0, "Suspend Task");
+  						vTaskSuspend(xSoundTaskHandle);
+  						PassiveBuzzer_Control(0);
+  						bRunning = 0;
+  					}
+  					else
+  					{
+  						LCD_ClearLine(0, 0);
+  						LCD_PrintString(0, 0, "Resume Task");
+  						vTaskResume(xSoundTaskHandle);
+  						bRunning = 1;
+  					}
+  				}
+  			}
+  		}
+  		else if (data == 0xa2)		// power，表示按下电源键
+  		{
+  			/* 删除播放音乐的任务 */
+  			if (xSoundTaskHandle != NULL)		//只有存在任务才创建
+  			{
+  				LCD_ClearLine(0, 0);
+  				LCD_PrintString(0, 0, "Delete Task");
+  				vTaskDelete(xSoundTaskHandle);
+  				PassiveBuzzer_Control(0);        /* 停止蜂鸣器 */
+  				xSoundTaskHandle = NULL;
+  			}
+  		}
+  	}
+    /* USER CODE END StartDefaultTask */
+  }
+  ```
+
+---
 
 
 
 # 5-5-2 任务管理与调度
 
+## 1.任务的调度原则
+
+- 相同优先级的任务轮流运行；
+
+- 最高优先级的任务先运行；
+
+- 由上面可以得出以下结论：
+  - 高优先级的任务未执行完，低优先级的任务无法运行；
+  - 一旦高优先级的任务就绪，马上运行；
+  - 最高优先级的任务多个时，它们轮流运行；
+
+
+
+## 2.调度的实现——链表
+
+本小节的调度的实现以**09_Chapter9_Task_Suspend_Learning_State**工程为例进行讲解。
+
+### 2.1 三个链表
+
+- **打开工程的.ioc文件**
+
+  - 打开工程的.ioc文件，查看FREERTOS中间件的参数配置；
+  - 可以看到，在配置中**最大优先级MAX_PRIORITIES为56；**
+  - 接着回到Keil中，打开FreeRTOSConfig.h文件，可以看到这个宏定义也为56；
+
+  | <img src="E:\Learning_Lab\2.FreeRTOS\3.images\5-5-2任务管理与调度\CubeMX配置.png" alt="CubeMX配置" style="zoom: 50%;" /> | <img src="3.images/5-5-2任务管理与调度/FreeRTOSConfig.h配置.png" alt="FreeRTOSConfig.h文件内容" style="zoom: 50%;" /> |
+  | ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+- **三个链表**
+
+  - 接着在工程中直接搜索这个宏定义**configMAX_PRIORITIES**，双击第一个结果打开**task.c文件**；
+  - 可以看到这里有三个链表：
+    - **pxReadyTaskLists链表**：这个链表的大小就是56，用于存放处于就绪状态的任务，它是一个数组；
+    - **xDelayTaskList1/2链表**：它用于存放处于阻塞态的任务；
+    - **xSuspendedTaskList链表**：它用于存放处于挂起（暂停）状态的任务；
+
+  <img src="3.images/5-5-2任务管理与调度/三个管理链表.png" alt="三个链表" style="zoom:50%;" />
+
+### 2.2 pxReadyTaskLists链表
+
+- **链表的组成形式**
+  - pxReadyTaskLists链表组成如下，它有56个元素，每一个元素是一个链表；
+  - 每一个链表中都放着对应优先级的处于Ready/Running状态的任务；
+
+![链表的组成](3.images/5-5-2任务管理与调度/链表的组成.png)
+
+- **项目的实际链表**
+
+  - 每一个链表都是对应的任务的TCB结构体，只有找到了TCB结构体才能找到对应的任务；
+  - 在我们前面创建的几个任务中，它们的优先级是osPriorityNormal，对应的数值是24；
+  - 所以在ReadyTaskLists[24]位置会存放着它们的链表（也就是每个任务的TCB结构体），整个链表的结构如下：
+
+  ![实际工程的链表](3.images/5-5-2任务管理与调度/实际工程的链表.png) 
+
+### 2.3 空闲任务
+
+- **项目入口**
+
+  - 整个项目的入口文件是main.c文件，文件中完成了：
+
+    - osKernelInitialize()初始化内核；
+    - MX_FREERTOS_Init()创建任务；
+    - osKernelStart()启动内核即开启调度器；
+
+    <img src="3.images/5-5-2任务管理与调度/main.c文件.png" alt="main.c文件" style="zoom:67%;" />
+
+- **启动内核内部实现**
+  - 跳转找到这个函数的定义，在文件cmsis_os2.c文件中：
+
+<img src="3.images/5-5-2任务管理与调度/启动调度器的内部实现.png" alt="启动调度器的内部实现" style="zoom: 50%;" />
+
+- **vTaskStartScheduler()函数**
+  - 函数中调用了vTaskStartScheduler()函数，即启动调度器的函数；
+  - 再转到这个函数的定义，在文件task.c文件中，如下图：
+
+<img src="3.images/5-5-2任务管理与调度/空闲任务创建.png" alt="空闲任务创建" style="zoom: 50%;" />
+
+- **空闲任务**
+  - 可以看到，在启动调度器时还会创建一个空闲任务，**这个任务的优先级为0；**
+  - 所以整个pxReadyTaskLists链表的结构如下图所示： 
+
+![完整链表组成](3.images/5-5-2任务管理与调度/完成链表组成.png)
+
+
+
+## 3.实际的任务调度过程
+
+### 3.1 全局变量找链表
+
+- **任务创建函数**
+
+  - 当运行项目后，项目从main.c文件开始运行，将执行**MX_FREERTOS_Init()**函数，这个函数就在freertos.c文件中；
+  - 这个函数实际上就是进行任务的创建，如下图所示：
+
+  ![任务创建函数](3.images/5-5-2任务管理与调度/任务创建函数.png) 
+
+- **xTaskCreateStatic()函数**
+  - 接着跳转**xTaskCreateStatic()**函数中，这个是静态创建任务的函数，它在**task.c**文件中进行定义：
+
+<img src="3.images/5-5-2任务管理与调度/静态创建任务的内部实现.png" alt="静态创建任务函数内部实现" style="zoom:50%;" />
+
+- **全局指针变量**
+
+  -  继续往下找，可以看到添加任务到ReadyList的函数**prvAddTaskToReadyList()**，且有一个全局变量**pxNewTCB**；
+  - 它会根据优先级创建任务，每当我们创建一个任务时，这个全局变量就会指向对应任务的链表：
+
+  <img src="3.images/5-5-2任务管理与调度/全局指针变量.png" alt="全局指针变量" style="zoom: 50%;" />
+
+- **机理解释**
+  - 在前面的那个pxReadyTaskLists链表结构图中，创建完所有任务后，pxNewTCB就应该指向colorLED_Test这个链表，因为空闲任务优先级比较低；
+  - 当启动调度器后，这个全局变量指向clorLED_Test这个链表，所以项目会先从这个任务开始运行；
+  - 这也是之前的演示中为什么第三个项目先开始计数的原因；
+
+### 3.2 Tick中断
+
+- 任务的切换调度是靠Tick中断进行的；
+
+- 在配置工程的过程中，配置了Tick中断，如下图所示，它的频率是1000，所以每1ms产生一次中断；
+- 也就是说，对于同等优先级的任务，它们每1ms切换一次任务；
+- 对于每一次Tick中断，它都会完成任务的调度，整个调度的过程如右下图所示：
+
+| <img src="3.images/5-5-2任务管理与调度/\Tick中断.png" alt="Tick中断" style="zoom: 40%;" /> | <img src="3.images/5-5-2任务管理与调度/普通任务调度.png" alt="普通任务调度" style="zoom:40%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+### 3.3 不同优先级时的调度
+
+- **任务创建时的链表变化**
+
+  - 在默认任务中，当我们接收到指令时，我们将创建一个音乐播放的任务；
+  - 这个任务的优先级比前面的优先级高1，所以它会在ReadyList链表中重新创建一个链表，这个链表就是音乐播放对应的链表：
+
+  <img src="3.images/5-5-2任务管理与调度/新建音乐任务后的链表.png" alt="新建任务后的链表" style="zoom: 50%;" />
+
+- **状态变换1**
+
+  - 由于这个任务的优先级最高，创建完后处于Ready状态，所以它将马上进入Running状态，无论这时其他任务有没有完成一个中断内的时间片；
+  - 在这个任务中，我们先进行了蜂鸣器频率的设置，然后马上调用了vTaskDelay()函数；
+  - 这时候任务就会被放入某一个**DelayTaskList链表**中，并发起一次触发调度，这个调度和前面的中断调度功能一样，整个过程如下图所示：
+
+  <img src="3.images/5-5-2任务管理与调度/完整时间戳.png" alt="完整时间戳" style="zoom: 50%;" /> 
+
+- **任务变换2**
+  - 当经过两个Tick后(即设置前面的那个Delay就是延时两个Tick)，延时时间已经到了；
+  - 它就会再次发起调度，将音乐播放任务从Delay链表移出来移到Ready链表里面，并再次遍历Ready链表；
+  - 由于音乐播放优先级最高，故又运行到音乐播放的任务；
+  - 设置完频率后，它又进入Delay状态，并再次发起了触发调度；
+  - 若运行到任务1时，按下了暂停按键，这时音乐播放的任务将从DelayTaskList链表里面移到SuspendTaskList链表中；
+  - 这时候不会再进行时间等待，而是完全暂停，只有再次调用Rusume函数将其移到ReadyTaskList链表中才可以运行；
+
 
 
 # 5-5-3 空闲任务
+
+
+
+
+
+
+
+
+
+
 
 
 
