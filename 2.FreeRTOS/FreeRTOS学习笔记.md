@@ -2870,19 +2870,288 @@ void StartDefaultTask(void *argument)
 
 # 5-5-3 空闲任务
 
+## 1.内容介绍
+
+- 本节内容介绍上一节留下来的**空闲任务**的问题，并深入介绍**FreeRTOS中的任务函数；**
+- 本节内容对应的课程资料为**9.7——空闲任务及其钩子函数；**
+
+- 本节内容对应的工程项目为**10_Chapter9_Idle_Task**，该程序在**09_Chapter9_Task_Suspend_Learning_State**基础上修改；
 
 
 
+## 2.任务创建的底部实现
+
+### 2.1 接口层
+
+- 在freertos.c文件中，通过xTaskCreate()或是xTaskCreateStatic()函数进行任务的创建；
+- 这是内核提供的接口层，创建任务时给参数即可，不需要理解其底层；
+
+### 2.2 内核层
+
+- 接口层的xTaskCreate()和xTaskCreateStatic()是在task.c文件中实现的；
+- task.c是通用内核层，即FreeRTOS系统提供的统一内核；
+- 在task.c文件中，无论是实现xTaskCreate()还是xTaskCreateStatic()，其底层都会调用**prvInitialiseNewTask()函数；**
+- prvInitialiseNewTask()函数负责初始化栈，该函数也是在task.c文件中实现的；
+
+### 2.3 硬件底层
+
+- 在task.c文件的prvInitialiseNewTask()函数实现中，它会调用底层的pxPortInitialiseStack()函数，这个函数在port.c文件中定义；
+- port.c文件和硬件底层相关，所以这是一个移植层或叫硬件底层；
+- 在port.c文件实现pxPortInitialiseStack()函数时，它会为每个任务都伪造一个返回地址LR，即prvTaskExitError()，这是一个错误处理函数；
+
+```c
+StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
+{
+	/* Simulate the stack frame as it would be created by a context switch
+	interrupt. */
+	pxTopOfStack--; /* Offset added to account for the way the MCU uses the stack on entry/exit of interrupts. */
+	*pxTopOfStack = portINITIAL_XPSR;	/* xPSR */
+	pxTopOfStack--;
+	*pxTopOfStack = ( ( StackType_t ) pxCode ) & portSTART_ADDRESS_MASK;	/* PC */
+	pxTopOfStack--;
+	*pxTopOfStack = ( StackType_t ) prvTaskExitError;	/* LR */
+
+	pxTopOfStack -= 5;	/* R12, R3, R2 and R1. */
+	*pxTopOfStack = ( StackType_t ) pvParameters;	/* R0 */
+	pxTopOfStack -= 8;	/* R11, R10, R9, R8, R7, R6, R5 and R4. */
+
+	return pxTopOfStack;
+}
+```
+
+- prvTaskExitError()函数的原型如下：
+
+  - 先关闭所有的中断，这样Tick中断关闭无法调度任务；
+  - 接着是一个死循环for( ;; )；
+  - 这样，只要任务函数返回就会执行这个函数，所有任务都无法调度，只能在这死循环，系统崩溃；
+
+  ```c
+  static void prvTaskExitError( void )
+  {
+  	/* A function that implements a task must not exit or attempt to return to
+  	its caller as there is nothing to return to.  If a task wants to exit it
+  	should instead call vTaskDelete( NULL ).
+  
+  	Artificially force an assert() to be triggered if configASSERT() is
+  	defined, then stop here so application writers can catch the error. */
+  	configASSERT( uxCriticalNesting == ~0UL );
+  	portDISABLE_INTERRUPTS();
+  	for( ;; );
+  }
+  ```
 
 
 
+## 3.任务的正确退出流程
+
+### 3.1 任务的退出
+
+要让函数退出但又不会让整个系统崩溃，就得让任务能够正常的退出。任务的退出有两种方法：
+
+- **自杀**
+  - vTaskDelete(NULL)；
+  - 需要空闲任务进行收尸，即回收TCB和Stack等；
+
+- **他杀**
+  - vTaskDelete(handle)；
+  - 由杀它的人帮它收尸，即回收TCB和Stack等；
+
+### 3.2 任务的收尸
+
+- 在前面提到的自杀中，自杀的任务的TCB和Stack只能由空闲任务回收；
+- 但空闲任务的优先级是0，如果其他任务不主动让出CPU，那空闲任务永远无法运行；
+- 如果一直自杀，一直新建，就会导致内存很快被消耗殆尽；
+- 所以为了让空闲任务能够运行，要注意以下事项：
+  - **事件驱动**：如按下某个按键之后再做某一件事情（后面的同步互斥操作）；
+  - **延时函数不要使用死循环**：如以前自己写的Delay()；
+    - 对于所有的死循环的延时函数都要改为阻塞式的“vTaskDelay()”函数，这个函数由FreeRTOS自己提供，当调用时对应的任务将处于阻塞态；
+    - 需要注意的是，空闲任务永远都处于就绪态，当所有任务都处于vTaskDelay()函数的阻塞态时，就可以由调度器调用空闲任务，实现对“尸体”的清理；
+
+### 3.3 程序的修改
+
+- **任务2函数修改**
+
+  - 在原来的驱动函数基础上修改如下；
+  - 将原来的while死循环改为有循环次数的for循环，并将原来的死循环延时mdelay()改为阻塞态的vTaskDelay()；
+  - 执行完后会返回：
+    - 若最后不进行vTaskDelete(NULL)则系统崩溃；
+    - 执行vTaskDelete(NULL)则能继续正常运行；
+
+  ```c
+  void Led_Test(void)
+  {
+  	int i;
+      Led_Init();
+  
+      for(i = 0; i < 10; i++)
+      {
+          Led_Control(LED_GREEN, 1);
+          //mdelay(500);
+  		vTaskDelay(500);
+  
+          Led_Control(LED_GREEN, 0);
+          //mdelay(500);
+  		vTaskDelay(500);
+      }
+      vTaskDelete(NULL);
+  }
+  ```
+
+- **任务3函数修改**
+
+  - 在原来的驱动函数基础上修改如下；
+  - 即将mdelay(1000)改为vTaskDelay(1000)；
+
+  ```c
+  void ColorLED_Test(void)
+  {
+      uint32_t color = 0;
+  
+      ColorLED_Init();
+  
+      while (1)
+      {
+          //LCD_PrintString(0, 0, "Show Color: ");
+          //LCD_PrintHex(0, 2, color, 1);
+          
+          ColorLED_Set(color);
+  
+          color += 200000;
+          color &= 0x00ffffff;
+          //mdelay(1000);
+  		vTaskDelay(1000);
+      }    
+  }
+  ```
 
 
 
+## 4.空闲任务的钩子函数
+
+在FreeRTOS\Source\tasks.c中，可以看到如下代码，所以前提就是：
+
+- 把这个宏定义为1：configUSE_IDLE_HOOK；
+- 实现vApplicationIdleHook()函数；
+- 在实现这个函数时，可以添加自己要打印的提示信息；
+
+```c
+#if ( configUSE_IDLE_HOOK == 1 )
+{
+    extern void vApplicationIdleHook( void );
+
+    /* Call the user defined function from within the idle task.  This
+                allows the application designer to add background functionality
+                without the overhead of a separate task.
+                NOTE: vApplicationIdleHook() MUST NOT, UNDER ANY CIRCUMSTANCES,
+                CALL A FUNCTION THAT MIGHT BLOCK. */
+    vApplicationIdleHook();
+}
+#endif /* configUSE_IDLE_HOOK */
+```
 
 
 
 # 5-6 两个Delay函数
+
+## 1.内容介绍
+
+- 在前面对音乐播放任务进行改进时，曾把**延时函数mdelay()改为vTaskDelay()函数；**
+- 其中vTaskDelay()就是FreeRTOS提供的延时函数，除此之外FreeRTOS还提供了**vTaskDelayUntil()函数**；
+- 本节内容对应的课程资料为**9.6——Delay函数；**
+- 本节内容对应的工程程序为**11_Chapter9_TaskDelay**，它在**06_Chapter9_Create_Task_Use_Params**基础上修改；
+
+
+
+## 2.两个Delay函数
+
+### 2.1 API介绍
+
+- vTaskDelay()：至少等待指定个数的Tick Interrupt才能变为就绪状态；
+
+```c
+void vTaskDelay( const TickType_t xTicksToDelay ); /* xTicksToDelay: 等待多少给Tick */
+```
+
+- vTaskDelayUntil()：等待到指定的绝对时刻，才能变为就绪态；
+
+```c
+/* pxPreviousWakeTime: 上一次被唤醒的时间
+ * xTimeIncrement: 要阻塞到(pxPreviousWakeTime + xTimeIncrement)
+ * 单位都是Tick Count
+ */
+BaseType_t xTaskDelayUntil( TickType_t * const pxPreviousWakeTime,
+                            const TickType_t xTimeIncrement );
+```
+
+### 2.2 画图介绍
+
+- 使用vTaskDelay(n)时，进入、退出vTaskDelay()的时间间隔至少是n个Tick中断；
+
+- 使用xTaskDelayUntil(&Pre, n)时，前后两次退出xTaskDelayUntil()的时间至少是n个Tick中断；
+
+  - 退出xTaskDelayUntil()时任务就进入的就绪状态，一般都能得到执行机会；
+  - 所以可以使用xTaskDelayUntil()来让任务周期性地运行；
+  - 注意使用这个函数需要调用**vTaskGetTickCount()**函数获取上一次时间；
+
+  ![Delay介绍](3.images/5-6两个Delay函数/Delay函数介绍.png)
+
+
+
+## 3.项目演示
+
+- 在**06_Chapter9_Create_Task_Use_Params**中，创建了三个相同函数但参数不同的任务；
+- 现在注释其中，两个，只保留一个，用这个任务来演示两个函数的不同；
+- **注释任务2和任务3**
+
+```c
+  xTaskCreate(Lcd_PrintTask, "task1", 128, &g_Task1Info, osPriorityNormal, NULL);
+  //xTaskCreate(Lcd_PrintTask, "task2", 128, &g_Task2Info, osPriorityNormal, NULL);
+  //xTaskCreate(Lcd_PrintTask, "task3", 128, &g_Task3Info, osPriorityNormal, NULL);
+```
+
+- **修改任务函数**
+
+```c
+void Lcd_PrintTask(void *params)
+{
+	struct TaskPrintInfo *pInfo = params;
+	uint32_t cnt = 0;		// 要显示的数字
+	int len;				// 记录当前打印的列
+	BaseType_t pretime;
+	uint64_t t1, t2;
+	
+	/* 替换不同的Delay()函数进行测试它们的不同 */
+	//pretime = xTaskGetTickCount();
+	while(1)
+	{
+		/* 打印信息 */
+		if (g_LCDCanUse)
+		{
+			g_LCDCanUse = 0;
+			len = LCD_PrintString(pInfo->x, pInfo->y, pInfo->name);		// 先打印任务的名字，并返回打印的名字的长度
+			len += LCD_PrintString(len, pInfo->y, ":");                 // 在名字后面打印：，并同时返回打印后的列的位置
+			LCD_PrintSignedVal(len, pInfo->y, cnt++);		            // 在：后面打印数字
+			g_LCDCanUse = 1;
+			mdelay(cnt & 0x3);
+		}
+		
+		t1 = system_get_ns();
+		vTaskDelay(500);
+		
+		//vTaskDelayUtil(&pretime, 500);
+		t2 = system_get_ns();
+		
+		LCD_ClearLine(pInfo->x, pInfo->y+2);
+		LCD_PrintSignedVal(pInfo->x, pInfo->y+2, t2-t1);
+	}
+}
+```
+
+- **烧录和效果**
+  - 上面版本是测试vTaskDelay()函数的格式，若要测试vTaskDelayUtil()则将pretime和vTaskDelayUtil()两行代码取消注释，并将vTaskDelay()注释；
+  - 烧录代码后会发现，vTaskDelay版本的信息基本不变，vTaskDelayUtil版本的信息会跳变；
+
+
 
 
 
