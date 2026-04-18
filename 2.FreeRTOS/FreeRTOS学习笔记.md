@@ -2729,9 +2729,9 @@ void StartDefaultTask(void *argument)
 
 - **打开工程的.ioc文件**
 
-  - 打开工程的.ioc文件，查看FREERTOS中间件的参数配置；
+  - 打开工程的**.ioc文件**，查看FREERTOS中间件的参数配置；
   - 可以看到，在配置中**最大优先级MAX_PRIORITIES为56；**
-  - 接着回到Keil中，打开FreeRTOSConfig.h文件，可以看到这个宏定义也为56；
+  - 接着回到Keil中，打开**FreeRTOSConfig.h文件**，可以看到这个宏定义也为56；
 
   | <img src="E:\Learning_Lab\2.FreeRTOS\3.images\5-5-2任务管理与调度\CubeMX配置.png" alt="CubeMX配置" style="zoom: 50%;" /> | <img src="3.images/5-5-2任务管理与调度/FreeRTOSConfig.h配置.png" alt="FreeRTOSConfig.h文件内容" style="zoom: 50%;" /> |
   | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -2740,27 +2740,27 @@ void StartDefaultTask(void *argument)
 
   - 接着在工程中直接搜索这个宏定义**configMAX_PRIORITIES**，双击第一个结果打开**task.c文件**；
   - 可以看到这里有三个链表：
-    - **pxReadyTaskLists链表**：这个链表的大小就是56，用于存放处于就绪状态的任务，它是一个数组；
-    - **xDelayTaskList1/2链表**：它用于存放处于阻塞态的任务；
-    - **xSuspendedTaskList链表**：它用于存放处于挂起（暂停）状态的任务；
+    - **pxReadyTaskLists链表**：这个链表的大小就是56，用于存放**处于就绪状态（Ready/Running）**的任务，它是一个数组；
+    - **xDelayTaskList1/2链表**：它用于存放**处于阻塞态**的任务；
+    - **xSuspendedTaskList链表**：它用于存放**处于挂起（暂停）状态**的任务；
 
   <img src="3.images/5-5-2任务管理与调度/三个管理链表.png" alt="三个链表" style="zoom:50%;" />
 
 ### 2.2 pxReadyTaskLists链表
 
 - **链表的组成形式**
-  - pxReadyTaskLists链表组成如下，它有56个元素，每一个元素是一个链表；
-  - 每一个链表中都放着对应优先级的处于Ready/Running状态的任务；
+  - pxReadyTaskLists链表组成如下，它有**56（configMAX_PRIORITIES）个元素**，每一个元素是一个链表；
+  - 每一个链表中都放着对应优先级的**处于Ready/Running状态**的任务；
 
-![链表的组成](3.images/5-5-2任务管理与调度/链表的组成.png)
+<img src="3.images/5-5-2任务管理与调度/链表的组成形式.png" alt="链表的组成" style="zoom: 50%;" />
 
 - **项目的实际链表**
 
-  - 每一个链表都是对应的任务的TCB结构体，只有找到了TCB结构体才能找到对应的任务；
-  - 在我们前面创建的几个任务中，它们的优先级是osPriorityNormal，对应的数值是24；
-  - 所以在ReadyTaskLists[24]位置会存放着它们的链表（也就是每个任务的TCB结构体），整个链表的结构如下：
+  - 每一个链表都是对应的**任务的TCB结构体**，只有找到了TCB结构体才能找到对应的任务；
+  - 在我们前面创建的几个任务中，它们的优先级是**osPriorityNormal，对应的数值是24；**
+  - 所以在**ReadyTaskLists[24]**位置会存放着它们的链表**（也就是每个任务的TCB结构体）**，整个链表的结构如下：
 
-  ![实际工程的链表](3.images/5-5-2任务管理与调度/实际工程的链表.png) 
+  <img src="3.images/5-5-2任务管理与调度/实际工程链表.png" alt="实际工程的链表" style="zoom: 50%;" />
 
 ### 2.3 空闲任务
 
@@ -2768,9 +2768,9 @@ void StartDefaultTask(void *argument)
 
   - 整个项目的入口文件是main.c文件，文件中完成了：
 
-    - osKernelInitialize()初始化内核；
-    - MX_FREERTOS_Init()创建任务；
-    - osKernelStart()启动内核即开启调度器；
+    - **osKernelInitialize()**初始化内核；
+    - **MX_FREERTOS_Init()**创建任务；
+    - **osKernelStart()**启动内核即开启调度器；
 
     <img src="3.images/5-5-2任务管理与调度/main.c文件.png" alt="main.c文件" style="zoom:67%;" />
 
@@ -2780,16 +2780,16 @@ void StartDefaultTask(void *argument)
 <img src="3.images/5-5-2任务管理与调度/启动调度器的内部实现.png" alt="启动调度器的内部实现" style="zoom: 50%;" />
 
 - **vTaskStartScheduler()函数**
-  - 函数中调用了vTaskStartScheduler()函数，即启动调度器的函数；
+  - 函数中调用了**vTaskStartScheduler()**函数，即启动调度器的函数；
   - 再转到这个函数的定义，在文件task.c文件中，如下图：
 
 <img src="3.images/5-5-2任务管理与调度/空闲任务创建.png" alt="空闲任务创建" style="zoom: 50%;" />
 
 - **空闲任务**
   - 可以看到，在启动调度器时还会创建一个空闲任务，**这个任务的优先级为0；**
-  - 所以整个pxReadyTaskLists链表的结构如下图所示： 
+  - 所以整个**pxReadyTaskLists链表**的结构如下图所示： 
 
-![完整链表组成](3.images/5-5-2任务管理与调度/完成链表组成.png)
+<img src="3.images/5-5-2任务管理与调度/完整链表组成.png" alt="完整链表组成" style="zoom: 67%;" />
 
 
 
@@ -2799,63 +2799,72 @@ void StartDefaultTask(void *argument)
 
 - **任务创建函数**
 
-  - 当运行项目后，项目从main.c文件开始运行，将执行**MX_FREERTOS_Init()**函数，这个函数就在freertos.c文件中；
+  - 当运行项目后，项目从main.c文件开始运行，将执行**MX_FREERTOS_Init()**函数，这个函数就在**freertos.c**文件中；
   - 这个函数实际上就是进行任务的创建，如下图所示：
 
   ![任务创建函数](3.images/5-5-2任务管理与调度/任务创建函数.png) 
 
 - **xTaskCreateStatic()函数**
+
   - 接着跳转**xTaskCreateStatic()**函数中，这个是静态创建任务的函数，它在**task.c**文件中进行定义：
 
-<img src="3.images/5-5-2任务管理与调度/静态创建任务的内部实现.png" alt="静态创建任务函数内部实现" style="zoom:50%;" />
+  | <img src="3.images/5-5-2任务管理与调度/静态创建任务函数内部实现.png" alt="静态创建任务内部实现" style="zoom:50%;" /> | <img src="3.images/5-5-2任务管理与调度/全局指针变量.png" alt="全局指针变量" style="zoom: 50%;" /> |
+  | ------------------------------------------------------------ | ------------------------------------------------------------ |
 
 - **全局指针变量**
-
   -  继续往下找，可以看到添加任务到ReadyList的函数**prvAddTaskToReadyList()**，且有一个全局变量**pxNewTCB**；
-  - 它会根据优先级创建任务，每当我们创建一个任务时，这个全局变量就会指向对应任务的链表：
-
-  <img src="3.images/5-5-2任务管理与调度/全局指针变量.png" alt="全局指针变量" style="zoom: 50%;" />
+  - 它会根据优先级创建任务，每当我们创建一个任务时，**这个全局变量就会指向对应任务的链表；**
 
 - **机理解释**
-  - 在前面的那个pxReadyTaskLists链表结构图中，创建完所有任务后，pxNewTCB就应该指向colorLED_Test这个链表，因为空闲任务优先级比较低；
-  - 当启动调度器后，这个全局变量指向clorLED_Test这个链表，所以项目会先从这个任务开始运行；
+  - 前面的那个pxReadyTaskLists链表结构图中，创建完所有任务后，**pxNewTCB就应该指向colorLED_Test这个链表，因为空闲任务优先级比较低；**
+  - 当启动调度器后，这个**全局变量指向clorLED_Test这个链表**，所以项目会先从这个任务开始运行；
   - 这也是之前的演示中为什么第三个项目先开始计数的原因；
 
 ### 3.2 Tick中断
 
-- 任务的切换调度是靠Tick中断进行的；
+- 任务的切换调度是靠**Tick中断**进行的；
 
-- 在配置工程的过程中，配置了Tick中断，如下图所示，它的频率是1000，所以每1ms产生一次中断；
-- 也就是说，对于同等优先级的任务，它们每1ms切换一次任务；
+- 在配置工程的过程中，配置了Tick中断，如下图所示，它的频率是1000，所以**每1ms产生一次中断**；
+- 也就是说，**对于同等优先级的任务，它们每1ms切换一次任务；**
 - 对于每一次Tick中断，它都会完成任务的调度，整个调度的过程如右下图所示：
 
-| <img src="3.images/5-5-2任务管理与调度/\Tick中断.png" alt="Tick中断" style="zoom: 40%;" /> | <img src="3.images/5-5-2任务管理与调度/普通任务调度.png" alt="普通任务调度" style="zoom:40%;" /> |
+| <img src="3.images/5-5-2任务管理与调度/\Tick中断.png" alt="Tick中断" style="zoom: 40%;" /> | <img src="3.images/5-5-2任务管理与调度/普通任务的调度.png" alt="普通任务的调度" style="zoom: 67%;" /> |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 
 ### 3.3 不同优先级时的调度
 
 - **任务创建时的链表变化**
 
-  - 在默认任务中，当我们接收到指令时，我们将创建一个音乐播放的任务；
-  - 这个任务的优先级比前面的优先级高1，所以它会在ReadyList链表中重新创建一个链表，这个链表就是音乐播放对应的链表：
+  - 在默认任务中，当我们接收到指令时，我们将创建一个**音乐播放的任务；**
+  - **这个任务的优先级比前面的优先级高1（即25）**，所以它会在**ReadyList[25]**重新创建一个链表，这个链表就是音乐播放对应的链表：
 
-  <img src="3.images/5-5-2任务管理与调度/新建音乐任务后的链表.png" alt="新建任务后的链表" style="zoom: 50%;" />
+  <img src="3.images/5-5-2任务管理与调度/新建音乐任务后链表.png" alt="新建任务后的链表" style="zoom: 50%;" />
 
-- **状态变换1**
+- **任务调度**
+  - 由于这个任务的优先级最高，创建完后**处于Ready状态，所以它将马上进入Running状态**，无论这时其他任务有没有完成一个中断内的时间片；
+  - 所以创建了任务后音乐播放任务马上运行，且由于其优先级最高，除非它主动Delay或是Suspend，否则其他任务无法运行；
 
-  - 由于这个任务的优先级最高，创建完后处于Ready状态，所以它将马上进入Running状态，无论这时其他任务有没有完成一个中断内的时间片；
-  - 在这个任务中，我们先进行了蜂鸣器频率的设置，然后马上调用了vTaskDelay()函数；
-  - 这时候任务就会被放入某一个**DelayTaskList链表**中，并发起一次触发调度，这个调度和前面的中断调度功能一样，整个过程如下图所示：
+### 3.4 涉及任务状态的任务调度
 
-  <img src="3.images/5-5-2任务管理与调度/完整时间戳.png" alt="完整时间戳" style="zoom: 50%;" /> 
+- **Blocked状态的切换**
 
-- **任务变换2**
-  - 当经过两个Tick后(即设置前面的那个Delay就是延时两个Tick)，延时时间已经到了；
-  - 它就会再次发起调度，将音乐播放任务从Delay链表移出来移到Ready链表里面，并再次遍历Ready链表；
+  - 在这个音乐播方任务中，先进行了蜂鸣器频率的设置，然后马上调用了**vTaskDelay()函数；**
+  - 这时候任务就会被放入某一个**DelayTaskList链表**中，并发起一次触发调度，这个调度和前面的中断调度功能一样；
+  - 当经过**两个Tick**后（即设置前面的那个Delay就是延时两个Tick），延时时间已经到了；
+  - 它就会再次发起调度，将**音乐播放任务从DelayLists链表移出来移到ReadyLists链表里面，并再次遍历ReadyLists链表**；
   - 由于音乐播放优先级最高，故又运行到音乐播放的任务；
   - 设置完频率后，它又进入Delay状态，并再次发起了触发调度；
-  - 若运行到任务1时，按下了暂停按键，这时音乐播放的任务将从DelayTaskList链表里面移到SuspendTaskList链表中；
-  - 这时候不会再进行时间等待，而是完全暂停，只有再次调用Rusume函数将其移到ReadyTaskList链表中才可以运行；
+
+  <img src="3.images/5-5-2任务管理与调度/涉及任务状态的任务调度.png" alt="涉及任务状态的任务调度" style="zoom:67%;" />
+
+- **Suspended状态的切换**
+
+  - 若运行到任务1时，按下了**暂停按键**，这时音乐播放的任务**将从DelayTaskLists链表里面移到SuspendTaskLists链表**中；
+  - 这时候不会再进行时间等待，而是**完全暂停**，只有再次**调用Rusume()函数将其移到ReadyTaskList链表**中才可以运行；
+
+  <img src="3.images/5-5-2任务管理与调度/完整的时间戳.png" alt="完整的时间戳" style="zoom: 50%;" />
+
+---
 
 
 
