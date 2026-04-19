@@ -3602,23 +3602,511 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 
 
+## 4.项目源码概述
+
+- 本项目的底层本质就是不断地在OLED上绘制响应的图形；
+
+- 在项目中的game1.c和game2.c文件中，有如下几个模块的数组：
+
+  - 只要把这些数组通过I2C送到OLED的显存中，就可以把它们的图形绘制出来了；
+  - 至于在实际运行中，这些图形如何变化，需要通过游戏的逻辑来实现；
+
+  ```c
+  static const byte block[] ={
+  	0x07,0x07,0x07,
+  };
+  
+  static const byte platform[] ={
+  	0x60,0x70,0x50,0x10,0x30,0xF0,0xF0,0x30,0x10,0x50,0x70,0x60,
+  };
+  
+  static const byte ballImg[] ={
+  	0x03,0x03,
+  };
+  
+  static const byte clearImg[] ={
+  	0,0,0,0,0,0,0,0,0,0,0,0,
+  }
+  
+  static const byte carImg[] PROGMEM ={
+  	0x40,0xF8,0xEC,0x2C,0x2C,0x38,0xF0,0x10,0xD0,0x30,0xE8,0x4C,0x4C,0x9C,0xF0,
+  	0x02,0x1F,0x37,0x34,0x34,0x1C,0x0F,0x08,0x0B,0x0C,0x17,0x32,0x32,0x39,0x0F,
+  };
+  
+  static const byte roadMarking[] PROGMEM ={
+  	0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,
+  };
+  ```
 
 
 
+# 8-1-1 数据传输的方法_环形Buffer
+
+## 1.内容介绍
+
+- 本节内容首先介绍一下在FreeRTOS中进行数据传输的方法，其中重点讲解**环形Buffer如何传输数据；**
+- 本节内容对应的课程资料为**第11章——队列；**
 
 
 
+## 2.数据传输的主要方法
+
+- FreeRTOS系统中，数据传输的方法有如下几种：全局变量、环形缓冲区、队列；
+- **前面提到的信号量、互斥量、任务通知、事件组等，都只能传输标志位状态而已；**
+
+|            | 数据个数 | 互斥措施 | 阻塞-唤醒 | 使用场景 |
+| ---------- | -------- | -------- | --------- | -------- |
+| 全局变量   | 1        | 无       | 无        | 一读一写 |
+| 环形缓冲区 | 多个     | 无       | 无        | 一读一写 |
+| 队列       | 多个     | 有       | 有        | 多读多写 |
+
+### 2.1 全局变量
+
+- **全局变量的特点**
+  - 每个全局变量只能传送一个数据；
+  - 全局变量没有互斥操作也没有阻塞-唤醒机制；
+- **全局变量的问题**
+  - 在前面讲解有缺陷的互斥操作和同步操作时已经演示了全局变量的问题；
+  - 由于没有互斥措施，所以全局变量无法保证数据的正确性；
+  - 由于没有阻塞-唤醒机制，所以全局变量的效率低下；
+
+- **示例**
+
+  - 如下面的示例所示，定义了一个全局结构体，还有两个任务；
+  - 如果Task_A只是运行到了修改完x坐标，就切换到了Task_B，这样Task_B得到的就是错误的数据；
+
+  ```c
+  struct Position
+  {
+      int x;
+      int y
+  };
+  
+  struct Position g_pos;
+  
+  Task_A()
+  {
+      g_pos.x = 1;
+      g_pos.y = 2;
+  }
+  
+  Task_B()
+  {
+      // 访问g_pos
+  }
+  ```
+
+### 2.2 环形Buffer
+
+- **环形Buffer的介绍**
+  - 环形Buffer的本质是一个**循环的数组；**
+  - 环形Buffer只能适合只有**两个任务通信时的场景；**
+
+- **正确的环形Buffer设计**
+
+  - 下图为正确的环形Buffer设计方法，即通过下一个读的位置r和下一个写的位置w来完成对环形Buffer的互斥写和读；
+  - **由于对r的修改只在读任务中进行，对w的修改只在写任务中进行，所以这样不会产生冲突；**
+  - 在这里，也可能存在全局变量中那样的问题，即w/r还没完全改完就切换任务了，但是只有对应任务会修改变量，所以这没有影响，只是效率问题而已；
+
+  <img src="3.images/8-1-1数据传输的方法_环形Buffer/正确的环形Buffer设计.png" alt="正确的环形Buffer设计" style="zoom: 50%;" />
+
+- **有问题的环形Buffer设计**
+
+  - 在下图的环形Buffer设计中，它加多了一个指示当前所剩数据的num变量；
+  - **这个变量是全局变量，且是一个读任务和写任务都会访问修改的变量，这样就又回到了一开始的全局变量的互斥访问问题上；**
+
+  <img src="3.images/8-1-1数据传输的方法_环形Buffer/有问题的环形Buffer设计.png" alt="有问题的环形Buffer设计" style="zoom:50%;" />
+
+---
 
 
 
+# 8-1-2 数据传输的方法_队列的本质
+
+## 1.队列的概述
+
+### 1.1 队列与环形Buffer的区别
+
+- 队列中，**数据的读写本质就是环形缓冲区**，在这个基础上**增加了互斥措施、阻塞-唤醒机制；**
+- 队列的三要素就是上一节提到的有问题的环形Buffer设计的**三个要素：w、r、num；**
+- 环形Buffer是**单生产者、单消费者的**，且在设计上就已经杜绝了变量的冲突访问，所以不需要设计互斥措施；
+- 队列是**多生产者、多消费者的**，它必须考虑互斥措施解决正确性的问题以及阻塞-唤醒机制解决效率的问题；
+
+### 1.2 队列与其他方法的联系
+
+- 如果这个队列不传输数据，只调整"数据个数"，它就是**信号量(semaphore)；**
+
+- 如果信号量中，限定"数据个数"最大值为1，它就是**互斥量(mutex)；**
+
+### 1.3 梳理总结
+
+- 队列的本质是加了互斥措施和阻塞-唤醒机制的环形Buffer；
+- 信号量和互斥量的本质是队列，即其本质也是环形Buffer；
 
 
 
+## 2.队列的操作
+
+### 2.1 创建队列
+
+- **动态分配内存**
+
+  - **函数API原型**
+
+  ```c
+  QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength, UBaseType_t uxItemSize);
+  ```
+
+  - **参数**
+
+  | **参数**      | **说明**                                                     |
+  | ------------- | ------------------------------------------------------------ |
+  | uxQueueLength | 队列长度，最多能存放多少个数据(item)                         |
+  | uxItemSize    | 每个数据(item)的大小：以字节为单位                           |
+  | 返回值        | 非0：成功，返回句柄，以后使用句柄来操作队列 NULL：失败，因为内存不足 |
+
+- **静态分配内存**
+
+  - **函数API原型**
+
+  ```c
+  QueueHandle_t xQueueCreateStatic(*
+                		UBaseType_t uxQueueLength,*
+                		UBaseType_t uxItemSize,*
+                		uint8_t *pucQueueStorageBuffer,*
+                		StaticQueue_t *pxQueueBuffer*
+             		 );
+  ```
+
+  - **参数**
+
+  | **参数**              | **说明**                                                     |
+  | --------------------- | ------------------------------------------------------------ |
+  | uxQueueLength         | 队列长度，最多能存放多少个数据(item)                         |
+  | uxItemSize            | 每个数据(item)的大小：以字节为单位                           |
+  | pucQueueStorageBuffer | 如果uxItemSize非0，pucQueueStorageBuffer必须指向一个uint8_t数组， 此数组大小至少为"uxQueueLength * uxItemSize" |
+  | pxQueueBuffer         | 必须执行一个StaticQueue_t结构体，用来保存队列的数据结构      |
+  | 返回值                | 非0：成功，返回句柄，以后使用句柄来操作队列 NULL：失败，因为pxQueueBuffer为NULL |
+
+### 2.2 写队列
+
+- **函数API原型**
+
+  - 可以把数据写到队列头部，也可以写到尾部；
+  - 这些函数有两个版本：在任务中使用、在ISR中使用。函数原型如下：
+
+  ```c
+  /* 等同于xQueueSendToBack
+   * 往队列尾部写入数据，如果没有空间，阻塞时间为xTicksToWait
+   */
+  BaseType_t xQueueSend(
+                                  QueueHandle_t    xQueue,
+                                  const void       *pvItemToQueue,
+                                  TickType_t       xTicksToWait
+                              );
+  
+  /* 
+   * 往队列尾部写入数据，如果没有空间，阻塞时间为xTicksToWait
+   */
+  BaseType_t xQueueSendToBack(
+                                  QueueHandle_t    xQueue,
+                                  const void       *pvItemToQueue,
+                                  TickType_t       xTicksToWait
+                              );
+  
+  
+  /* 
+   * 往队列尾部写入数据，此函数可以在中断函数中使用，不可阻塞
+   */
+  BaseType_t xQueueSendToBackFromISR(
+                                        QueueHandle_t xQueue,
+                                        const void *pvItemToQueue,
+                                        BaseType_t *pxHigherPriorityTaskWoken
+                                     );
+  
+  /* 
+   * 往队列头部写入数据，如果没有空间，阻塞时间为xTicksToWait
+   */
+  BaseType_t xQueueSendToFront(
+                                  QueueHandle_t    xQueue,
+                                  const void       *pvItemToQueue,
+                                  TickType_t       xTicksToWait
+                              );
+  
+  /* 
+   * 往队列头部写入数据，此函数可以在中断函数中使用，不可阻塞
+   */
+  BaseType_t xQueueSendToFrontFromISR(
+                                        QueueHandle_t xQueue,
+                                        const void *pvItemToQueue,
+                                        BaseType_t *pxHigherPriorityTaskWoken
+                                     );
+  ```
+
+- **参数**
+
+| 参数          | 说明                                                         |
+| ------------- | ------------------------------------------------------------ |
+| xQueue        | 队列句柄，要写哪个队列                                       |
+| pvItemToQueue | 数据指针，这个数据的值会被复制进队列， 复制多大的数据？在创建队列时已经指定了数据大小 |
+| xTicksToWait  | 如果队列满则无法写入新数据，可以让任务进入阻塞状态， xTicksToWait表示阻塞的最大时间(Tick Count)。 如果被设为0，无法写入数据时函数会立刻返回； 如果被设为portMAX_DELAY，则会一直阻塞直到有空间可写 |
+| 返回值        | pdPASS：数据成功写入了队列 errQUEUE_FULL：写入失败，因为队列满了。 |
+
+### 2.3 读队列
+
+- **函数API原型**
+
+  - 使用 **xQueueReceive()**函数读队列，读到一个数据后，队列中该数据会被移除；
+  - 这个函数有两个版本：在任务中使用、在ISR中使用。函数原型如下：
+
+  ```c
+  BaseType_t xQueueReceive( QueueHandle_t xQueue,
+                            void * const pvBuffer,
+                            TickType_t xTicksToWait );
+  
+  BaseType_t xQueueReceiveFromISR(
+                                      QueueHandle_t    xQueue,
+                                      void             *pvBuffer,
+                                      BaseType_t       *pxTaskWoken
+                                  );
+  ```
+
+- **参数**
+
+| **参数**     | **说明**                                                     |
+| ------------ | ------------------------------------------------------------ |
+| xQueue       | 队列句柄，要读哪个队列                                       |
+| pvBuffer     | bufer指针，队列的数据会被复制到这个buffer 复制多大的数据？在创建队列时已经指定了数据大小 |
+| xTicksToWait | 果队列空则无法读出数据，可以让任务进入阻塞状态， xTicksToWait表示阻塞的最大时间(Tick Count)。 如果被设为0，无法读出数据时函数会立刻返回； 如果被设为portMAX_DELAY，则会一直阻塞直到有数据可写 |
+| 返回值       | pdPASS：从队列读出数据入 errQUEUE_EMPTY：读取失败，因为队列空了。 |
+
+### 2.4 删除队列
+
+- 删除队列的函数为 **vQueueDelete()** ；
+- 只能删除使用动态方法创建的队列，它会释放内存。原型如下：
+
+```c
+void vQueueDelete( QueueHandle_t xQueue );
+```
+
+### 2.5 复位队列
+
+- 队列刚被创建时，里面没有数据；
+- 使用过程中可以调用 **xQueueReset()**把队列恢复为初始状态，此函数原型为：
+
+```c
+/*  pxQueue : 复位哪个队列;
+ * 返回值: pdPASS(必定成功)
+*/
+BaseType_t xQueueReset(QueueHandle_t pxQueue);
+```
+
+### 2.6 查询队列
+
+- 可以查询队列中有多少个数据、有多少空余空间。函数原型如下：
+
+```c
+/* 返回队列中可用数据的个数 */
+UBaseType_t uxQueueMessagesWaiting( const QueueHandle_t xQueue );
+
+/* 返回队列中可用空间的个数 */
+UBaseType_t uxQueueSpacesAvailable( const QueueHandle_t xQueue );
+```
+
+### 2.7 覆盖/偷看队列
+
+- **覆盖队列**
+
+  - 当队列长度为1时，可以使用 **xQueueOverwrite()** 或 **xQueueOverwriteFromISR()**来覆盖数据；
+  - 注意，队列长度必须为1；当队列满时，这些函数会覆盖里面的数据，这也意味着这些函数不会被阻塞；
+  - 函数原型如下：
+
+  ```c
+  /* 覆盖队列
+   * xQueue: 写哪个队列
+   * pvItemToQueue: 数据地址
+   * 返回值: pdTRUE表示成功, pdFALSE表示失败
+   */
+  BaseType_t xQueueOverwrite(
+                             QueueHandle_t xQueue,
+                             const void * pvItemToQueue
+                        );
+  
+  BaseType_t xQueueOverwriteFromISR(
+                             QueueHandle_t xQueue,
+                             const void * pvItemToQueue,
+                             BaseType_t *pxHigherPriorityTaskWoken
+                        );
+  ```
+
+- **偷看队列**
+
+  - 如果想让队列中的数据供多方读取，也就是说读取时不要移除数据，要留给后来人；
+  - 那么可以使用"窥视"，也就是**xQueuePeek()或xQueuePeekFromISR()**，这些函数会从队列中复制出数据，但是不移除数据；
+  - 这也意味着如果队列中没有数据，那么"偷看"时会导致阻塞；一旦队列中有数据，以后每次"偷看"都会成功；
+  - 函数原型如下：
+
+  ```c
+  /* 偷看队列
+   * xQueue: 偷看哪个队列
+   * pvItemToQueue: 数据地址, 用来保存复制出来的数据
+   * xTicksToWait: 没有数据的话阻塞一会
+   * 返回值: pdTRUE表示成功, pdFALSE表示失败
+   */
+  BaseType_t xQueuePeek(
+                            QueueHandle_t xQueue,
+                            void * const pvBuffer,
+                            TickType_t xTicksToWait
+                        );
+  
+  BaseType_t xQueuePeekFromISR(
+                                   QueueHandle_t xQueue,
+                                   void *pvBuffer,
+                               );
+  ```
 
 
 
+## 3.队列通信的流程
+
+### 3.1 队列的两个链表
+
+可以从两个角度去看队列如何传输数据：
+
+- **从接收者角度**
+  - ①它需要读队列，但是一直没有产品的话，它就设一个“闹钟”即超时，此时它将进入Blocked状态，即阻塞态；
+  - ②若某时刻A放入产品并敲敲流水线唤醒B，B将重新开始读队列，进入就绪态；
+  - ③若A一直不放入产品，B将由Tick中断唤醒；
+
+- **从发送者角度**
+  - ①它需要写队列，但是可能队列是满的，它将进入阻塞态；
+  - ②若某时刻B取走产品，并敲敲流水线唤醒A，A将重新进入就绪态；
+  - ③若B一直都没有取走产品，那A将由Tick中断唤醒；
+
+- **两个链表**
+  - 在上面所提到的“敲敲”流水线是由链表实现的，分别有一个链表指向发送者、一个链表指向接收者；
+  - **所以队列包括：①环形Buffer；②链表：Sender List、Receiver List；**
+
+<img src="3.images/8-1-2数据传输的方法_队列的本质/队列通信流程.png" alt="队列通信的流程" style="zoom: 50%;" />
+
+### 3.2 实际工程中任务的变化
+
+在上面的流程中，两个任务的状态的变化如下：
+
+- 对于Task_B，一创建将处于Ready状态，所以它会存在于ReadyList链表中；
+- 当它开始接收数据但一直没有数据，它将进入阻塞态，Queue.rece_List和DelayedList链表将指向Task_B；
+- 若任务A开始传输数据，它将写入队列，同时从Queue.rece_List链表中取出第一个任务进行唤醒，这样Task_B又进入就绪态ReadyList链表，并运行；
+- 若Task_A一直都没有写入队列，直至Tick中断达到设定的超时时间，Tick中断将从两个链表中将Task_B任务移到ReadyList链表中，实现唤醒；
+
+---
 
 
+
+# 8-2-1 队列实验_多设备玩游戏(思路)
+
+
+
+# 8-2-2 队列实验_多设备玩游戏(红外改造)
+
+
+
+# 8-2-3 队列实验_多设备玩游戏(旋转编码器)
+
+
+
+# 8-2-4 勘误_解决旋转编码器不好用的问题
+
+
+
+# 8-3-1 队列集实验_改进程序框架(思路)
+
+
+
+# 8-3-2 队列集实验_改进程序框架(编程)
+
+
+
+# 8-3-3 队列集实验_增加姿态控制
+
+
+
+# 8-4 队列实验_分发数据给多个任务(赛车游戏)
+
+
+
+# 9-1 信号量的本质
+
+
+
+# 9-2-1 信号量实验_控制车辆运行
+
+
+
+# 9-2-2 信号量实验_优先级反转
+
+
+
+# 9-3 互斥量_领导临时提拔你(解决优先级反转)
+
+
+
+# 10-1 事件组的本质
+
+
+
+# 10-2 事件组实验_车辆协同
+
+
+
+# 10-3 事件组实验_改进姿态控制
+
+
+
+# 11-1 任务通知的本质
+
+
+
+# 11-2 任务通知实验_通知车辆运行
+
+
+
+# 12-1 软件定时器的本质
+
+
+
+# 12-2 软件定时器_增加游戏音效
+
+
+
+# 13-1 任务和中断的两套API函数
+
+
+
+# 13-2 FromISR示例_改进实时性
+
+
+
+# 14-1 资源管理_互斥操作的本质
+
+
+
+# 14-2 资源管理示例_解解DHT11经常出错的问题
+
+
+
+# 15-1 优化系统_精细调整栈大小
+
+
+
+# 15-2 优化系统_打印所有任务的栈信息
+
+
+
+# 15-3 优化系统_统计CPU占比找出有问题的任务
+
+
+
+# 15-4 优化系统_改进MPU6050驱动
 
 
 
