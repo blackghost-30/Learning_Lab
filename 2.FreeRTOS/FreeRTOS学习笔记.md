@@ -3581,13 +3581,16 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 ## 2.项目移植
 
-老师已经下载了这套代码，并且移植出了自己的版本，源码在**2.FreeRTOS**下：
+老师已经下载了这套代码，并且移植出了自己的版本，源码在**5.NWatch参考源码**下：
 
-* **NWatch-master.zip**：官方源码；
+* **NWatch-master**：官方源码；
 * **"DshanMCU-F103"**目录是给百问网DshanMCU-F103移植好的代码
   * **01_nwatch_game.7z**：只有打砖块的游戏，裸机程序，未优化；
   * **02_nwatch_game_freertos.7z**：只有打砖块游戏，FreeRTOS程序，优化了OLED的显示效率，把按键控制、球的控制拆分为2个任务；
   * **03_nwatch_dshanmcu-f103_all.7z**：NWatch的完全版本，裸机程序；
+* **Nwatch-Stm32f103-master**：其他作者对NWatch项目的移植
+  - 这是一个开源up将NWatch移植到STM32F1系列单片机的工程；
+  - GITHUB：[https://github.com/Soysauce007/Nwatch-Stm32f103](https://github.com/Soysauce007/Nwatch-Stm32f103)；
 
 
 
