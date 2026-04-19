@@ -359,6 +359,49 @@ void main()
   }
   ```
 
+- **用全局变量实现互斥操作3：**
+
+  - 要解决上面的问题，可以通过关闭中断来实现
+
+  ```c
+  int LCD_PrintString(int x, int y, char *str) 
+  {
+      static int bCanUse = 1;
+      disable_irq();
+      if (bCanUse)
+      { 
+          bCanUse = 0;
+          enable_irq();
+          /* 使用LCD */
+          bCanUse = 1;
+          return 0;
+      }
+      enable_irq();
+      return -1;
+  }
+  
+  int LCD_PrintString(int x, int y, char *str) 
+  {
+      static int bCanUse = 1;
+      disable_irq();
+      bCanUse--;
+      enable_irq();
+      if (bCanUse == 0)
+      { 
+          /* 使用LCD */
+          bCanUse++;
+          return 0;
+      }
+      else
+      {
+          disable_irq();
+          bCanUse++;
+          enable_irq();
+          return -1;
+      }
+  }
+  ```
+
 - 所以，为了解决多任务系统中的互斥操作问题，FreeRTOS内部封装了API，后续利用FreeRTOS提供的API就能解决这些问题；
 
 #### 3.2.2 同步操作
@@ -3049,6 +3092,8 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 #endif /* configUSE_IDLE_HOOK */
 ```
 
+---
+
 
 
 # 5-6 两个Delay函数
@@ -3151,7 +3196,406 @@ void Lcd_PrintTask(void *params)
   - 上面版本是测试vTaskDelay()函数的格式，若要测试vTaskDelayUtil()则将pretime和vTaskDelayUtil()两行代码取消注释，并将vTaskDelay()注释；
   - 烧录代码后会发现，vTaskDelay版本的信息基本不变，vTaskDelayUtil版本的信息会跳变；
 
+---
 
+
+
+# 6-1 同步互斥与通信_有缺陷的同步示例
+
+## 1.内容介绍
+
+- 本节介绍**同步和互斥的概念**，并以一个有缺陷的同步示例来讲解FreeRTOS中同步问题该注意的问题；
+- 本节内容对应的程序为**12_Chatpter10_Task_Sync_Exclusion**，它在**06_Chapter9_Create_Task_Use_Params**的基础上修改得到；
+- 本节内容对应的课程资料为**10.1——同步与互斥的概念；**
+
+
+
+## 2.同步和互斥的概念
+
+- **同步**：即任务B等任务A做完某件事情之后才做某个动作，常用sync缩写表示；
+- **互斥**：即两个任务不能同时对某一个物理实体进行访问，如LCD、串口等不能同时被访问；
+- **“互斥”操作可以使用“同步”来实现；**
+
+
+
+## 3.有缺陷的同步示例——全局变量同步
+
+### 3.1 整体思路
+
+- 在**06_Chapter9_Create_Task_Use_Params**中，一共有三个相同函数但不同参数的任务；
+- 现在注释第三个任务，采用前面两个任务，让它们完成如下的同步操作：
+  - **A任务计算一个比较大的值，B任务等待A任务计算完成后再打印计算的值和计算所消耗的时间；** 
+  - 下面所有的修改都是在freertos.c文件中进行的，注意代码沙盒的位置；
+
+### 3.2 项目开发
+
+- **新建计算任务函数**
+
+  - 在这个函数中，计算一个比较大的数g_sum；
+  - 通过全局标志位g_clac_end实现两个任务的同步；
+  - 用g_time变量来获取整个计算任务消耗的时间；
+
+  ```c
+  /* 计算结果和时间及同步标志位变量 */
+  static uint64_t g_time = 0;
+  static uint32_t g_sum = 0;
+  static int g_calc_end = 0;
+  
+  /* 任务task1函数 */
+  void ClacTask(void *params)
+  {
+  	uint32_t i = 0;
+  	g_time = system_get_ns();
+  	
+  	for (i = 0; i < 1000000; i++)
+  	{
+  		g_sum += i;
+  	}
+  	g_calc_end = 1;
+  	g_time = system_get_ns() - g_time;
+  	vTaskDelete(NULL);
+  }
+  ```
+
+- **修改打印任务函数**
+
+  - 在这个任务函数中，它需要检查全局标志位来选择是否执行打印信息；
+  - 在OLED中，打印出g_sum的值和计算任务所消耗的时间g_time；
+
+  ```c
+  /* 任务task2函数 */
+  void Lcd_PrintTask(void *params)
+  {
+  	int len;
+  	while(1)
+  	{
+  		LCD_PrintString(0, 0, "Waiting");
+  		
+  		while (g_calc_end == 0);
+  			
+  		/* 打印信息 */
+  		if (g_LCDCanUse)
+  		{
+  			g_LCDCanUse = 0;
+  			
+  			LCD_ClearLine(0, 0);
+  			len = LCD_PrintString(0, 0, "Sum: ");
+  			LCD_PrintHex(len, 0, g_sum, 1);
+  			
+  			LCD_ClearLine(0, 2);
+  			len = LCD_PrintString(0, 2, "Time(ms): ");
+  			LCD_PrintSignedVal(len, 0, g_time/1000000);
+  			
+  			g_LCDCanUse = 1;
+  		}
+  		vTaskDelete(NULL);
+  	}
+  }
+  ```
+
+- **注释原来的第三个任务**
+
+  - 注释原来的第三个任务，保留前两个；
+  - 修改任务的函数，并更改参数；
+
+  ```c
+  // 使用同一个任务函数创建不同的任务
+  xTaskCreate(ClacTask, "task1", 128, NULL, osPriorityNormal, NULL);
+  xTaskCreate(Lcd_PrintTask, "task2", 128, &g_Task2Info, osPriorityNormal, NULL);
+  //xTaskCreate(Lcd_PrintTask, "task3", 128, &g_Task3Info, osPriorityNormal, NULL);
+  ```
+
+### 3.3 bug分析
+
+- 将上面修改的代码烧录进去后会发现，项目根本无法运行，任务2永远不可能打印信息；
+- 上面的项目存在两个问题：
+  - **全局变量问题**
+    - g_calc_end全局变量没有加volatile关键字，编译器会对其进行优化；
+    - 两个任务调度后会将内存的变量加载到寄存器中，即使任务切换了，任务读到的仍是旧的值，而不是内存中新的值；
+    - 这导致任务2读到的g_calc_end永远都是0，所以不会执行下面的打印信息；
+    - 解决办法是加volatile关键字，让编译器不要做优化；
+  - **效率问题**
+    - 在任务1进行计算时，Tick中断会调度任务，任务2即使无法执行下面的打印信息的代码，但当它参与调度时，它一直在做没有意义的循环判断；
+    - 两个任务轮流运行，只有任务1在做计算，任务2纯纯浪费CPU资源，大概会浪费一般的时间；
+    - 解决办法是可以先让任务2阻塞一段时间，阻塞的大概时间是前面显示的总时间的一半；
+
+### 3.4 bug修复
+
+- 基于上面的分析，对上面的代码修改；
+- 完整的两个任务函数和全局变量的代码如下，任务创建部分不需要更改：
+
+```c
+/* 计算结果和时间及同步标志位变量 */
+static uint64_t g_time = 0;
+static uint32_t g_sum = 0;
+static volatile int g_calc_end = 0;
+
+/* 任务task1函数 */
+void ClacTask(void *params)
+{
+	uint32_t i = 0;
+	g_time = system_get_ns();
+	
+	for (i = 0; i < 1000000; i++)
+	{
+		g_sum += i;
+	}
+	g_calc_end = 1;
+	g_time = system_get_ns() - g_time;
+	vTaskDelete(NULL);
+}
+
+/* 任务task2函数 */
+void Lcd_PrintTask(void *params)
+{
+	int len;
+	while(1)
+	{
+		LCD_PrintString(0, 0, "Waiting");
+		
+        vTaskDelay(3000);
+        
+		while (g_calc_end == 0);
+			
+		/* 打印信息 */
+		if (g_LCDCanUse)
+		{
+			g_LCDCanUse = 0;
+			
+			LCD_ClearLine(0, 0);
+			len = LCD_PrintString(0, 0, "Sum: ");
+			LCD_PrintHex(len, 0, g_sum, 1);
+			
+			LCD_ClearLine(0, 2);
+			len = LCD_PrintString(0, 2, "Time(ms): ");
+			LCD_PrintSignedVal(len, 0, g_time/1000000);
+			
+			g_LCDCanUse = 1;
+		}
+		vTaskDelete(NULL);
+	}
+}
+```
+
+
+
+## 4.总结
+
+在用普通方法即全局变量实现FreeRTOS中的同步操作时，会存在如下两个问题：
+
+- **系统正确性**
+  - 无法保证全局变量在不同任务间的正确流转；
+  - 尤其是在编译器做优化的条件下，极有可能使系统无法正常运行；
+- **系统效率问题**
+  - 在全局变量实现同步操作时，等待同步的任务总是在做无意义的循环判断，极大地浪费了CPU资源；
+  - 在少任务前提下，可以通过提前运行查看总时间来将等待同步的任务先阻塞一段时间，但任务多起来后这种方法不现实；
+
+---
+
+
+
+# 6-2 同步互斥与通信_有缺陷的互斥示例
+
+## 1.用全局变量实现互斥操作1
+
+- 如下方代码所示，两个任务都要用同一个串口进行打印，它们之间是互斥的；
+- 在下方代码中，通过全局变量的方式进行互斥操作的保护；
+- 但是在任务切换中很可能在刚进入if判断后就发生了切换，所以用全局变量保护互斥操作会存在很大的偶然性；
+
+```c
+// RTOS 程序
+int g_canuse = 1;
+
+void uart_print(char *str)
+{
+	if (g_canuse)
+	{
+		g_canuse = 0;
+		printf(str);
+		g_canuse = 1;
+	}
+}
+
+task_A()
+{
+	while (1)
+	{
+		uart_print("0123456789\n");
+	}
+}
+
+task_B()
+{
+	while (1)
+	{
+		uart_print("abcdefghij");
+}
+
+}
+
+void main()
+{
+	// 创建 2 个任务
+	create_task(task_A);
+	create_task(task_B);
+	// 启动调度器
+	start_scheduler();
+}
+```
+
+## 2.用全局变量实现互斥操作2
+
+- 在原来的基础上做修改，如下方代码所示；
+- 但是由于“减1”这个操作在底层的汇编实现上需要三步，所以仍然可能存在冲突的风险；
+
+```c
+void uart_print(char *str)
+{
+    g_canuse--;				① 减一
+    if( g_canuse == 0 )		② 判断
+    {
+        printf(str);		③ 打印
+    }
+    g_canuse++;				④ 加一
+}
+```
+
+## 3.用全局变量实现互斥操作3
+
+- 要解决上面的问题，可以通过关闭中断来实现；
+- 但是在用关闭中断的方式实现时，会存在与同步操作相同的效率的问题；
+
+```c
+int LCD_PrintString(int x, int y, char *str) 
+{
+    static int bCanUse = 1;
+    disable_irq();
+    if (bCanUse)
+    { 
+        bCanUse = 0;
+        enable_irq();
+        /* 使用LCD */
+        bCanUse = 1;
+        return 0;
+    }
+    enable_irq();
+    return -1;
+}
+
+int LCD_PrintString(int x, int y, char *str) 
+{
+    static int bCanUse = 1;
+    disable_irq();
+    bCanUse--;
+    enable_irq();
+    if (bCanUse == 0)
+    { 
+        /* 使用LCD */
+        bCanUse++;
+        return 0;
+    }
+    else
+    {
+        disable_irq();
+        bCanUse++;
+        enable_irq();
+        return -1;
+    }
+}
+```
+
+---
+
+
+
+# 6-3 同步互斥与通信_FreeRTOS提供的方法
+
+## 1.问题回顾
+
+在同步互斥与通信中需要解决两个问题：
+
+- **正确性**：FreeRTOS通过**互斥操作**进行解决，保证数据资源的互斥访问；
+
+- **效率性**：FreeRTOS通过**阻塞和唤醒的方式(同步操作)**解决；
+
+
+
+## 2.FreeRTOS提供的方法
+
+能实现同步、互斥的内核方法有：**任务通知(task notification)、队列(queue)、事件组(event group)、信号量(semaphoe)、互斥量(mutex)。**
+
+### 2.1 方法的概述
+
+它们都有类似的操作方法：**获取/释放、阻塞/唤醒、超时**
+
+- 任务A获取资源，用完后任务A释放资源；
+- 任务A获取不到资源则阻塞，任务B释放资源并把任务A唤醒；
+- 任务A获取不到资源则阻塞，并定个闹钟；A要么超时返回，要么在这段时间内因为任务B释放资源而被唤醒；
+
+| **内核对象** | **生产者** | **消费者** | **数据/状态**                                                | **说明**                                                     |
+| ------------ | ---------- | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 队列         | ALL        | ALL        | 数据：若干个数据 谁都可以往队列里扔数据， 谁都可以从队列里读数据 | 用来传递数据， 发送者、接收者无限制， 一个数据只能唤醒一个接收者 |
+| 事件组       | ALL        | ALL        | 多个位：或、与 谁都可以设置(生产)多个位， 谁都可以等待某个位、若干个位 | 用来传递事件， 可以是N个事件， 发送者、接受者无限制， 可以唤醒多个接收者：像广播 |
+| 信号量       | ALL        | ALL        | 数量：0~n 谁都可以增加一个数量， 谁都可消耗一个数量          | 用来维持资源的个数， 生产者、消费者无限制， 1个资源只能唤醒1个接收者 |
+| 任务通知     | ALL        | 只有我     | 数据、状态都可以传输， 使用任务通知时， 必须指定接受者       | N对1的关系： 发送者无限制， 接收者只能是这个任务             |
+| 互斥量       | 只能A开锁  | A上锁      | 位：0、1 我上锁：1变为0， 只能由我开锁：0变为1               | 就像一个空厕所， 谁使用谁上锁， 也只能由他开锁               |
+
+### 2.3 方法的介绍
+
+- **队列**
+  - 里面可以放任意数据，可以放多个数据；
+  - 任务、ISR都可以放入数据；任务、ISR都可以从中读出数据；
+- **事件组**
+  - 一个事件用1bit表示，1表示事件发生了，0表示事件没发生；
+  - 可以用来表示事件、事件的组合发生了，不能传递数据；
+  - 有广播效果：事件或事件的组合发生了，等待它的多个任务都会被唤醒；
+- **信号量**
+  - 核心是"计数值"；
+  - 任务、ISR释放信号量时让计数值加1；
+  - 任务、ISR获得信号量时，让计数值减1；
+- **任务通知**
+  - 核心是任务的TCB里的数值；
+  - 会被覆盖；
+  - 发通知给谁？必须指定接收任务；
+  - 只能由接收任务本身获取该通知；
+- **互斥量**
+  - 数值只有0或1；
+  - 谁获得互斥量，就必须由谁释放同一个互斥量；
+
+<img src="3.images/6-3同步互斥与通信_FreeRTOS提供的方法/方法介绍.png" alt="方法介绍" style="zoom: 67%;" />
+
+---
+
+
+
+# 7 游戏机项目说明
+
+## 1.NWatch项目
+
+NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续的软件部分都是基于这个项目的，官方链接为：
+
+* GITHUB：https://github.com/ZakKemble/NWatch  
+* 作者博客：https://blog.zakkemble.net/diy-digital-wristwatch/
+
+
+
+## 2.项目移植
+
+老师已经下载了这套代码，并且移植出了自己的版本，源码在**2.FreeRTOS**下：
+
+* **NWatch-master.zip**：官方源码；
+* **"DshanMCU-F103"**目录是给百问网DshanMCU-F103移植好的代码
+  * **01_nwatch_game.7z**：只有打砖块的游戏，裸机程序，未优化；
+  * **02_nwatch_game_freertos.7z**：只有打砖块游戏，FreeRTOS程序，优化了OLED的显示效率，把按键控制、球的控制拆分为2个任务；
+  * **03_nwatch_dshanmcu-f103_all.7z**：NWatch的完全版本，裸机程序；
+
+
+
+## 3.课程后续
+
+- 本课程不是要去移植完整的NWatch项目，而只是移植其中的赛车游戏和打砖块游戏；
+- 后续的程序在**02_nwatch_game_freertos**的基础上修改；
+- **后续要学习的就是基于这个项目，不断地将前面提到的FreeRTOS提供的同步互斥和通信的API加入到项目中；**
 
 
 
