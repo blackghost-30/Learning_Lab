@@ -1,5 +1,10 @@
 #include "stm32f10x.h"                  // Device header
 
+/**
+  * @brief  CAN外设初始化函数
+  * @param  无
+  * @retval 无
+  */
 void MyCAN_Init(void)
 {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
@@ -43,6 +48,13 @@ void MyCAN_Init(void)
 	CAN_FilterInit(&CAN_FilterInitStructure);
 }
 
+/**
+  * @brief  CAN发送报文函数
+  * @param  ID		发送报文的ID
+  * @param  Length	发送报文的长度
+  * @param  *Data	发送报文的数据的地址
+  * @retval 无
+  */
 void MyCAN_Transmit(uint32_t ID, uint8_t Length, uint8_t *Data)
 {
 	CanTxMsg TxMessage;
@@ -69,6 +81,11 @@ void MyCAN_Transmit(uint32_t ID, uint8_t Length, uint8_t *Data)
 	}
 }
 
+/**
+  * @brief  获取FIFO状态函数
+  * @param  无
+  * @retval 1 / 0
+  */
 uint8_t MyCAN_ReceiveFlag(void)
 {
 	if (CAN_MessagePending(CAN1, CAN_FIFO0) > 0)
@@ -78,6 +95,13 @@ uint8_t MyCAN_ReceiveFlag(void)
 	return 0;
 }
 
+/**
+  * @brief  CAN接收报文函数
+  * @param  ID		接收报文的ID
+  * @param  Length	接收报文的长度
+  * @param  *Data	接收报文的数据的地址
+  * @retval 无
+  */
 void MyCAN_Receive(uint32_t *ID, uint8_t *Length, uint8_t *Data)
 {
 	CanRxMsg RxMessage;

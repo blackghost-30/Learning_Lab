@@ -983,11 +983,396 @@ CAN外设一共有4个中断向量：
 
 # 3-1 单个设备环回测试&三个设备互相通信
 
+## 1.内容介绍
+
+- 本节内容一共有两个程序，分别为单个设备换回测试与三个设备互相通信；
+- 单个设备环回测试可以先检测设备的状态，避免后续由于设备状态而出现的问题；
+
+- 本课程的所有程序项目都基于`1.课程资料\STM32资料\程序源码\4-1 OLED显示屏`工程改进得到；
+
+
+
+## 2.项目移植与库函数了解
+
+### 2.1 项目移植
+
+- 首先打开`1.课程资料\STM32资料\程序源码`，将`4-1 OLED显示屏`文件夹复制下来；
+- 然后把该文件夹重命名为`01-CAN总线单个设备环回测试`；
+- 打开文件夹，打开Keil工程文件，在Keil中对工程进行进一步的改写；
+
+### 2.2 项目思路
+
+本工程项目的基本思路如下：
+
+- **对CAN外设进行初始化**
+  - 第一步：RCC时钟初始化，包括开启CAN引脚的GPIO时钟和CAN1时钟；
+  - 第二步：GPIO初始化，即将TX设置为复用推挽输出，RX设置为上拉输入；
+  - 第三步：整个CAN外设的初始化，用一个结构体即可完成初始化；
+  - 第四步：单独对过滤器进行初始化，也是通过结构体进行初始化；
+  - 第五步：若需要中断，则开启中断、配置NVIC并添加中断函数即可；
+- **完成发送报文流程**
+  - 把报文写入结构体，然后调用发送函数即可；
+- **完成接收报文流程**
+  - 调用接收函数，将数据存入接收结构体中，再去读结构体即可；
+
+### 2.3 CAN外设的库函数
+
+打开Keil工程，打开**Library目录**，找到**stm32f10x_can.h文件**，拉到最后，可以看到可调用的库函数，主要有：
+
+- **缺省配置函数**
+  - CAN_DeInit()：恢复缺省配置，CAN外设回到默认的状态；
+- **初始化和配置函数**
+  - **CAN_Init()**：初始化CAN外设；
+  - **CAN_FilterInit()**：初始化过滤器
+  - CAN_StructInit：为初始化CAN外设时传入的结构体赋一个初始值；
+  - CAN_SlaveStartBank()：用于配置CAN2的起始滤波器号，只有互联型设备才有；
+  - CAN_TTComModeCmd()：是能TTCM模式的TGT位；
+- **发送相关函数**
+  - **AN_Transmit()**：发送一个CAN报文；
+  - **CAN_TransmitStatus()**：获取发送邮箱的状态；
+  - CAN_CancelTransmit()：取消发送，了解即可，即将ABRQ置位1；
+- **接收相关函数**
+  - **CAN_Receive()**：读取接收FIFO的数据，自带释放邮箱的功能；
+  - CAN_FIFORelease()：释放FIFO，了解即可，即置RFOM为1；
+  - **CAN_MessagePending()**：获取指定FIFO队列里排队的报文数目；
+- **工作模式相关函数**
+  - CAN_OperatingModeRequest()：工作模式请求，参数可指定初始化、正常或睡眠；
+  - CAN_Sleep()：直接指定CAN进入睡眠模式；
+  - CAN_WakeUp()：直接指定CAN退出睡眠模式；
+- **错误管理相关函数**
+  - CAN_GetLastErrorCode()：获取最近一次的错误码；
+  - CAN_GetReceiveErrorCounter()：获取错误接收计数器，即REC的值；
+  - CAN_GetLSBTransmitErrorCounter()：获取发送错误计数器的低八位；
+- **中断和标志位相关函数**
+  - CAN_ITConfig()：中断输出使能；
+  - CAN_GetFlagStatus()：获取标志位状态；
+  - CAN_ClearFlag()：清除标志位；
+  - CAN_GetITStatus()：获取中断状态；
+  - CAN_ClearITPendingBit()：清除中断挂起位；
+
+<img src="2.images/3-1单个设备环回测试与三个设备互相通信/库函数.png" alt="库函数" style="zoom:67%;" />
+
+
+
+## 3.单个设备环回测试
+
+### 3.0 接线图
+
+- 本工程的接线图如下图所示：
+
+![接线图](2.images/3-1单个设备环回测试与三个设备互相通信/01-CAN总线单个设备环回测试.jpg)
+
+### 3.1 封装MyCAN.c文件
+
+- 右键Hardware组，添加文件，选择MyCAN.c文件，并将路径改为Hardware；
+
+- **封装初始化函数**
+
+  - **第一步：开启时钟**
+    - 需要打开GPIO的时钟和CAN外设的时钟；
+  - **第二步：初始化GPIO口**
+    - 将PA12即TX引脚初始化为复用推挽输出模式；
+    - 将PA11即RX引脚初始化为上拉输入模式；
+  - **第三步：初始化CAN外设**
+    - 一开始选择的是测试模式，不是选择工作模式；
+    - 在CAN_Init()函数内部，已经自动处理了工作模式，它会让CAN进入正常模式；
+    - 在配置位时序时，CAN_Init()函数内部会执行减1操作，所以不需要对参数减1；
+  - **第四步：初始化过滤器**
+    - 这里选择32位屏蔽模式，且配置成全通模式；
+
+  ```c
+  void MyCAN_Nint(void)
+  {
+  	/* 初始化第一步：开启时钟 */
+  	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+  	RCC_APB1PeriphClockCmd(RCC_APB1Periph_CAN1, ENABLE);
+  	
+  	/* 初始化第二步：初始化GPIO口 */
+  	GPIO_InitTypeDef GPIO_InitStructure;
+  	
+  	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+  	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
+  	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  	GPIO_Init(GPIOA, &GPIO_InitStructure);
+  	
+  	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+  	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
+  	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  	GPIO_Init(GPIOA, &GPIO_InitStructure);
+  	
+  	/* 初始化第三步：CAN外设的初始化 */
+  	CAN_InitTypeDef CAN_InitStrcuture;
+  	
+  	CAN_InitStrcuture.CAN_Mode = CAN_Mode_LoopBack;	// 选择测试模式，注意这里不是工作模式
+  	CAN_InitStrcuture.CAN_Prescaler = 48;
+  	CAN_InitStrcuture.CAN_BS1 = CAN_BS1_2tq;	// 函数内部自动减1，给参数时不需减1
+  	CAN_InitStrcuture.CAN_BS2 = CAN_BS2_3tq;	// 波特率 = 36M / 48 / (1 + 2 + 3) = 125K
+  	CAN_InitStrcuture.CAN_SJW = CAN_SJW_2tq;
+  	CAN_InitStrcuture.CAN_NART = DISABLE;		// 不自动重装配置位
+  	CAN_InitStrcuture.CAN_TXFP = DISABLE;		// 发送邮箱优先级，选择ID号
+  	CAN_InitStrcuture.CAN_RFLM = DISABLE;		// FIFO锁定
+  	CAN_InitStrcuture.CAN_AWUM = DISABLE;		// 自动唤醒
+  	CAN_InitStrcuture.CAN_TTCM = DISABLE;		// 时间触发通信
+  	CAN_InitStrcuture.CAN_ABOM = DISABLE;		// 离线自动恢复
+  	
+  	CAN_Init(CAN1, &CAN_InitStrcuture);
+  	
+  	/* 初始化第四步：配置过滤器 */
+  	CAN_FilterInitTypeDef CAN_FilterInitStrcuture;
+  	
+  	CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  	CAN_FilterInitStrcuture.CAN_FilterIdHigh = 0x0000;
+  	CAN_FilterInitStrcuture.CAN_FilterIdLow = 0x0000;
+  	CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = 0x0000;
+  	CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = 0x0000;					// 32位屏蔽模式的全通
+  	CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_32bit;		// 位宽
+  	CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdMask;			// 屏蔽模式
+  	CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  	CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  	
+  	CAN_FilterInit(&CAN_FilterInitStrcuture);
+  }
+  ```
+
+- **封装发送函数**
+
+  - 只需对CAN_Transmit()函数进行封装，并添加一些优化操作即可；
+
+  ```c
+  void MyCAN_Transmit(uint32_t ID, uint8_t Length, uint8_t *Data)
+  {
+  	CanTxMsg TxMessage;
+  	
+  	TxMessage.StdId = ID;					// 标准ID
+  	TxMessage.ExtId = ID;					// 扩展ID
+  	TxMessage.IDE = CAN_Id_Standard;		// 扩展标志位
+  	TxMessage.RTR = CAN_RTR_Data;			// 遥控标志位
+  	TxMessage.DLC = Length;					// 数据段长度
+  	for (uint8_t i = 0; i < Length; i ++)	// 数据段内容
+  	{
+  		TxMessage.Data[i] = Data[i];		// Data成员是8字节的数组
+  	}
+  	
+  	/* 等待报文发送完成 */
+  	uint8_t TransmitMailbox =  CAN_Transmit(CAN1, &TxMessage);
+  	
+  	uint32_t Timeout = 0;
+  	while (CAN_TransmitStatus(CAN1, TransmitMailbox) != CAN_TxStatus_Ok)
+  	{
+  		Timeout ++;
+  		if (Timeout > 100000)
+  		{
+  			break;
+  		}
+  	}
+  }
+  ```
+
+- **封装接收函数**
+
+  - 先判断标志位，查看FIFO是否有数据，若有再进行数据读取；
+
+  ```c
+  uint8_t MyCAN_ReceiveFlag(void)
+  {
+  	if (CAN_MessagePending(CAN1, CAN_FIFO0) > 0)
+  	{
+  		return 1;
+  	}
+  	return 0;
+  }
+  
+  void MyCAN_Receive(uint32_t *ID, uint8_t *Length, uint8_t *Data)
+  {
+  	CanRxMsg RxMessage;
+  	
+  	CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
+  	
+  	if (RxMessage.IDE == CAN_Id_Standard)
+  	{
+  		*ID = RxMessage.StdId;
+  	}
+  	else
+  	{
+  		*ID = RxMessage.ExtId;
+  	}
+  	
+  	if (RxMessage.RTR == CAN_RTR_Data)
+  	{
+  		*Length = RxMessage.DLC;
+  		for (uint8_t i = 0; i < *Length; i ++)
+  		{
+  			Data[i] = RxMessage.Data[i];
+  		}
+  	}
+  	else
+  	{
+  		//...
+  	}
+  }
+  ```
+
+### 3.2 封装MyCAN.h文件
+
+- 右键Hardware组，添加文件，选择MyCAN.h文件，并将路径改为Hardware；
+- 将MyCAN.c文件的函数，放到.h文件中声明；
+
+```c
+#ifndef __MYCAN_H_
+#define __MYCAN_H_
+
+void MyCAN_Nint(void);
+void MyCAN_Transmit(uint32_t ID, uint8_t Length, uint8_t *Data);
+uint8_t MyCAN_ReceiveFlag(void);
+void MyCAN_Receive(uint32_t *ID, uint8_t *Length, uint8_t *Data);
+
+#endif
+```
+
+### 3.3 开发main.c文件
+
+- 接着回到main.c文件中完成测试代码；
+
+```c
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "OLED.h"
+#include "MyCAN.h"
+#include "Key.h"
+
+uint8_t KeyNum;
+
+uint32_t RxID;
+uint8_t RxLength;
+uint8_t RxData[8];
+
+uint32_t TxID = 0x555;
+uint8_t TxLength = 4;
+uint8_t TxData[8] = {0x11, 0x22, 0x33, 0x44};
+
+int main(void)
+{
+	OLED_Init();
+	
+	Key_Init();
+	MyCAN_Init();
+	
+	OLED_ShowString(1, 1, "TxID:");
+	OLED_ShowHexNum(1, 6, TxID, 3);
+	OLED_ShowString(2, 1, "RxID:");
+	OLED_ShowString(3, 1, "Leng:");
+	OLED_ShowString(4, 1, "Data:");
+	
+	while (1)
+	{
+		KeyNum = Key_GetNum();
+		
+		if (KeyNum == 1)
+		{
+			TxData[0] ++;
+			TxData[1] ++;
+			TxData[2] ++;
+			TxData[3] ++;
+			
+			MyCAN_Transmit(TxID, TxLength, TxData);
+		}
+		
+		if (MyCAN_ReceiveFlag())
+		{
+			MyCAN_Receive(&RxID, &RxLength, RxData);
+			
+			OLED_ShowHexNum(2, 6, RxID, 3);
+			OLED_ShowHexNum(3, 6, RxLength, 1);
+			OLED_ShowHexNum(4, 6, RxData[0], 2);
+			OLED_ShowHexNum(4, 9, RxData[1], 2);
+			OLED_ShowHexNum(4, 12, RxData[2], 2);
+			OLED_ShowHexNum(4, 15, RxData[3], 2);
+		}
+	}
+}
+```
+
+
+
+## 4.三个设备互相通信
+
+### 4.0 接线图
+
+- 该项目工程的接线图如图所示：
+
+<img src="2.images/3-1单个设备环回测试与三个设备互相通信/02-CAN总线三个设备互相通信.jpg" alt="接线图" style="zoom: 80%;" />
+
+### 4.1 项目移植
+
+- 将上一个工程复制，并重命名为`02-CAN总线三个设备互相通信`；
+
+- 打开Keil工程文件，只需将原来的MyCAN.c文件中，初始化代码的CAN模式改为正常即可：
+
+```c
+//CAN_InitStrcuture.CAN_Mode = CAN_Mode_LoopBack;	// 选择测试模式，注意这里不是工作模式
+CAN_InitStrcuture.CAN_Mode = CAN_Mode_Normal;	// 选择测试模式，改为正常模式
+```
+
+- 按上面的接线图接好，每次只插一个STLink到电脑上，然后依次将代码烧录进STM32中；
+- 注意在烧录前需要修改一下代码中的TxID：
+
+```c
+uint32_t TxID = 0x555;
+```
+
+---
+
 
 
 # 3-2 标准格式-扩展格式-数据帧-遥控帧&标识符过滤器
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 # 3-3 中断式接收&数据传输策略
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
