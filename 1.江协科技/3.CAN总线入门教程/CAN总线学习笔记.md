@@ -1326,17 +1326,516 @@ uint32_t TxID = 0x555;
 
 # 3-2 标准格式-扩展格式-数据帧-遥控帧&标识符过滤器
 
+## 1.标准格式-扩展格式-数据帧-遥控帧
+
+### 1.1内容介绍
+
+- 在上一节中，只是演示了一种**标准格式的数据帧**，这一节将同时演示**标准格式-扩展格式-数据帧和遥控帧**这四种情况；
+- 本项目工程在`01-CAN总线单个设备环回测试`基础上修改；
+- 复制该文件夹，然后修改名字为`03-标准格式-扩展格式-数据帧-遥控帧`；
+
+### 1.2 项目改造
+
+- **修改MyCAN.c文件**
+
+  - 在前面的项目中，发送函数和接收函数的逻辑都是写死的，也就是IDE位和RTR位是写死的；
+  - 我们可以把这两个参数也提取成参数，但这样就变成了5个参数，太臃肿了，所以这样改为**直接用结构体传递参数；**
+  - 将两个函数修改如下：
+
+  ```c
+  void MyCAN_Transmit(CanTxMsg *TxMessage)
+  {
+  	/* 等待报文发送完成 */
+  	uint8_t TransmitMailbox =  CAN_Transmit(CAN1, TxMessage);
+  	
+  	uint32_t Timeout = 0;
+  	while (CAN_TransmitStatus(CAN1, TransmitMailbox) != CAN_TxStatus_Ok)
+  	{
+  		Timeout ++;
+  		if (Timeout > 100000)
+  		{
+  			break;
+  		}
+  	}
+  }
+  
+  void MyCAN_Receive(CanRxMsg *RxMessage)
+  {
+  	CAN_Receive(CAN1, CAN_FIFO0, RxMessage);
+  }
+  ```
+
+- **修改main.c文件**
+
+  - 在main.c文件中，通过按键控制发送不同的帧格式，并显示发送报文/接收报文结构体的信息；
+  - 完整代码如下：
+
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  #include "Delay.h"
+  #include "OLED.h"
+  #include "MyCAN.h"
+  #include "Key.h"
+  
+  uint8_t KeyNum;
+  
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[4] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x555, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x12345678, CAN_Id_Extended, CAN_RTR_Data,   4, {0xAA, 0xBB, 0xCC, 0xDD}},
+  	{0x666, 0x00000000, CAN_Id_Standard, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	{0x000, 0x0789ABCD, CAN_Id_Extended, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  };
+  
+  /* 报文数组索引 */
+  uint8_t pTxMsgArray = 0;
+  
+  CanRxMsg RxMsg;
+  
+  int main(void)
+  {
+  	OLED_Init();
+  	
+  	Key_Init();
+  	MyCAN_Init();
+  	
+  	OLED_ShowString(1, 1, " Rx :");
+  	OLED_ShowString(2, 1, "RxID:");
+  	OLED_ShowString(3, 1, "Leng:");
+  	OLED_ShowString(4, 1, "Data:");
+  	
+  	while (1)
+  	{
+  		KeyNum = Key_GetNum();
+  		
+  		if (KeyNum == 1)
+  		{
+  			MyCAN_Transmit(&TxMsgArray[pTxMsgArray]);
+  			
+  			pTxMsgArray ++;
+  			if (pTxMsgArray >= sizeof(TxMsgArray) / sizeof(CanTxMsg))	// 越界判断
+  			{
+  				pTxMsgArray = 0;
+  			}
+  		}
+  		
+  		if (MyCAN_ReceiveFlag())
+  		{
+  			MyCAN_Receive(&RxMsg);
+  			
+  			if (RxMsg.IDE == CAN_Id_Standard)			// 标准帧格式
+  			{
+  				OLED_ShowString(1, 6, "Std");
+  				
+  				OLED_ShowHexNum(2, 6, RxMsg.StdId, 8);
+  			}
+  			else if(RxMsg.IDE == CAN_Id_Extended)		// 扩展帧格式
+  			{
+  				OLED_ShowString(1, 6, "Ext");
+  				
+  				OLED_ShowHexNum(2, 6, RxMsg.ExtId, 8);
+  			}
+  			
+  			if (RxMsg.RTR == CAN_RTR_Data)				// 数据帧
+  			{
+  				OLED_ShowString(1, 10, " Data ");
+  				
+  				OLED_ShowHexNum(3, 6, RxMsg.DLC, 1);
+  				OLED_ShowHexNum(4, 6, RxMsg.Data[0], 2);
+  				OLED_ShowHexNum(4, 9, RxMsg.Data[1], 2);
+  				OLED_ShowHexNum(4, 12, RxMsg.Data[2], 2);
+  				OLED_ShowHexNum(4, 15, RxMsg.Data[3], 2);
+  			}
+  			else if (RxMsg.RTR == CAN_RTR_Remote)		// 遥控帧
+  			{
+  				OLED_ShowString(1, 10, "Remote");
+  				
+  				OLED_ShowHexNum(3, 6, RxMsg.DLC, 1);
+  				OLED_ShowHexNum(4, 6, 0x00, 2);
+  				OLED_ShowHexNum(4, 9, 0x00, 2);
+  				OLED_ShowHexNum(4, 12, 0x00, 2);
+  				OLED_ShowHexNum(4, 15, 0x00, 2);
+  			}
+  		}
+  	}
+  }
+  
+  ```
+
+### 1.3 烧录现象
+
+- 将上述项目编译，然后将其烧录到STM32中，可以对其先进性环回测试；
+- 测试完成后，将初始化函数的CAN_Mode_LoopBack改为CAN_Mode_Normal，将其烧录到STM32中即可完成不同帧格式的发送和接收；
+- 在给不同的STM32设备烧录时，可以有代码上的不同，如某一个STM32只发送不接收就可以把接收代码注释，只接收不发送则将发送代码注释；
 
 
 
+## 2.标识符过滤器
 
+### 2.1 16位列表
 
+- **要验证的情况**
 
+  - 本项目要验证如下情况的标识符过滤器，全部帧都是标准格式的数据帧；
+  - 本项目工程在`03-标准格式-扩展格式-数据帧-遥控帧`工程基础上修改，重命名为`04-标识符过滤器-16位列表；`
+  - 即将上一工程的ID号改为第一列的数值，然后配置标识符过滤器，让其只能接收0x234、0x345和0x567的报文；
 
+  ![16位列表](2.images/3-2标准格式-扩展格式-数据帧-遥控帧/16位列表模式.png)
 
+- **main.c文件修改**
 
+  - 将main.c文件中的发送结构体数组的ID号，改为上表出现的ID号，以模拟总线上存在的数据；
 
+  ```c
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x123, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x234, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x345, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x456, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x567, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x678, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  };
+  ```
 
+- **置标识符过滤器**
+
+  - 将MyCAN.c文件中初始化函数的标识符过滤器配置成上表所示状态；
+
+  ```c
+  /* 初始化第四步：配置过滤器 */
+  CAN_FilterInitTypeDef CAN_FilterInitStrcuture;
+  
+  CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = 0x234<<5;
+  CAN_FilterInitStrcuture.CAN_FilterIdLow = 0x345<<5;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = 0x567<<5;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = 0x000<<5;					// 16位列表模式，过滤三个ID
+  CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_16bit;		// 16位位宽
+  CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdList;			// 列表模式
+  CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  
+  CAN_FilterInit(&CAN_FilterInitStrcuture);
+  ```
+
+- **两种烧录测试方法**
+
+  - **方式1**
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，可以看到只能显示要求的报文ID；
+  - **方式2**
+    - 复制03-标准格式-扩展格式-数据帧-遥控帧工程，将CAN_Mode_LoopBack改为CAN_Mode_Silent，烧录到另外一个STM32中；
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，发送报文；
+    - 对比着看，发现另一个STM32能够接收所有的报文，因为03-标准格式-扩展格式-数据帧-遥控帧工程配置成了全通模式，它监控了总线所有帧；
+  - 这样就可以实现16位列表模式的验证了；
+
+- **配置多个过滤器的方法**
+
+  - 每个过滤器最多配置4个ID号，当ID号超过4个时，需要配置多个过滤器；
+  - 配置多个过滤器的方式就是复制如下的代码，然后修改过滤器的位号即可：
+
+  ```c
+  CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = 0x234<<5;
+  CAN_FilterInitStrcuture.CAN_FilterIdLow = 0x345<<5;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = 0x567<<5;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = 0x000<<5;					// 16位列表模式，过滤三个ID
+  CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_16bit;		// 16位位宽
+  CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdList;			// 列表模式
+  CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  
+  CAN_FilterInit(&CAN_FilterInitStrcuture);
+  ```
+
+- **16位列表过滤遥控帧的方法**
+
+  - 在16位列表模式下，寄存器的第5位是TRT位，需要将其设置为1才是指定为过滤遥控帧；
+  - 配置的方式就是通过或的方式让第5位为1，如下面代码所示：
+  - 若要验证正确性的话，就需要在main.c文件的发送结构体数组中将ID号为234的数据的格式改为遥控帧；
+
+  ```c
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = (0x234<<5)|(0x10);
+  ```
+
+### 2.2 16位屏蔽
+
+- **要验证的情况**
+  
+  - 本项目要验证的情况如下，即16位屏蔽模式；
+  - 每组选择前面两个ID号和后面两个ID号，项目在`04-标识符过滤器-16位列表`基础上修改，重命名为`05-标识符过滤器-16位屏蔽；`
+  
+  ![16位屏蔽](2.images/3-2标准格式-扩展格式-数据帧-遥控帧/16位屏蔽模式.png)
+  
+- **main.c文件修改**
+
+  - 将main.c文件中的发送结构体数组的ID号，改为上表出现的ID号，以模拟总线上存在的数据；
+
+  ```c
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x100, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x101, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x1FE, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x1FF, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	
+  	{0x200, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x201, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x2FE, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x2FF, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	
+  	{0x310, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x311, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x31E, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x31F, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	
+  	{0x320, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x321, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x32E, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x32F, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  };
+  ```
+
+- **置标识符过滤器**
+
+  - 将MyCAN.c文件中初始化函数的标识符过滤器配置成上表所示状态；
+  - 注意这里的掩码Mask和ID号是要成对的，即FilterIdHigh和FilterMaskIdHig要对应；
+
+  ```c
+  /* 初始化第四步：配置过滤器 */
+  CAN_FilterInitTypeDef CAN_FilterInitStrcuture;
+  
+  CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = 0x200<<5;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = (0x700<<5)|0x10|0x8;
+  
+  CAN_FilterInitStrcuture.CAN_FilterIdLow = 0x320<<5;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = (0x7F0<<5)|0x10|0x8;
+  
+  CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_16bit;		// 16位位宽
+  CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdMask;			// 屏蔽模式
+  CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  
+  CAN_FilterInit(&CAN_FilterInitStrcuture);
+  ```
+
+- **两种烧录测试方法**
+
+  - **方式1**
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，可以看到只能显示要求的报文ID；
+  - **方式2**
+    - 复制03-标准格式-扩展格式-数据帧-遥控帧工程，将CAN_Mode_LoopBack改为CAN_Mode_Silent，烧录到另外一个STM32中；
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，发送报文；
+    - 对比着看，发现另一个STM32能够接收所有的报文，因为03-标准格式-扩展格式-数据帧-遥控帧工程配置成了全通模式，它监控了总线所有帧；
+  - 这样就可以实现16位屏蔽模式的验证了；
+
+### 2.3 32位列表
+
+- **要验证的情况**
+
+  - 本项目要验证的情况如下，即32位列表模式；
+  - 项目在`04-标识符过滤器-16位列表`基础上修改，重命名为`06-标识符过滤器-32位列表；`
+
+  ![32位列表](2.images/3-2标准格式-扩展格式-数据帧-遥控帧/32位列表模式.png)
+
+- **main.c文件修改**
+
+  - 将main.c文件中的发送结构体数组的ID号，改为上表出现的ID号，以模拟总线上存在的数据；
+  - 在扩展格式下，StdId参数是没有意义的，所以给了0x000；
+
+  ```c
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x123, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x234, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x345, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x456, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	
+  	{0x000, 0x12345678, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x0789ABCD, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  };
+  ```
+
+- **置标识符过滤器**
+
+  - 将MyCAN.c文件中初始化函数的标识符过滤器配置成上表所示状态；
+  - 注意这里的高16位和低16位要对应，也就是FilterIdHigh和FilterIdLow是一组32位寄存器；
+  - 但是这里只能分开16位来填写，所以需要先定义一个uint32_t的类型，再将其划分为高16位和低16位写入；
+
+  ```c
+  /* 初始化第四步：配置过滤器 */
+  CAN_FilterInitTypeDef CAN_FilterInitStrcuture;
+  CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  
+  uint32_t ID1 = 0x123 << 21;
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = ID1>>16;
+  CAN_FilterInitStrcuture.CAN_FilterIdLow = ID1;
+  
+  uint32_t ID2 = ((uint32_t)0x12345678<<3)|0x4;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = ID2>>16;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = ID2;
+  
+  CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_32bit;		// 32位位宽
+  CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdList;			// 列表模式
+  CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  
+  CAN_FilterInit(&CAN_FilterInitStrcuture);
+  ```
+
+- **两种烧录测试方法**
+
+  - **方式1**
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，可以看到只能显示要求的报文ID；
+  - **方式2**
+    - 复制03-标准格式-扩展格式-数据帧-遥控帧工程，将CAN_Mode_LoopBack改为CAN_Mode_Silent，烧录到另外一个STM32中；
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，发送报文；
+    - 对比着看，发现另一个STM32能够接收所有的报文，因为03-标准格式-扩展格式-数据帧-遥控帧工程配置成了全通模式，它监控了总线所有帧；
+  - 这样就可以实现32位列表模式的验证了；
+
+### 2.4 32位屏蔽
+
+- **要验证的情况**
+
+  - 本项目要验证的情况如下，即32位列表模式；
+  - 项目在`06-标识符过滤器-32位列表`基础上修改，重命名为`07-标识符过滤器-32位屏蔽；`
+
+  ![32位屏蔽](2.images/3-2标准格式-扩展格式-数据帧-遥控帧/32位屏蔽模式.png)
+
+- **main.c文件修改**
+
+  - 将main.c文件中的发送结构体数组的ID号，改为上表出现的ID号，以模拟总线上存在的数据；
+
+  ```c
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x000, 0x12345600, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x12345601, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x123456FE, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x123456FF, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	
+  	{0x000, 0x0789AB00, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x0789AB01, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x0789ABFE, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x0789ABFF, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  };
+  ```
+
+- **置标识符过滤器**
+
+  - 将MyCAN.c文件中初始化函数的标识符过滤器配置成上表所示状态；
+  - 注意这里的高16位和低16位要对应，也就是FilterIdHigh和FilterIdLow是一组32位寄存器；
+  - 但是这里只能分开16位来填写，所以需要先定义一个uint32_t的类型，再将其划分为高16位和低16位写入；
+
+  ```c
+  /* 初始化第四步：配置过滤器 */
+  CAN_FilterInitTypeDef CAN_FilterInitStrcuture;
+  CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  
+  uint32_t ID = (0x12345600u<<3)|0x4;
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = ID>>16;
+  CAN_FilterInitStrcuture.CAN_FilterIdLow = ID;
+  
+  uint32_t Mask = (0x1FFFFF00u<<3)|0x4|0x2;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = Mask>>16;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = Mask;
+  
+  CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_32bit;		// 16位位宽
+  CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdMask;			// 列表模式
+  CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  
+  CAN_FilterInit(&CAN_FilterInitStrcuture);
+  ```
+
+- **两种烧录测试方法**
+
+  - **方式1**
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，可以看到只能显示要求的报文ID；
+  - **方式2**
+    - 复制03-标准格式-扩展格式-数据帧-遥控帧工程，将CAN_Mode_LoopBack改为CAN_Mode_Silent，烧录到另外一个STM32中；
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，发送报文；
+    - 对比着看，发现另一个STM32能够接收所有的报文，因为03-标准格式-扩展格式-数据帧-遥控帧工程配置成了全通模式，它监控了总线所有帧；
+  - 这样就可以实现32位列表模式的验证了；
+
+### 2.5 只要遥控帧
+
+- **要验证的情况**
+
+  - 本项目要验证的情况如下，即只要遥控帧的模式；
+  - 项目在`07-标识符过滤器-32位屏蔽`基础上修改，重命名为`08-标识符过滤器-只要遥控帧；`
+
+  ![只要遥控帧模式](2.images/3-2标准格式-扩展格式-数据帧-遥控帧/只要遥控帧模式.png)
+
+- **main.c文件修改**
+
+  - 将main.c文件中的发送结构体数组的ID号，改为上表出现的ID号，以模拟总线上存在的数据；
+
+  ```c
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x123, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x234, 0x00000000, CAN_Id_Standard, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	{0x345, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x456, 0x00000000, CAN_Id_Standard, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	
+  	{0x000, 0x12345600, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x12345601, CAN_Id_Extended, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	{0x000, 0x123456FE, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x123456FF, CAN_Id_Extended, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	
+  	{0x000, 0x0789AB00, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x0789AB01, CAN_Id_Extended, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	{0x000, 0x0789ABFE, CAN_Id_Extended, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x0789ABFF, CAN_Id_Extended, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  };
+  ```
+
+- **置标识符过滤器**
+
+  - 将MyCAN.c文件中初始化函数的标识符过滤器配置成上表所示状态；
+  - 注意这里的高16位和低16位要对应，也就是FilterIdHigh和FilterIdLow是一组32位寄存器；
+  - 但是这里只能分开16位来填写，所以需要先定义一个uint32_t的类型，再将其划分为高16位和低16位写入；
+
+  ```c
+  /* 初始化第四步：配置过滤器 */
+  CAN_FilterInitTypeDef CAN_FilterInitStrcuture;
+  CAN_FilterInitStrcuture.CAN_FilterNumber = 0;							// 初始化的过滤器
+  
+  uint32_t ID = 0x2;
+  CAN_FilterInitStrcuture.CAN_FilterIdHigh = ID>>16;
+  CAN_FilterInitStrcuture.CAN_FilterIdLow = ID;
+  
+  uint32_t Mask = 0x2;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdHigh = Mask>>16;
+  CAN_FilterInitStrcuture.CAN_FilterMaskIdLow = Mask;
+  
+  CAN_FilterInitStrcuture.CAN_FilterScale = CAN_FilterScale_32bit;		// 16位位宽
+  CAN_FilterInitStrcuture.CAN_FilterMode = CAN_FilterMode_IdMask;			// 列表模式
+  CAN_FilterInitStrcuture.CAN_FilterFIFOAssignment = CAN_Filter_FIFO0;	// 关联，数据进入FIFO0
+  CAN_FilterInitStrcuture.CAN_FilterActivation = ENABLE;					// 激活，打开过滤器
+  
+  CAN_FilterInit(&CAN_FilterInitStrcuture);
+  ```
+
+- **两种烧录测试方法**
+
+  - **方式1**
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，可以看到只能显示要求的报文ID；
+  - **方式2**
+    - 复制03-标准格式-扩展格式-数据帧-遥控帧工程，将CAN_Mode_LoopBack改为CAN_Mode_Silent，烧录到另外一个STM32中；
+    - 将该工程直接烧录到一个STM32中，现在是环回测试状态，不断按下按键，发送报文；
+    - 对比着看，发现另一个STM32能够接收所有的报文，因为03-标准格式-扩展格式-数据帧-遥控帧工程配置成了全通模式，它监控了总线所有帧；
+  - 这样就可以实现32位列表模式的验证了；
+
+---
 
 
 
