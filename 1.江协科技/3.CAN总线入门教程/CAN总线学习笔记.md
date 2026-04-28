@@ -1841,37 +1841,539 @@ uint32_t TxID = 0x555;
 
 # 3-3 中断式接收&数据传输策略
 
+## 1.中断式接收
+
+### 1.1 内容介绍
+
+- 在前面的所有程序中，接收都是用的轮询的方式接收，即CPU不断的查看FIFO是否有数据；
+- 本节在原来的基础上，更改为**中断式接收**，即配置FIFO中断，中断产生后CPU才去读取FIFO数据；
+- 一般而言，**在接收一帧数据帧时中断方式体现不出来中断的优势，如果发送的数据超过8字节，中断接收就可以体现优势了；**
+- 这里的思想，和STM32教程中的串口收发一字节数据和串口收发数据包的一样的；
+- 本工程项目在`03-标准格式-扩展格式-数据帧-遥控帧`的基础上修改，复制该文件夹并重命名为`09-中断式接收`；
+
+### 1.2 项目改造
+
+- **修改初始化函数**
+
+  - 要使用中断式接收，需要在初始化函数中添加中断初始化的内容；
+  - 中断初始化最好放在GPIO初始化后，因为CAN初始化后，CAN外设就直接工作了，可能会出错；
+  - CAN外设中断的初始化步骤如下：
+    - 第一步：用ITConfig()函数打开外设的中断信号输出；
+    - 第二步：配置NVIC，接收中断信号进入NVIC；
+    - 第三步：在程序中写中断函数，处理中断逻辑；
+  - 中断的配置需要参考如下图的中断向量表：
+    - CAN_ITConfig()函数配置的就是中间一列的IE寄存器，这里选择的是FIFO0；
+    - NVIC_InitStrcuture.NVIC_IRQChannel参数配置的是右边的4个箭头，所以需要选择USB_LP_CAN1_RX0_IRQn；
+
+  <img src="2.images/3-3中断式接收与数据传输策略/4个中断向量表.png" alt="中断向量表" style="zoom:80%;" />
+
+  ```c
+  /* 添加中断初始化 */
+  CAN_ITConfig(CAN1, CAN_IT_FMP0, ENABLE);
+  
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+  
+  NVIC_InitTypeDef NVIC_InitStrcuture;
+  NVIC_InitStrcuture.NVIC_IRQChannel = USB_LP_CAN1_RX0_IRQn;
+  NVIC_InitStrcuture.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_InitStrcuture.NVIC_IRQChannelPreemptionPriority = 1;
+  NVIC_InitStrcuture.NVIC_IRQChannelSubPriority = 1;
+  NVIC_Init(&NVIC_InitStrcuture);
+  ```
+
+- **写中断函数**
+
+  - 在MyCAN.c文件中添加中断处理函数；
+  - 中断函数中不能直接调用CAN_ClearITPendingBit()清除中断挂起位，CAN_Receive内部会处理；
+
+  ```c
+  CanRxMsg MyCAN_RxMsg;
+  uint8_t MyCAN_RxFlag;
+  
+  /**
+    * @brief  FIFO0中断函数
+    * @param  无
+    * @retval 无
+    */
+  void USB_LP_CAN1_RX0_IRQHandler(void)
+  {
+  	if (CAN_GetFlagStatus(CAN1, CAN_IT_FMP0) == SET)
+  	{
+  		CAN_Receive(CAN1, CAN_FIFO0, &MyCAN_RxMsg);
+  		MyCAN_RxFlag = 1;
+  	}
+  }
+  ```
+
+- **改造MyCAN.h文件**
+
+  - 改造后的文件如下：
+    - 声明两个变量为外部可调用变量；
+    - 在MyCAN.c文件中，将与接收有关的函数删掉，并将.h文件的声明删掉；
+
+  ```c
+  #ifndef __MYCAN_H_
+  #define __MYCAN_H_
+  
+  extern CanRxMsg MyCAN_RxMsg;
+  extern uint8_t MyCAN_RxFlag;
+  
+  void MyCAN_Init(void);
+  void MyCAN_Transmit(CanTxMsg *TxMessage);
+  
+  #endif
+  
+  ```
+
+- **改造main.c文件**
+
+  - 删除接收变量、删除接收函数；
+  - 将所有的接收变量更改为MyCAN_RxMsg；
+
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  #include "Delay.h"
+  #include "OLED.h"
+  #include "MyCAN.h"
+  #include "Key.h"
+  
+  uint8_t KeyNum;
+  
+  /* 要发送的报文数组 */
+  CanTxMsg TxMsgArray[4] = {
+  /*  StdId      ExtId         IDE             RTR        DLC         Data[8]         */
+  	{0x555, 0x00000000, CAN_Id_Standard, CAN_RTR_Data,   4, {0x11, 0x22, 0x33, 0x44}},
+  	{0x000, 0x12345678, CAN_Id_Extended, CAN_RTR_Data,   4, {0xAA, 0xBB, 0xCC, 0xDD}},
+  	{0x666, 0x00000000, CAN_Id_Standard, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  	{0x000, 0x0789ABCD, CAN_Id_Extended, CAN_RTR_Remote, 0, {0x00, 0x00, 0x00, 0x00}},
+  };
+  
+  /* 报文数组索引 */
+  uint8_t pTxMsgArray = 0;
+  
+  int main(void)
+  {
+  	OLED_Init();
+  	
+  	Key_Init();
+  	MyCAN_Init();
+  	
+  	OLED_ShowString(1, 1, " Rx :");
+  	OLED_ShowString(2, 1, "RxID:");
+  	OLED_ShowString(3, 1, "Leng:");
+  	OLED_ShowString(4, 1, "Data:");
+  	
+  	while (1)
+  	{
+  		KeyNum = Key_GetNum();
+  		
+  		if (KeyNum == 1)
+  		{
+  			MyCAN_Transmit(&TxMsgArray[pTxMsgArray]);
+  			
+  			pTxMsgArray ++;
+  			if (pTxMsgArray >= sizeof(TxMsgArray) / sizeof(CanTxMsg))	// 越界判断
+  			{
+  				pTxMsgArray = 0;
+  			}
+  		}
+  		
+  		if (MyCAN_RxFlag == 1)
+  		{
+  			MyCAN_RxFlag = 0;
+  			
+  			if (MyCAN_RxMsg.IDE == CAN_Id_Standard)			// 标准帧格式
+  			{
+  				OLED_ShowString(1, 6, "Std");
+  				
+  				OLED_ShowHexNum(2, 6, MyCAN_RxMsg.StdId, 8);	// 8位实现显示对齐
+  			}
+  			else if(MyCAN_RxMsg.IDE == CAN_Id_Extended)		// 扩展帧格式
+  			{
+  				OLED_ShowString(1, 6, "Ext");
+  				
+  				OLED_ShowHexNum(2, 6, MyCAN_RxMsg.ExtId, 8);	// 8位实现显示对齐
+  			}
+  			
+  			if (MyCAN_RxMsg.RTR == CAN_RTR_Data)				// 数据帧
+  			{
+  				OLED_ShowString(1, 10, " Data ");
+  				
+  				OLED_ShowHexNum(3, 6, MyCAN_RxMsg.DLC, 1);
+  				OLED_ShowHexNum(4, 6, MyCAN_RxMsg.Data[0], 2);
+  				OLED_ShowHexNum(4, 9, MyCAN_RxMsg.Data[1], 2);
+  				OLED_ShowHexNum(4, 12, MyCAN_RxMsg.Data[2], 2);
+  				OLED_ShowHexNum(4, 15, MyCAN_RxMsg.Data[3], 2);
+  			}
+  			else if (MyCAN_RxMsg.RTR == CAN_RTR_Remote)		// 遥控帧
+  			{
+  				OLED_ShowString(1, 10, "Remote");
+  				
+  				OLED_ShowHexNum(3, 6, MyCAN_RxMsg.DLC, 1);
+  				OLED_ShowHexNum(4, 6, 0x00, 2);
+  				OLED_ShowHexNum(4, 9, 0x00, 2);
+  				OLED_ShowHexNum(4, 12, 0x00, 2);
+  				OLED_ShowHexNum(4, 15, 0x00, 2);
+  			}
+  		}
+  	}
+  }
+  
+  ```
+
+- **编译烧录**
+  - 在完成上面的程序改造后，直接编译并烧录，它的程序现象与`03-标准格式-扩展格式-数据帧-遥控帧`相同；
 
 
 
+## 2.数据传输策略
 
+### 2.1 内容介绍
 
+- 本工程项目主要演示数据传输的3种策略；
+- 本工程项目分为两个部分，一个是`10-数据传输策略-发送部分`，一个是`10-数据传输策略-接收部分`；
 
+### 2.2 数据传输的3种策略
 
+- **定时传输**
+  - 由发送方主导，每隔一段时间自动的广播一批数据；
+  - 这种数据传输的频率是固定的，适合广播周期性的数据；
+- **触发传输**
+  - 由发送方主导，发送方平时不会主动广播数据，只有在发送方内部达成了某种条件才广播数据；
+  - 这种数据传输的频率是不固定的；
+  - 该种方法主要适合报警信息或通知的发送；
+- **请求传输**
+  - 由接收方主导，接收方先广播一个遥控帧进行请求，如果发送方有对应ID的数据再广播数据帧；
+  - 整个过去需要一去一回两个过程；
+  - 请求式传输的一去一回不是硬件规定的，它的底层本质也是数据的发送和接收，是通过软件层面完成的；
+  - 且用数据帧也能完成遥控帧的功能，还能附加一些请求参数，所以一般情况下遥控帧很少用；
 
+### 2.2 发送部分
 
+- **项目移植**
+  - 本工程是在`03-标准格式-扩展格式-数据帧-遥控帧`工程基础上修改的；
+  - 复制该文件夹，并重命名为`10-数据传输策略-发送部分`；
+  
+- **修改CAN模式**
 
+  - 将先前的Loopback模式改为Normal模式：
 
+  ```c
+  /* 初始化第三步：CAN外设的初始化 */
+  CAN_InitTypeDef CAN_InitStrcuture;
+  
+  CAN_InitStrcuture.CAN_Mode = CAN_Mode_Normal;	// 选择测试模式，给正常
+  CAN_InitStrcuture.CAN_Prescaler = 48;
+  CAN_InitStrcuture.CAN_BS1 = CAN_BS1_2tq;	// 函数内部自动减1，给参数时不需减1
+  CAN_InitStrcuture.CAN_BS2 = CAN_BS2_3tq;	// 波特率 = 36M / 48 / (1 + 2 + 3) = 125K
+  CAN_InitStrcuture.CAN_SJW = CAN_SJW_2tq;
+  CAN_InitStrcuture.CAN_NART = DISABLE;		// 不自动重装配置位
+  CAN_InitStrcuture.CAN_TXFP = DISABLE;		// 发送邮箱优先级，选择ID号
+  CAN_InitStrcuture.CAN_RFLM = DISABLE;		// FIFO锁定
+  CAN_InitStrcuture.CAN_AWUM = DISABLE;		// 自动唤醒
+  CAN_InitStrcuture.CAN_TTCM = DISABLE;		// 时间触发通信
+  CAN_InitStrcuture.CAN_ABOM = DISABLE;		// 离线自动恢复
+  ```
 
+- **定时器模块添加**
 
+  - 在定时发送模式下，需要用到定时器中断；
+  - 在`1.课程资料\STM32资料\程序源码\6-1 定时器定时中断\System`下，有Timer.c和Timer.h文件；
+  - 将它们复制到新工程的System文件夹下，再在Keil种添加进System组即可；
 
+- **修改main.c主程序**
 
+  - 完整的main.c程序如下所示：
 
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  #include "Delay.h"
+  #include "OLED.h"
+  #include "MyCAN.h"
+  #include "Key.h"
+  #include "Timer.h"
+  
+  uint8_t KeyNum;
+  
+  /* 标志位 */
+  uint8_t TimingFlag;
+  uint8_t TriggerFlag;
+  uint8_t RequestFlag;
+  
+  /* 接收报文 */
+  CanRxMsg RxMsg;
+  
+  /* 定时发送的报文 */
+  CanTxMsg TxMsg_Timing = {
+  	.StdId = 0x100,
+  	.ExtId = 0x00000000,
+  	.IDE = CAN_Id_Standard,
+  	.RTR = CAN_RTR_Data,
+  	.DLC = 4,
+  	.Data = {0x11, 0x22, 0x33, 0x44}
+  };
+  
+  /* 触发发送的报文 */
+  CanTxMsg TxMsg_Trigger = {
+  	.StdId = 0x200,
+  	.ExtId = 0x00000000,
+  	.IDE = CAN_Id_Standard,
+  	.RTR = CAN_RTR_Data,
+  	.DLC = 4,
+  	.Data = {0x11, 0x22, 0x33, 0x44}
+  };
+  
+  /* 请求发送的报文 */
+  CanTxMsg TxMsg_Request = {
+  	.StdId = 0x300,
+  	.ExtId = 0x00000000,
+  	.IDE = CAN_Id_Standard,
+  	.RTR = CAN_RTR_Data,
+  	.DLC = 4,
+  	.Data = {0x11, 0x22, 0x33, 0x44}
+  };
+  
+  int main(void)
+  {
+  	OLED_Init();
+  	
+  	Key_Init();
+  	MyCAN_Init();
+  	Timer_Init();
+  	
+  	OLED_ShowString(1, 1, " Tx ");
+  	OLED_ShowString(2, 1, "TIM:");
+  	OLED_ShowString(3, 1, "Tri:");
+  	OLED_ShowString(4, 1, "Req:");
+  	
+  	while (1)
+  	{
+  		/* 定时发送 */
+  		if (TimingFlag == 1)
+  		{
+  			TimingFlag = 0;
+  			
+  			TxMsg_Timing.Data[0]++;
+  			TxMsg_Timing.Data[1]++;
+  			TxMsg_Timing.Data[2]++;
+  			TxMsg_Timing.Data[3]++;
+  			
+  			MyCAN_Transmit(&TxMsg_Timing);
+  			
+  			OLED_ShowHexNum(2, 5, TxMsg_Timing.Data[0], 2);
+  			OLED_ShowHexNum(2, 8, TxMsg_Timing.Data[1], 2);
+  			OLED_ShowHexNum(2, 11, TxMsg_Timing.Data[2], 2);
+  			OLED_ShowHexNum(2, 14, TxMsg_Timing.Data[3], 2);	
+  		}
+  		
+  		/* 触发发送 */
+  		KeyNum = Key_GetNum();
+  		if (KeyNum == 1)
+  		{
+  			TriggerFlag = 1;
+  		}
+  		
+  		if (TriggerFlag == 1)
+  		{
+  			TriggerFlag = 0;
+  			
+  			TxMsg_Trigger.Data[0]++;
+  			TxMsg_Trigger.Data[1]++;
+  			TxMsg_Trigger.Data[2]++;
+  			TxMsg_Trigger.Data[3]++;
+  			
+  			MyCAN_Transmit(&TxMsg_Trigger);
+  			
+  			OLED_ShowHexNum(3, 5, TxMsg_Trigger.Data[0], 2);
+  			OLED_ShowHexNum(3, 8, TxMsg_Trigger.Data[1], 2);
+  			OLED_ShowHexNum(3, 11, TxMsg_Trigger.Data[2], 2);
+  			OLED_ShowHexNum(3, 14, TxMsg_Trigger.Data[3], 2);	
+  		}
+  		
+  		/* 请求发送 */
+  		if (MyCAN_ReceiveFlag())
+  		{
+  			MyCAN_Receive(&RxMsg);
+  			
+  			if (RxMsg.IDE == CAN_Id_Standard &&
+  				RxMsg.RTR == CAN_RTR_Remote &&
+  				RxMsg.StdId == 0x300)
+  			{
+  				RequestFlag = 1;
+  			}
+  			
+  			if (RxMsg.IDE == CAN_Id_Standard &&
+  				RxMsg.RTR == CAN_RTR_Data &&
+  				RxMsg.StdId == 0x3FF)
+  			{
+  				RequestFlag = 1;
+  			}
+  		}
+  		
+  		if (RequestFlag == 1)
+  		{
+  			RequestFlag = 0;
+  			
+  			TxMsg_Request.Data[0]++;
+  			TxMsg_Request.Data[1]++;
+  			TxMsg_Request.Data[2]++;
+  			TxMsg_Request.Data[3]++;
+  			
+  			MyCAN_Transmit(&TxMsg_Trigger);
+  			
+  			OLED_ShowHexNum(4, 5, TxMsg_Request.Data[0], 2);
+  			OLED_ShowHexNum(4, 8, TxMsg_Request.Data[1], 2);
+  			OLED_ShowHexNum(4, 11, TxMsg_Request.Data[2], 2);
+  			OLED_ShowHexNum(4, 14, TxMsg_Request.Data[3], 2);	
+  		}		
+  	}
+  }
+  
+  /* 中断函数逻辑 */
+  void TIM2_IRQHandler(void)
+  {
+  	if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+  	{
+  		TimingFlag = 1;	
+  		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+  	}
+  }
+  
+  ```
 
+### 2.3 接收部分
 
+- **项目移植**
+  
+  - 本工程是在`03-标准格式-扩展格式-数据帧-遥控帧`工程基础上修改的；
+  - 复制该文件夹，并重命名为`10-数据传输策略-接收部分`；
+  
+- **修改CAN模式**
 
+  - 将先前的Loopback模式改为Normal模式：
 
+  ```c
+  /* 初始化第三步：CAN外设的初始化 */
+  CAN_InitTypeDef CAN_InitStrcuture;
+  
+  CAN_InitStrcuture.CAN_Mode = CAN_Mode_Normal;	// 选择测试模式，给正常
+  CAN_InitStrcuture.CAN_Prescaler = 48;
+  CAN_InitStrcuture.CAN_BS1 = CAN_BS1_2tq;	// 函数内部自动减1，给参数时不需减1
+  CAN_InitStrcuture.CAN_BS2 = CAN_BS2_3tq;	// 波特率 = 36M / 48 / (1 + 2 + 3) = 125K
+  CAN_InitStrcuture.CAN_SJW = CAN_SJW_2tq;
+  CAN_InitStrcuture.CAN_NART = DISABLE;		// 不自动重装配置位
+  CAN_InitStrcuture.CAN_TXFP = DISABLE;		// 发送邮箱优先级，选择ID号
+  CAN_InitStrcuture.CAN_RFLM = DISABLE;		// FIFO锁定
+  CAN_InitStrcuture.CAN_AWUM = DISABLE;		// 自动唤醒
+  CAN_InitStrcuture.CAN_TTCM = DISABLE;		// 时间触发通信
+  CAN_InitStrcuture.CAN_ABOM = DISABLE;		// 离线自动恢复
+  ```
 
+- **修改main.c主程序**
 
+  - 完整的main.c程序如下所示：
 
+  ```c
+  #include "stm32f10x.h"                  // Device header
+  #include "Delay.h"
+  #include "OLED.h"
+  #include "MyCAN.h"
+  #include "Key.h"
+  
+  uint8_t KeyNum;
+  
+  /* 0x300ID的遥控帧 */
+  CanTxMsg TxMsg_Request_Remote = {
+  	.StdId = 0x300,
+  	.ExtId = 0x00000000,
+  	.IDE = CAN_Id_Standard,
+  	.RTR = CAN_RTR_Remote,
+  	.DLC = 0,
+  	.Data = {0x00}
+  };
+  
+  /* 0x3FF的数据帧 */
+  CanTxMsg TxMsg_Request_Data = {
+  	.StdId = 0x3FF,
+  	.ExtId = 0x00000000,
+  	.IDE = CAN_Id_Standard,
+  	.RTR = CAN_RTR_Data,
+  	.DLC = 0,
+  	.Data = {0x00}
+  };
+  
+  CanRxMsg RxMsg;
+  
+  int main(void)
+  {
+  	OLED_Init();
+  	
+  	Key_Init();
+  	MyCAN_Init();
+  	
+  	OLED_ShowString(1, 1, " Rx ");
+  	OLED_ShowString(2, 1, "Tim:");
+  	OLED_ShowString(3, 1, "Tri:");
+  	OLED_ShowString(4, 1, "Req:");
+  	
+  	while (1)
+  	{
+  		/* 请求部分 */
+  		KeyNum = Key_GetNum();
+  		if (KeyNum == 1)
+  		{
+  			MyCAN_Transmit(&TxMsg_Request_Remote);
+  		}
+  		if (KeyNum == 2)
+  		{
+  			MyCAN_Transmit(&TxMsg_Request_Data);
+  		}
+  		
+  		/* 接收部分 */
+  		if (MyCAN_ReceiveFlag())
+  		{
+  			MyCAN_Receive(&RxMsg);
+  			
+  			if (RxMsg.RTR == CAN_RTR_Data)
+  			{
+  				/* 定时数据帧 */
+  				if (RxMsg.StdId == 0x100 && RxMsg.IDE == CAN_Id_Standard)
+  				{
+  					OLED_ShowHexNum(2, 5, RxMsg.Data[0], 2);
+  					OLED_ShowHexNum(2, 8, RxMsg.Data[1], 2);
+  					OLED_ShowHexNum(2, 11, RxMsg.Data[2], 2);
+  					OLED_ShowHexNum(2, 14, RxMsg.Data[3], 2);
+  				}
+  				
+  				/* 触发数据帧 */
+  				if (RxMsg.StdId == 0x200 && RxMsg.IDE == CAN_Id_Standard)
+  				{
+  					OLED_ShowHexNum(3, 5, RxMsg.Data[0], 2);
+  					OLED_ShowHexNum(3, 8, RxMsg.Data[1], 2);
+  					OLED_ShowHexNum(3, 11, RxMsg.Data[2], 2);
+  					OLED_ShowHexNum(3, 14, RxMsg.Data[3], 2);
+  				}	
+  
+  				/* 请求数据帧 */
+  				if (RxMsg.StdId == 0x300 && RxMsg.IDE == CAN_Id_Standard)
+  				{
+  					OLED_ShowHexNum(4, 5, RxMsg.Data[0], 2);
+  					OLED_ShowHexNum(4, 8, RxMsg.Data[1], 2);
+  					OLED_ShowHexNum(4, 11, RxMsg.Data[2], 2);
+  					OLED_ShowHexNum(4, 14, RxMsg.Data[3], 2);
+  				}				
+  			}
+  		}
+  	}
+  }
+  
+  ```
 
+### 2.4 烧录编译
 
-
-
-
-
-
-
-
+- 两个项目需要分别烧录到两个不同的STM32中；
+- 定时发送不需要操作，上电后会自动定时发送数据；
+- 触发发送通过按下第一个STM32的按键来实现触发发送；
+- 请求模式需要按下第二个STM32的按键来实现请求发送；
 
 
