@@ -3540,7 +3540,7 @@ int LCD_PrintString(int x, int y, char *str)
 | 任务通知     | ALL        | 只有我     | 数据、状态都可以传输， 使用任务通知时， 必须指定接受者       | N对1的关系： 发送者无限制， 接收者只能是这个任务             |
 | 互斥量       | 只能A开锁  | A上锁      | 位：0、1 我上锁：1变为0， 只能由我开锁：0变为1               | 就像一个空厕所， 谁使用谁上锁， 也只能由他开锁               |
 
-### 2.3 方法的介绍
+### 2.2 方法的介绍
 
 - **队列**
   - 里面可以放任意数据，可以放多个数据；
@@ -3574,8 +3574,8 @@ int LCD_PrintString(int x, int y, char *str)
 
 NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续的软件部分都是基于这个项目的，官方链接为：
 
-* GITHUB：https://github.com/ZakKemble/NWatch  
-* 作者博客：https://blog.zakkemble.net/diy-digital-wristwatch/
+* GITHUB：https://github.com/ZakKemble/NWatch ；
+* 作者博客：https://blog.zakkemble.net/diy-digital-wristwatch/；
 
 
 
@@ -3596,7 +3596,7 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 ## 3.课程后续
 
-- 本课程不是要去移植完整的NWatch项目，而只是移植其中的赛车游戏和打砖块游戏；
+- 本课程不是要去移植完整的NWatch项目，而只是移植其中的**赛车游戏和打砖块游戏；****
 - 后续的程序在**02_nwatch_game_freertos**的基础上修改；
 - **后续要学习的就是基于这个项目，不断地将前面提到的FreeRTOS提供的同步互斥和通信的API加入到项目中；**
 
@@ -3608,35 +3608,47 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 - 在项目中的game1.c和game2.c文件中，有如下几个模块的数组：
 
-  - 只要把这些数组通过I2C送到OLED的显存中，就可以把它们的图形绘制出来了；
+  - 只要把这些数组通过I2C送到**OLED的显存**中，就可以把它们的图形绘制出来了；
   - 至于在实际运行中，这些图形如何变化，需要通过游戏的逻辑来实现；
 
   ```c
+  /* 方块数组 */
   static const byte block[] ={
   	0x07,0x07,0x07,
   };
   
+  /* 平台数组 */
   static const byte platform[] ={
   	0x60,0x70,0x50,0x10,0x30,0xF0,0xF0,0x30,0x10,0x50,0x70,0x60,
   };
   
+  /* 球数组 */
   static const byte ballImg[] ={
   	0x03,0x03,
   };
   
+  /* 清除画面 */
   static const byte clearImg[] ={
   	0,0,0,0,0,0,0,0,0,0,0,0,
   }
   
+  /* 小车数组 */
   static const byte carImg[] PROGMEM ={
   	0x40,0xF8,0xEC,0x2C,0x2C,0x38,0xF0,0x10,0xD0,0x30,0xE8,0x4C,0x4C,0x9C,0xF0,
   	0x02,0x1F,0x37,0x34,0x34,0x1C,0x0F,0x08,0x0B,0x0C,0x17,0x32,0x32,0x39,0x0F,
   };
   
+  /* 路数组 */
   static const byte roadMarking[] PROGMEM ={
   	0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,
   };
   ```
+
+- 如下图所示就是实际的画面呈现的原理：
+
+![画面呈现](3.images/7游戏项目说明/OLED图形呈现.png)
+
+---
 
 
 
@@ -3651,7 +3663,7 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 ## 2.数据传输的主要方法
 
-- FreeRTOS系统中，数据传输的方法有如下几种：全局变量、环形缓冲区、队列；
+- FreeRTOS系统中，数据传输的方法有如下几种：**全局变量、环形缓冲区、队列；**
 - **前面提到的信号量、互斥量、任务通知、事件组等，都只能传输标志位状态而已；**
 
 |            | 数据个数 | 互斥措施 | 阻塞-唤醒 | 使用场景 |
@@ -3729,6 +3741,7 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 - 队列中，**数据的读写本质就是环形缓冲区**，在这个基础上**增加了互斥措施、阻塞-唤醒机制；**
 - 队列的三要素就是上一节提到的有问题的环形Buffer设计的**三个要素：w、r、num；**
+- 正是由于队列中比环形Buffer多了一个num变量，所以它在设计上需要采取保护措施；
 - 环形Buffer是**单生产者、单消费者的**，且在设计上就已经杜绝了变量的冲突访问，所以不需要设计互斥措施；
 - 队列是**多生产者、多消费者的**，它必须考虑互斥措施解决正确性的问题以及阻塞-唤醒机制解决效率的问题；
 
@@ -3740,7 +3753,7 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
 
 ### 1.3 梳理总结
 
-- 队列的本质是加了互斥措施和阻塞-唤醒机制的环形Buffer；
+- 队列的本质是加了**互斥措施和阻塞-唤醒机制**的环形Buffer；
 - 信号量和互斥量的本质是队列，即其本质也是环形Buffer；
 
 
@@ -3993,10 +4006,10 @@ UBaseType_t uxQueueSpacesAvailable( const QueueHandle_t xQueue );
 
 在上面的流程中，两个任务的状态的变化如下：
 
-- 对于Task_B，一创建将处于Ready状态，所以它会存在于ReadyList链表中；
-- 当它开始接收数据但一直没有数据，它将进入阻塞态，Queue.rece_List和DelayedList链表将指向Task_B；
-- 若任务A开始传输数据，它将写入队列，同时从Queue.rece_List链表中取出第一个任务进行唤醒，这样Task_B又进入就绪态ReadyList链表，并运行；
-- 若Task_A一直都没有写入队列，直至Tick中断达到设定的超时时间，Tick中断将从两个链表中将Task_B任务移到ReadyList链表中，实现唤醒；
+- 对于Task_B，一创建将处于**Ready状态**，所以它会存在于**ReadyList链表**中；
+- 当它开始接收数据但一直没有数据，它将进入**阻塞态**，**Queue.rece_List和DelayedList链表**将指向Task_B；
+- **任务唤醒**：若任务A开始传输数据，写入队列，同时从**Queue.rece_List链**表取出第一个任务唤醒，这样Task_B又进入就绪态**ReadyList链表**，并运行；
+- **中断唤醒**：若任务A一直没有写入队列，直至Tick中断达到设定的超时时间，**Tick中断将从两个链表中将Task_B任务移到ReadyList链表中**，实现唤醒；
 
 ---
 
@@ -4004,17 +4017,612 @@ UBaseType_t uxQueueSpacesAvailable( const QueueHandle_t xQueue );
 
 # 8-2-1 队列实验_多设备玩游戏(思路)
 
+## 1.项目工程结构
+
+### 1.1 项目内容说明
+
+- 后续的工程都基于工程`02_nwatch_game_freertos`进行改进；
+- 打开`5.NWatch参考源码\DshanMCU-F103`，解压缩下面的`02_nwatch_game_freertos`；
+- 本节工程的项目为`13_Chapter11_Queue_Game`，只需新建一个这样的文件夹，然后将`02_nwatch_game_freertos`复制到文件夹下即可；
+
+### 1.2 项目结构剖析
+
+- **两个任务**
+
+  - MX_FREERTOS_Init()函数只基于**game1_task()函数**创建了一个任务：**GameTask**；
+
+  <img src="3.images/8-2-1队列实验_多设备玩游戏(思路)/任务初始化函数.png" alt="任务初始化函数" style="zoom:67%;" />
+
+  - **主要的两个任务**
+    - 进入game1_task()函数，可以看到函数内部基于**platform_task()函数**创建了挡球板的任务**platform_task**；
+    - while(1)循环是**game1_task()函数**的逻辑，负责球的位置的更新，主要包括了是否碰墙、是否碰挡球板、是否碰砖块等，这是基于游戏规则变化的；
+    - 后续主要的改进就是针对任务**platform_task**，因为它涉及了外部控制设备如何控制挡球板；
+
+  <img src="3.images/8-2-1队列实验_多设备玩游戏(思路)/两个任务.png" alt="两个任务" style="zoom: 67%;" />
+
+- **挡球板任务**
+
+  - 进入platform_task()函数中，可以看到它内部就是一个死循环，不断的读取红外遥控器的值，来控制左右移动挡球板；
+
+  ```c
+  /* 挡球板任务 */
+  static void platform_task(void *params)
+  {
+      /* ... */
+      while (1)
+      {
+          /* 读取红外遥控器 */
+  		if (0 == IRReceiver_Read(&dev, &data))
+  		{
+              if (data == 0x00)
+              {
+                  data = last_data;
+              }
+          }
+      }
+      /* ... */
+  }
+  ```
+
+  - 查看IRReceeiver_Read()函数，它的内部是去**读一个环形缓冲区；**
+
+  ```c
+  int IRReceiver_Read(uint8_t *pDev, uint8_t *pData)
+  {
+      if (isKeysBufEmpty())
+          return -1;
+      
+      *pDev  = GetKeyFromBuf();
+      *pData = GetKeyFromBuf();
+      return 0;
+  }
+  ```
+
+  - 上面的环形Buffer由红外中断函数在解析数据后写入；
+
+  <img src="3.images/8-2-1队列实验_多设备玩游戏(思路)/红外中断函数.png" alt="中断函数" style="zoom:80%;" />
+
+- **项目结构总结**
+  - 缓冲区是没有阻塞的，效率是低下的，只要while(1)成立就一直读取红外遥控器的键值；
+  - 我们要做的就是改进这个程序，**把读写环形缓冲器改为读写队列；**
+
+
+
+## 2.项目工程改进
+
+- **红外改造**
+  - 让**红外接收函数**去读队列而不是读环形缓冲区；
+  - 让**中断服务函数**写队列而不是写环形缓冲区；
+
+- **多设备问题**
+  - 对于红外遥控器而言，它发送一个键值最长需要85ms，这对于游戏是很慢的，只有在连续按着某个键使其发重复码才能较快；
+  - 所以希望用增加另外一个设备来实现——旋转编码器；
+
+- **旋转编码器改造**
+
+  - 旋转编码器的内部实现也是通过**中断服务函数**来实现解码的；
+  - 但是对于旋转编码器，除了中断的个数外，它的速度也是很重要的，速度的处理较为麻烦，如果在中断中进行解析就会导致中断时间过长；
+  - 所以选择将这个速度的解码放到任务中去做；
+  - 先让**中断服务函数**写一个队列B，然后再**通过任务去读队列B并解读它的数据，写入到队列A中**，这样就实现了多设备玩游戏；
+  - 需要注意，在任务中写队列和在中断中写队列的函数是不一样的；
+
+- **整体框架图**
+
+  - 整体改进后的项目结构图如下图所示：
+
+  ![项目结构改进](3.images/8-2-1队列实验_多设备玩游戏(思路)/改进后的项目结构.png)
+
+---
+
 
 
 # 8-2-2 队列实验_多设备玩游戏(红外改造)
+
+本节内容完成上节课程介绍的红外遥控器的框架改造。
+
+## 1.创建队列
+
+### 1.1 新建结构体变量
+
+- 在新建队列之前，需要先给遥控器的数据新建一个结构体变量，这是由课程的红外驱动决定的；
+- 在nwatch/game1.c/typedefs.h文件里面定义结构体变量：
+
+```c
+struct input_data {
+	uint32_t dev;
+	uint32_t val;
+};
+```
+
+### 1.2 创建队列
+
+- 在gaim1.c文件的game1_task()函数中创建队列，完整代码如下所示
+
+```c
+/* 挡球板队列 */
+QueueHandle_t g_xQueuePlatform;
+
+/* 游戏任务 */
+void game1_task(void *params)
+{		
+    uint8_t dev, data, last_data;
+    
+    g_framebuffer = LCD_GetFrameBuffer(&g_xres, &g_yres, &g_bpp);
+    draw_init();
+    draw_end();
+    
+	/* 创建队列:平台任务从里面读到设备控制数据 */
+	g_xQueuePlatform = xQueueCreate(10, sizeof(struct input_data));
+	
+	uptMove = UPT_MOVE_NONE;
+
+	ball.x = g_xres / 2;
+	ball.y = g_yres - 10;
+        
+	ball.velX = -0.5;
+	ball.velY = -0.6;
+//	ball.velX = -1;
+//	ball.velY = -1.1;
+
+	blocks = pvPortMalloc(BLOCK_COUNT);
+    memset(blocks, 0, BLOCK_COUNT);
+	
+	lives = lives_origin = 3;
+	score = 0;
+	platformX = (g_xres / 2) - (PLATFORM_WIDTH / 2);
+
+    xTaskCreate(platform_task, "platform_task", 128, NULL, osPriorityNormal, NULL);
+
+    while (1)
+    {
+        game1_draw();
+        //draw_end();
+        vTaskDelay(50);
+    }
+}
+```
+
+
+
+## 2.写队列
+
+- 接下来需要在中断函数中将解析出来的数据写入队列中；
+- 打开driver_ir_receiver.c驱动文件，
+
+```c
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "typedefs.h"
+
+extern QueueHandle_t g_xQueuePlatform;		/* 挡球板队列 */
+
+static int IRReceiver_IRQTimes_Parse(void)
+{
+    // ...
+	//PutKeyToBuf(datas[0]);
+	//PutKeyToBuf(datas[2]);
+	
+    /* 写入队列 */
+	idata.dev = datas[0];
+	idata.val = datas[2];
+	xQueueSendToBackFromISR(g_xQueuePlatform, &idata, NULL);
+    return 0;
+}
+
+void IRReceiver_IRQ_Callback(void)
+{
+	// ...
+
+	/* 3. 次数达标后, 解析数据, 放入buffer */
+	if (g_IRReceiverIRQ_Cnt == 4)
+	{
+		/* 是否重复码 */
+		if (isRepeatedKey())
+		{
+			/* device: 0, val: 0, 表示重复码 */
+			//PutKeyToBuf(0);
+			//PutKeyToBuf(0);
+			/* 改为写队列 */
+			idata.dev = 0;
+			idata.val = 0;
+			xQueueSendToBackFromISR(g_xQueuePlatform, &idata, NULL);
+			
+			g_IRReceiverIRQ_Cnt = 0;
+		}
+	}
+    // ...
+}
+```
+
+
+
+## 3.读队列
+
+- 接下来需要在在挡球板任务中读取队列，完整代码如下：
+
+```c
+/* 挡球板任务 */
+static void platform_task(void *params)
+{
+    byte platformXtmp = platformX;    
+    uint8_t dev, data, last_data;
+	
+	struct input_data idata;		// 新增
+
+    // Draw platform
+    draw_bitmap(platformXtmp, g_yres - 8, platform, 12, 8, NOINVERT, 0);
+    draw_flushArea(platformXtmp, g_yres - 8, 12, 8);
+    
+    while (1)
+    {
+        /* 读取红外遥控器 */
+		// if (0 == IRReceiver_Read(&dev, &data))
+		if (pdPASS == xQueueReceive(&g_xQueuePlatform, &idata, portMAX_DELAY))		// 将原先的判断环形Buffer改为判断队列
+		{
+			data = idata.val;			// input_data结构体中的成员是val，为兼容源代码，直接赋值
+            if (data == 0x00)
+            {
+                data = last_data;
+            }
+			/ ... /
+            
+		}
+```
+
+
+
+## 4.编译烧录
+
+- 在完成上述任务改造后，可直接编译烧录，就可以用遥控器控制挡球板了；
+- 如果要同时运行音乐任务的话，可在freertos.c文件中，创建一个音乐播放的任务；
+
+---
 
 
 
 # 8-2-3 队列实验_多设备玩游戏(旋转编码器)
 
+## 1.内容介绍
+
+- 本节课程要完成的是8-2-1中提到的旋转编码器的程序框架；
+
+- 本节课程的项目在`13_Chapter11_Queue_Game`的基础上改造出`14_Chapter11_Queue_Game_Multi_Input`；
+
+- 程序框架说明
+  - 这里最大的区别是中断不直接给队列A写数据，而是先写队列B，然后任务处理后再写入队列A；
+  - 这是因为我们假设了写入队列A的数据需要经过长时间的处理；
+  - 即便可能实际上并不需要长时间，但是为了学习新技能，我们假设它需要长时间，并采取这种方式来写入队列A；
+
+
+
+## 2.创建旋转编码器队列B
+
+- 采用静态创建的方法，创建的过程如下：
+  - 首先定义一个旋转编码器的结构体存放数据，同样在typedefs.h文件中定义；
+  - 然后在game1.c文件的game1_task()函数中创建队列；
+  - 采用静态创建队列的方法，需要限定旋转编码器的环形Buffer和句柄和结构体；
+
+- **game1.c文件的修改如下**
+
+```c
+/* 旋转编码器队列 */
+QueueHandle_t g_xQueueRotary;
+
+/* 旋转编码器的队列Buffer和队列结构体 */
+static uint8_t g_ucQueueRotaryBuf[10 * sizeof(struct rotary_data)];
+static StaticQueue_t g_xQueueRotaryStaticStructure;
+
+/* 游戏任务 */
+void game1_task(void *params)
+{
+	// ...
+    
+	/* 创建队列，创建旋转编码器的任务 */
+	g_xQueuePlatform = xQueueCreate(10, sizeof(struct input_data));
+	
+	g_xQueueRotary = xQueueCreateStatic(10, sizeof(struct rotary_data), 
+										g_ucQueueRotaryBuf, &g_xQueueRotaryStaticStructure);
+	
+	// ...
+}
+```
+
+- **typedefs.h文件的修改如下**
+
+```c
+/* 旋转编码器数据结构体 */
+struct rotary_data {
+	int32_t cnt;
+	int32_t speed;
+};
+```
+
+
+
+## 3.中断服务函数写入队列B
+
+- 定义一个结构体变量，然后将前面运算的数据写入这个结构体变量中，并将这个结构体写入前面创建的队列中：
+
+```c
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "typedefs.h"
+
+extern QueueHandle_t g_xQueueRotary;
+
+void RotaryEncoder_IRQ_Callback(void)
+{
+	// ...
+    struct rotary_data rdata;
+    
+	/* 写队列 */
+    rdata.cnt = g_count;
+	rdata.speed = g_speed;
+	xQueueSendFromISR(g_xQueueRotary, &rdata, NULL);
+}
+```
+
+ 
+
+## 4.数据处理任务写入队列A
+
+- 首先创建一个数据处理任务；
+- 然后把一个实际做数据处理的函数传进去作为任务函数；
+- 这个任务函数读取队列B，处理数据后再写入队列A；
+
+```c
+/* 旋转编码器数据处理任务 */
+static void RotaryEncoderTask(void *params)
+{
+	struct rotary_data rdata;
+	struct input_data idata;
+	
+	int left;
+	int i,cnt;
+	
+	while(1)
+	{
+		/* 读旋转编码器队列 */
+		xQueueReceive(&g_xQueueRotary, &rdata, portMAX_DELAY);
+		
+		/* 处理数据 */
+		/* 判度速度:负数表示向左，正数表示向右 */
+		if (rdata.speed < 0)
+		{
+			left = 1;
+			rdata.speed = 0 - rdata.speed;
+		}
+		else
+		{
+			left = 0;
+		}
+		
+		if (rdata.speed > 100)
+			cnt = 4;
+		else if (rdata.speed > 50)
+			cnt = 2;
+		else
+			cnt = 1;
+		
+		/* 写挡球板队列 */
+		idata.dev = 1;
+		idata.val = left ? 0xe0 : 0x90;		// 由于队列A是红外遥控器式数据，所以这里的数据和红外数据耦合起来了
+		for (i = 0; i < cnt; i ++)
+		{
+			xQueueSend(g_xQueuePlatform, &idata, 0);
+		}
+	}
+}
+
+/* 游戏任务 */
+void game1_task(void *params)
+{
+    // ...
+    
+	/* 创建队列 */
+	g_xQueuePlatform = xQueueCreate(10, sizeof(struct input_data));
+	
+	g_xQueueRotary = xQueueCreateStatic(10, sizeof(struct rotary_data), 
+										g_ucQueueRotaryBuf, &g_xQueueRotaryStaticStructure);
+	
+	/* 创建旋转编码器数据处理任务 */
+	xTaskCreate(RotaryEncoderTask, "RotaryEncoderTask", 128, NULL, osPriorityNormal, NULL);
+	
+	// ...
+} 
+```
+
+
+
+## 5.程序解耦_改造当前挡球板的数据格式
+
+### 5.1 耦合性讲解
+
+- 在前面写入挡球板队列时，需要判断左右将**idata.val**属性改造成红外接收器的数据格式；
+- 这样导致任务间的耦合性过强，下面对队列A进行改造，解耦程序；
+
+### 5.2 解耦改造
+
+- **应用层的方向设定**
+
+  - 在应用层game1.c文件中，我们定义的左右的数据如下面所示；
+  - **想要把红外和旋转编码器解耦，其实就是让它们两个在底层将数据先转化成应用层类型再写入队列A，当然队列A的val值也要改成这样；**
+  - 先将这三句代码复制到typedefs.h文件中；
+
+  ```c
+  #define UPT_MOVE_NONE	0
+  #define UPT_MOVE_RIGHT	1
+  #define UPT_MOVE_LEFT	2
+  ```
+
+- **红外改造**
+
+  - 在数据解析函数中，根据红外的键码，更改写入队列的数据；
+  - 除了数据解析，红外发送还有**重复码需要解决；**
+  - 完整修改的代码如下：
+
+  ```c
+  /* 解决红外的重复码问题 */
+  static uint32_t g_last_val;
+  
+  static int IRReceiver_IRQTimes_Parse(void)
+  {
+  	// ...
+      
+  	//PutKeyToBuf(datas[0]);
+  	//PutKeyToBuf(datas[2]);
+  	
+  	/* 改为写队列 */
+  	idata.dev = datas[0];
+  	
+  	if (datas[2] == 0xe0)
+  		idata.val = UPT_MOVE_LEFT;
+  	else if (datas[2] == 0x90)
+  		idata.val = UPT_MOVE_RIGHT;
+  	else
+  		idata.val = UPT_MOVE_NONE;
+      
+  	g_last_val = idata.val;		// 修改
+      
+  	idata.val = datas[2];
+  	xQueueSendToBackFromISR(g_xQueuePlatform, &idata, NULL);
+      return 0;
+  }
+  
+  void IRReceiver_IRQ_Callback(void)
+  {
+  	// ...
+      
+  	if (g_IRReceiverIRQ_Cnt == 4)
+  	{
+  		/* 是否重复码 */
+  		if (isRepeatedKey())
+  		{
+  			/* device: 0, val: 0, 表示重复码 */
+  			//PutKeyToBuf(0);
+  			//PutKeyToBuf(0);
+  			
+  			/* 改为写队列 */
+  			idata.dev = 0;
+  			idata.val = g_last_val;			// 修改
+  			xQueueSendToBackFromISR(g_xQueuePlatform, &idata, NULL);
+  			
+  			g_IRReceiverIRQ_Cnt = 0;
+  		}
+  	}
+  	// ...
+  }
+  ```
+
+- **旋转编码器改造**
+
+  - 将前面数据处理函数的最后改为一样的数据格式：
+
+  ```c
+  static void RotaryEncoderTask(void *params)
+  {
+  		// ...	
+      
+  		/* 写挡球板队列 */
+  		idata.dev = 1;
+  		idata.val = left ? UPT_MOVE_LEFT : UPT_MOVE_RIGHT;
+  		for (i = 0; i < cnt; i ++)
+  		{
+  			xQueueSend(g_xQueuePlatform, &idata, 0);
+  		}
+  }
+  ```
+
+- **挡球板任务改造**
+
+  - 先前的挡球板任务也是和红外数据直接耦合的，因为先前的队列A的数据和红外耦合；
+  - 这里直接读取队列A的新的数据，将其复制给uptMove变量即可：
+
+  ```c
+  /* 挡球板任务 */
+  static void platform_task(void *params)
+  {
+      // ...
+      
+      while (1)
+      {
+          /* 读取红外遥控器 */
+  		// if (0 == IRReceiver_Read(&dev, &data))
+  		if (pdPASS == xQueueReceive(&g_xQueuePlatform, &idata, portMAX_DELAY))	/* 读取队列 */
+  		{
+  			uptMove = idata.val;
+  			
+              // Hide platform
+              draw_bitmap(platformXtmp, g_yres - 8, clearImg, 12, 8, NOINVERT, 0);
+              draw_flushArea(platformXtmp, g_yres - 8, 12, 8);
+              
+              // Move platform
+              if(uptMove == UPT_MOVE_RIGHT)
+                  platformXtmp += 3;
+              else if(uptMove == UPT_MOVE_LEFT)
+                  platformXtmp -= 3;
+              uptMove = UPT_MOVE_NONE;
+              
+              // Make sure platform stays on screen
+              if(platformXtmp > 250)
+                  platformXtmp = 0;
+              else if(platformXtmp > g_xres - PLATFORM_WIDTH)
+                  platformXtmp = g_xres - PLATFORM_WIDTH;
+              
+              // Draw platform
+              draw_bitmap(platformXtmp, g_yres - 8, platform, 12, 8, NOINVERT, 0);
+              draw_flushArea(platformXtmp, g_yres - 8, 12, 8);
+              
+              platformX = platformXtmp;
+  		}
+      }
+  }
+  
+  ```
+
+
+
+## 6.总结
+
+- 将上面的程序编译烧录，就可以同时用旋转编码器和红外遥控器同时控制挡球板的移动了；
+- 这两节课的主要目的就是学会如何利用队列来传递数据，解决环形Buffer的低效率的问题；
+
+---
+
 
 
 # 8-2-4 勘误_解决旋转编码器不好用的问题
+
+- 前面的程序中，旋转编码器不是很好用，可以更改驱动代码中回调函数的两个地方；
+- 完整代码如下：
+
+```c
+void RotaryEncoder_IRQ_Callback(void)
+{
+	// ...
+    
+    //mdelay(2);
+	if (time - pre_time < 2000000)	// 修改
+	{
+		pre_time = time;
+		return;
+	}
+    if (!RotaryEncoder_Get_S1())
+        return;
+
+    /* S1上升沿触发中断
+     * S2为0表示逆时针转, 为1表示顺时针转
+     */
+    g_speed = (uint64_t)1000000000/(time - pre_time);
+	
+	if (g_speed == 0)		// 修改
+		g_speed = 1;
+	
+	// ...
+}
+```
+
+---
 
 
 
