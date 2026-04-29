@@ -147,7 +147,7 @@ void car_game(void)
 	{
 		for (j = 0; j < 8; j ++)
 		{
-			draw_bitmap(16 * j, 16 + 17 * i, clearImg, 8, 1, NOINVERT, 0);
+			draw_bitmap(16 * j, 16 + 17 * i, roadMarking, 8, 1, NOINVERT, 0);
 			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
 		}
 		
@@ -158,7 +158,7 @@ void car_game(void)
 	/* 画出3辆汽车 */
 	for (i = 0; i < 3; i ++)
 	{
-		draw_bitmap(g_cars[i].x, g_cars[i].y, clearImg, 15, 16, NOINVERT, 0);
+		draw_bitmap(g_cars[i].x, g_cars[i].y, carImg, 15, 16, NOINVERT, 0);
 		draw_flushArea(g_cars[i].x, g_cars[i].y, 15, 16);
 	}
 #endif	

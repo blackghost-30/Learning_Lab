@@ -2862,6 +2862,7 @@ void StartDefaultTask(void *argument)
   - 前面的那个pxReadyTaskLists链表结构图中，创建完所有任务后，**pxNewTCB就应该指向colorLED_Test这个链表，因为空闲任务优先级比较低；**
   - 当启动调度器后，这个**全局变量指向clorLED_Test这个链表**，所以项目会先从这个任务开始运行；
   - 这也是之前的演示中为什么第三个项目先开始计数的原因；
+  - 注意：上面所说的创建完所有任务指的是MX_FREERTOS_Init()函数执行完后，FreeRTOS内核才启动调度；
 
 ### 3.2 Tick中断
 
@@ -5832,14 +5833,14 @@ void car_game(void)
 	{
 		for (j = 0; j < 8; j ++)
 		{
-			draw_bitmap(16 * j, 16 + 17 * i, carImg, 8, 1, NOINVERT, 0);
+			draw_bitmap(16 * j, 16 + 17 * i, roadMarking, 8, 1, NOINVERT, 0);
 			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
 		}
 		
 	}
 	
 	/* 前面两个参数是位置，后面两个参数是大小 */
-	draw_bitmap(0, 0, clearImg, 15, 16, NOINVERT, 0);
+	draw_bitmap(0, 0, carImg, 15, 16, NOINVERT, 0);
     draw_flushArea(0, 0, 15, 16);
 	
 	while(1);
@@ -5893,7 +5894,7 @@ void car_game(void)
 	{
 		for (j = 0; j < 8; j ++)
 		{
-			draw_bitmap(16 * j, 16 + 17 * i, clearImg, 8, 1, NOINVERT, 0);
+			draw_bitmap(16 * j, 16 + 17 * i, roadMarking, 8, 1, NOINVERT, 0);
 			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
 		}
 		
@@ -5903,7 +5904,7 @@ void car_game(void)
 	/* 画出3辆汽车 */
 	for (i = 0; i < 3; i ++)
 	{
-		draw_bitmap(g_cars[i].x, g_cars[i].y, clearImg, 15, 16, NOINVERT, 0);
+		draw_bitmap(g_cars[i].x, g_cars[i].y, carImg, 15, 16, NOINVERT, 0);
 		draw_flushArea(g_cars[i].x, g_cars[i].y, 15, 16);
 	}
 	
@@ -5932,7 +5933,7 @@ void car_game(void)
 	{
 		for (j = 0; j < 8; j ++)
 		{
-			draw_bitmap(16 * j, 16 + 17 * i, clearImg, 8, 1, NOINVERT, 0);
+			draw_bitmap(16 * j, 16 + 17 * i, roadMarking, 8, 1, NOINVERT, 0);
 			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
 		}
 		
@@ -5943,7 +5944,7 @@ void car_game(void)
 	/* 画出3辆汽车 */
 	for (i = 0; i < 3; i ++)
 	{
-		draw_bitmap(g_cars[i].x, g_cars[i].y, clearImg, 15, 16, NOINVERT, 0);
+		draw_bitmap(g_cars[i].x, g_cars[i].y, carImg, 15, 16, NOINVERT, 0);
 		draw_flushArea(g_cars[i].x, g_cars[i].y, 15, 16);
 	}
 #endif	
@@ -6228,11 +6229,354 @@ void MX_FREERTOS_Init(void) {
 
 <img src="3.images/9-1信号量的本质/信号量与队列的区别.png" alt="区别" style="zoom: 50%;" />
 
+
+
+## 3.信号量相关API
+
+### 3.1 创建信号量
+
+- **API介绍**
+
+  - 使用信号量之前，要先创建，得到一个句柄，使用信号量时，要使用句柄来表明使用哪个信号量；
+  -  对于**二进制信号量、计数型信号量**，它们的创建函数不一样：
+
+  |          | 二进制信号量                                   | 计数型信号量                   |
+  | -------- | ---------------------------------------------- | ------------------------------ |
+  | 动态创建 | xSemaphoreCreateBinary 计数值初始值为0         | xSemaphoreCreateCounting       |
+  |          | vSemaphoreCreateBinary(过时了) 计数值初始值为1 |                                |
+  | 静态创建 | xSemaphoreCreateBinaryStatic                   | xSemaphoreCreateCountingStatic |
+
+- **函数原型**
+
+  - 创建二进制信号量的函数原型如下
+
+  ```c
+  /* 创建一个二进制信号量，返回它的句柄。
+   * 此函数内部会分配信号量结构体 
+   * 返回值: 返回句柄，非NULL表示成功
+   */
+  SemaphoreHandle_t xSemaphoreCreateBinary( void );
+  
+  /* 创建一个二进制信号量，返回它的句柄。
+   * 此函数无需动态分配内存，所以需要先有一个StaticSemaphore_t结构体，并传入它的指针
+   * 返回值: 返回句柄，非NULL表示成功
+   */
+  SemaphoreHandle_t xSemaphoreCreateBinaryStatic( StaticSemaphore_t *pxSemaphoreBuffer );
+  ```
+
+  - 创建计数型信号量的函数原型如下
+
+  ```c
+  /* 创建一个计数型信号量，返回它的句柄。
+   * 此函数内部会分配信号量结构体 
+   * uxMaxCount: 最大计数值
+   * uxInitialCount: 初始计数值
+   * 返回值: 返回句柄，非NULL表示成功
+   */
+  SemaphoreHandle_t xSemaphoreCreateCounting(UBaseType_t uxMaxCount, UBaseType_t uxInitialCount);
+  
+  /* 创建一个计数型信号量，返回它的句柄。
+   * 此函数无需动态分配内存，所以需要先有一个StaticSemaphore_t结构体，并传入它的指针
+   * uxMaxCount: 最大计数值
+   * uxInitialCount: 初始计数值
+   * pxSemaphoreBuffer: StaticSemaphore_t结构体指针
+   * 返回值: 返回句柄，非NULL表示成功
+   */
+  SemaphoreHandle_t xSemaphoreCreateCountingStatic( UBaseType_t uxMaxCount, 
+                                                   UBaseType_t uxInitialCount, 
+                                                   StaticSemaphore_t *pxSemaphoreBuffer );
+  ```
+
+### 3.2 删除
+
+- 对于动态创建的信号量，不再需要它们时，可以删除它们以回收内存；
+- **vSemaphoreDelete()**可以用来删除二进制信号量、计数型信号量，函数原型如下：
+
+```c
+/*
+ * xSemaphore: 信号量句柄，你要删除哪个信号量
+ */
+void vSemaphoreDelete( SemaphoreHandle_t xSemaphore );
+```
+
+### 3.3 give/take
+
+- 二进制信号量、计数型信号量的give、take操作函数是一样的；
+- 这些函数也分为2个版本：给任务使用，给ISR使用。列表如下：
+
+|      | 在任务中使用   | 在ISR中使用           |
+| ---- | -------------- | --------------------- |
+| give | xSemaphoreGive | xSemaphoreGiveFromISR |
+| take | xSemaphoreTake | xSemaphoreTakeFromISR |
+
+- **Give函数**
+
+  - xSemaphoreGive的函数原型如下
+
+  ```c
+  BaseType_t xSemaphoreGive( SemaphoreHandle_t xSemaphore );
+  ```
+
+  - xSemaphoreGive函数的参数与返回值列表如下
+
+  | 参数       | 说明                                                         |
+  | ---------- | ------------------------------------------------------------ |
+  | xSemaphore | 信号量句柄，释放哪个信号量                                   |
+  | 返回值     | pdTRUE表示成功, 如果二进制信号量的计数值已经是1，再次调用此函数则返回失败； 如果计数型信号量的计数值已经是最大值，再次调用此函数则返回失败 |
+
+  - xSemaphoreGiveFromISR函数的参数与返回值列表如下
+
+  | 参数                      | 说明                                                         |
+  | ------------------------- | ------------------------------------------------------------ |
+  | xSemaphore                | 信号量句柄，释放哪个信号量                                   |
+  | pxHigherPriorityTaskWoken | 如果释放信号量导致更高优先级的任务变为了就绪态， 则*pxHigherPriorityTaskWoken = pdTRUE |
+  | 返回值                    | pdTRUE表示成功, 如果二进制信号量的计数值已经是1，再次调用此函数则返回失败； 如果计数型信号量的计数值已经是最大值，再次调用此函数则返回失败 |
+
+- **Take函数**
+
+  - xSemaphoreTake的函数原型如下
+
+  ```
+  BaseType_t xSemaphoreTake(
+                     SemaphoreHandle_t xSemaphore,
+                     TickType_t xTicksToWait
+                 );
+  ```
+
+  - xSemaphoreTake函数的参数与返回值列表如下
+
+  | 参数         | 说明                                                         |
+  | ------------ | ------------------------------------------------------------ |
+  | xSemaphore   | 信号量句柄，获取哪个信号量                                   |
+  | xTicksToWait | 如果无法马上获得信号量，阻塞一会： 0：不阻塞，马上返回 portMAX_DELAY: 一直阻塞直到成功 其他值: 阻塞的Tick个数，可以使用*pdMS_TO_TICKS()*来指定阻塞时间为若干ms |
+  | 返回值       | pdTRUE表示成功                                               |
+
+  - xSemaphoreTakeFromISR的函数原型如下
+
+  ```c
+  BaseType_t xSemaphoreTakeFromISR(
+                          SemaphoreHandle_t xSemaphore,
+                          BaseType_t *pxHigherPriorityTaskWoken
+                      );
+  ```
+
+  - xSemaphoreTakeFromISR函数的参数与返回值列表如下
+
+  | 参数                      | 说明                                                         |
+  | ------------------------- | ------------------------------------------------------------ |
+  | xSemaphore                | 信号量句柄，获取哪个信号量                                   |
+  | pxHigherPriorityTaskWoken | 如果获取信号量导致更高优先级的任务变为了就绪态， 则*pxHigherPriorityTaskWoken = pdTRUE |
+  | 返回值                    | pdTRUE表示成功                                               |
+
+- **pxHigherPriorityTaskWoken()函数**
+
+  - 函数原型如下
+
+  ```c
+  BaseType_t xSemaphoreGiveFromISR(
+                          SemaphoreHandle_t xSemaphore,
+                          BaseType_t *pxHigherPriorityTaskWoken
+                      );
+  ```
+
 ---
 
 
 
 # 9-2-1 信号量实验_控制车辆运行
+
+本节课在上一个程序的基础上，演示信号量的几种情况。
+
+## 1.不使用信号量：让三辆车同时到达最右边
+
+- 复制上一个程序，重命名为`18_Chapter12_Semaphore_Not_Use`；
+- 在上个程序的基础上，我们不需要等待任何红外遥控器的信号，让它简单的从左跑到右，只改变**CarTask()**函数，代码改造如下；
+- 这样，汽车的移动不需要任何控制，上电后，三个任务轮流跑，它们每个50ms移动一个像素，最后移动到最右时就不动了；
+
+```c
+static void CarTask(void *params)
+{
+	struct car *pcar = params;
+	struct ir_data idata;
+	
+	/* 创建自己的队列 */
+	QueueHandle_t xQueueIR = xQueueCreate(10, sizeof(struct ir_data));
+	
+	/* 注册队列 */
+	RegisterQueueHandle(xQueueIR);
+	
+	/* 先显示汽车 */
+	ShowCar(pcar);
+	
+	while(1)
+	{
+		/* 读取按键值:读队列 */
+		//xQueueReceive(xQueueIR, &idata, portMAX_DELAY);
+		
+		/* 控制汽车往右移动 */
+		//if (idata.val == pcar->control_key)
+		{
+			if (pcar->x < g_xres - CAR_LENGTH)
+			{
+				/* 隐藏汽车 */
+				HideCar(pcar);
+				
+				/* 调整位置 */
+				pcar->x += 1;
+				if (pcar->x > g_xres - CAR_LENGTH)
+				{
+					pcar->x = g_xres - CAR_LENGTH;
+				}
+				
+				/* 重新显示汽车 */
+				ShowCar(pcar);
+				
+				vTaskDelay(50);
+				
+				if (pcar->x == g_xres - CAR_LENGTH)
+					vTaskDelete(NULL);
+			}
+		}
+	}
+}
+```
+
+
+
+## 2.使用计数型信号量
+
+### 2.1 只有两辆车可以进城
+
+- 复制上一个程序，重命名为`19_Chapter12_Semaphore_Count`；
+
+- 本程序使用计数型信号量，同时允许多辆车进城；
+
+- **程序完善**
+
+  - 在上一个代码的基础上，在car_game()函数中创建一个初始值为2、最大值为3的信号量；
+  - 然后在CarTask()函数中获得信号量，只有成功获取了信号量才能够运行后续代码；
+  - 这样，烧录代码后就只有两辆车能够进城，剩下的一辆将永远都停在起始点；
+
+  ```c
+  /* 信号量句柄 */
+  static SemaphoreHandle_t g_xSemTicks;
+  
+  static void CarTask(void *params)
+  {
+  	// ...
+      
+  	/* 先获取信号量 */
+  	xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	// ...
+  }
+  
+  void car_game(void)
+  {
+  	// ...
+      
+      /* 创建信号量 */
+  	g_xSemTicks = xSemaphoreCreateCounting(3, 2);
+  	
+  	// ...
+  }
+   
+  ```
+
+### 2.2 两辆车进城后第三辆车才进城
+
+- 我们在上一个代码的基础上，在任务函数中添加“释放信号量”的操作；
+- 当小车进城达到最右边后，它会释放信号量，然后再自杀，这样最后一辆车就可以获取信号量了，然后开始进城；
+
+```c
+/* 汽车任务函数 */
+static void CarTask(void *params)
+{
+	// ...
+	while(1)
+	{
+		/* 读取按键值:读队列 */
+		//xQueueReceive(xQueueIR, &idata, portMAX_DELAY);
+		
+		/* 控制汽车往右移动 */
+		//if (idata.val == pcar->control_key)
+		{
+			if (pcar->x < g_xres - CAR_LENGTH)
+			{
+				/* 隐藏汽车 */
+				HideCar(pcar);
+				
+				/* 调整位置 */
+				pcar->x += 1;
+				if (pcar->x > g_xres - CAR_LENGTH)
+				{
+					pcar->x = g_xres - CAR_LENGTH;
+				}
+				
+				/* 重新显示汽车 */
+				ShowCar(pcar);
+				
+				vTaskDelay(50);
+				
+				if (pcar->x == g_xres - CAR_LENGTH)
+				{
+					/* 到达最右边后释放信号量 */
+					xSemaphoreGive(g_xSemTicks);			// 增加释放信号量的操作
+					vTaskDelete(NULL);
+				}
+			}
+		}
+	}
+}
+```
+
+### 2.3 一辆一辆车进城
+
+- 把上述创建的信号量的最大值限定为1的话，就只能是一辆一辆的进城；
+- 将之前的程序复制，重命名为`20_Chapter12_Semaphore_Binary`；
+- **在这个程序中，将之前创建的信号量的初始值改为1，这样就同一时间只能有一辆车在走；**
+
+```c
+/* 汽车业务层逻辑 */
+void car_game(void)
+{
+	// ...
+	
+	/* 创建信号量 */
+	g_xSemTicks = xSemaphoreCreateCounting(3, 1);
+	
+	// ...
+}
+
+```
+
+### 2.4 执行顺序问题
+
+- 处于阻塞状态的任务会在一个receive链表中，等待信息量的唤醒；
+- **receive链表中的排序原则为**
+  - 高优先级的可以插队，只要来了高优先级的则它排在最前面；
+  - 同等优先级的根据调用Take函数的时刻排队，早调用的排在前面；
+- **最终的顺序如下**
+  - 如果项目中最后还创建了一个music任务，那么执行顺序应该是1、2、3；
+  - 如果没有打开music任务，最终的执行顺序应该是3、1、2；
+- **执行顺序机理解释**
+  - 如果没有打开music任务，在MX_FREERTOS_Init()函数中调用car_game()后，创建3个任务；
+  - 执行完MX_FREERTOS_Init()函数后，FreeRTOS内核才开始调度，这是由main函数的执行逻辑决定的；
+  - 由于任务3最后创建，所以全局指针现在指向任务3，任务3先开始运行，获得信号量，进城后释放信号量；
+  - 此时指针回到最开始，即任务1，因为任务3后面没有任务了，所以任务1运行，再到任务2运行；
+  - 如果在最后还创建了music任务，那内核启动后music任务先运行，在没插蜂鸣器条件下察觉不到；
+  - 然后任何就会直接切换到任务1了，接着到任务2，再到任务3；
+
+
+
+## 3.使用二进制信号量
+
+- 还可以使用二进制信号量进行汽车控制；
+- 二进制信号量的初始值为0，这样每一辆车都无法获得信号量，都无法运行；
+- **所以需要创建任务前先give一下，但是无论give多少下，对于二进制而言都只有一个有效；**
+- 经过这样的改造，就会变成一辆辆车进城了；
+
+---
 
 
 
