@@ -3644,7 +3644,12 @@ NWatch是一个很漂亮的、基于STM32的开源手表项目，我们的后续
   };
   ```
 
-- 如下图所示就是实际的画面呈现的原理：
+- 如下图所示就是实际的画面呈现的原理
+
+  - 整个OLED的大小是64×128，其中64是y方向，128是x方向；
+  - 要绘制的某个图形，以数组的形式存在，一个元素为两位16进制，也就是8位二进制；
+  - 这8位二进制按纵向即y方向排列，且是按低位在前排序，这样1个元素的显示就是16×1；
+  - **对于某个图形，它的数组有n行m列，则图像在OLED上的显示大小为16·n×m；**
 
 ![画面呈现](3.images/7游戏项目说明/OLED图形呈现.png)
 
@@ -5429,6 +5434,7 @@ void MX_FREERTOS_Init(void) {
 
 - 在任务函数中，我们**只读取x方向上的数值**，然后解析这个数值，最后写入队列中去；
 - 注意后面的vTaskDelay()函数，养成良好的编程习惯；
+- **这里的数据解析函数MPU6050_ParseData()在前面的工程中是没有的，可直接从我提供的工程里面复制；**
 
 ```c
 /* MPU6050任务函数 */
@@ -5675,13 +5681,554 @@ void MPU6050_Task(void *params)
 
 # 8-4 队列实验_分发数据给多个任务(赛车游戏)
 
+## 1.内容介绍
 
+- 本节源码`16_Chapter11_QueueSet_Game_Add_MPU6050`的基础上修改，得到`17_Chapter11_QueueCar_Dispatch`；
+- 实现的功能为：红外遥控器的中断函数解析出按键值后，写入3个队列，3个赛车任务读取其中一个队列得到按键数据；
+- 最终实现用遥控器上3个不同的按键控制赛车的移动；
+
+
+
+## 2.添加赛车显示代码
+
+- 解压`5.NWatch参考源码\DshanMCU-F103\03_nwatch_dshanmcu-f103_all.7z`；
+- 在`\03_nwatch_dshanmcu-f103_all\NWatch-DShanMCU-F103\NWatch`目录下找目录下找到`game2.c和game2.h`两个文件；
+- 复制到上一节课的nwatch文件夹下，并在Keil中把它们添加进去；
+
+
+
+## 3.game2.c文件移植
+
+- 删除所有其他东西，把game1.c文件的头文件都复制过来；
+- 保留`carImg和roadMarking`即可，其他的在此基础上进行添加；
+- 然后再从game1.c文件中将清屏数组也拷贝过来，将其数组改为30，初始值为0；
+
+```c
+/*
+ * Project: N|Watch
+ * Author: Zak Kemble, contact@zakkemble.co.uk
+ * Copyright: (C) 2013 by Zak Kemble
+ * License: GNU GPL v3 (see License.txt)
+ * Web: http://blog.zakkemble.co.uk/diy-digital-wristwatch/
+ */
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "cmsis_os.h"
+#include "FreeRTOS.h"                   // ARM.FreeRTOS::RTOS:Core
+#include "task.h"                       // ARM.FreeRTOS::RTOS:Core
+#include "event_groups.h"               // ARM.FreeRTOS::RTOS:Event Groups
+#include "semphr.h"                     // ARM.FreeRTOS::RTOS:Core
+
+#include "draw.h"
+#include "resources.h"
+
+#include "driver_lcd.h"
+#include "driver_rotary_encoder.h"
+#include "driver_ir_receiver.h"
+#include "driver_mpu6050.h"
+
+#define CAR_COUNT	3
+#define CAR_WIDTH	12
+#define CAR_LENGTH	15
+#define ROAD_SPEED	6
+
+static const byte carImg[] ={
+	0x40,0xF8,0xEC,0x2C,0x2C,0x38,0xF0,0x10,0xD0,0x30,0xE8,0x4C,0x4C,0x9C,0xF0,
+	0x02,0x1F,0x37,0x34,0x34,0x1C,0x0F,0x08,0x0B,0x0C,0x17,0x32,0x32,0x39,0x0F,
+};
+
+static const byte clearImg[30] ={0};
+
+static const byte roadMarking[] ={
+	0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,
+};
+
+```
+
+
+
+## 4.小车和赛道显示测试
+
+### 4.1 测试小车和赛道显示
+
+- 仿照game1.c文件中显示挡球板的程序，在game2.c文件中自己写car_test()函数，测试动画显示；
+- **关于在OLED上显示图形的原理及其关系可见`7 游戏机项目说明`节；**
+- 这个函数实现在OLED的左上角显示一辆小车和一个路标：
+  - 小车在y方向占用16个像素，在x方向占用15个像素；
+  - 路标在y方向只占用一个像素，在x方向占用8个像素，但它只用到了1个像素而已；
+  - 其中draw.c文件是nwatch项目的显示文件，我们直接拿来用；
+- **当然，我们不只是显示这两个东西而已，这只是一个测试函数，用预编译来把它框起来，后续可以用来测试；**
+- 直接参考game1.c文件中绘制平台的方式，写出下面的程序：
+
+```c
+#define NOINVERT	false
+#define INVERT		true
+
+static uint32_t g_xres, g_yres, g_bpp;
+static uint8_t *g_framebuffer;
+
+#if 0
+void car_test(void)
+{
+	g_framebuffer = LCD_GetFrameBuffer(&g_xres, &g_yres, &g_bpp);
+    draw_init();
+    draw_end();
+	
+    /* 前面两个参数是位置，后面两个参数是大小 */
+	draw_bitmap(0, 0, carImg, 15, 16, NOINVERT, 0);
+    draw_flushArea(0, 0, 15, 16);
+	
+	draw_bitmap(0, 16, roadMarking, 8, 1, NOINVERT, 0);
+    draw_flushArea(0, 16, 8, 1);
+	
+	while(1);
+}
+#endif
+
+```
+
+- 测试的时候将其放到**MX_FREERTOS_Init()**初始化函数中；
+
+```c
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
+  extern void car_test(void);
+  
+  LCD_Init();
+  LCD_Clear();
+  
+  RotaryEncoder_Init();
+  IRReceiver_Init();
+  MPU6050_Init();
+	
+  LCD_PrintString(0, 0, "Starting");
+  
+  car_test();	// 添加
+
+  // ...
+}
+```
+
+### 4.2 画出静态赛道
+
+- 绘制三条路标，每一段路标占用8个像素，OLED屏幕水平方向一共128个像素；
+- 采用显示一段、空白一段，一共显示8个周期，且三条路标是一直不变的，静态显示即可；
+- **基于上面的car_test()函数创建汽车游戏函数，每次改完后，将car_game()名称改为car_test()，先测试看看对不对；**
+- 此时的代码效果应该是左上角有一辆赛车，然后整个屏幕有三条赛道；
+
+```c
+void car_game(void)
+{
+	int x;
+	int i, j;
+	
+	g_framebuffer = LCD_GetFrameBuffer(&g_xres, &g_yres, &g_bpp);
+    draw_init();
+    draw_end();
+	
+	/* 画出路标 */
+	for (i = 0; i < 3; i++)
+	{
+		for (j = 0; j < 8; j ++)
+		{
+			draw_bitmap(16 * j, 16 + 17 * i, carImg, 8, 1, NOINVERT, 0);
+			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
+		}
+		
+	}
+	
+	/* 前面两个参数是位置，后面两个参数是大小 */
+	draw_bitmap(0, 0, clearImg, 15, 16, NOINVERT, 0);
+    draw_flushArea(0, 0, 15, 16);
+	
+	while(1);
+}
+```
+
+
+
+## 5.画出三辆汽车并创建三辆汽车任务
+
+### 5.1 工程思路
+
+- 创建3个不同的汽车任务，它们可以调用同一个函数；
+- 但是它们的位置、控制键值不一样；
+- 然后通过红外按键控制每辆车的移动；
+
+### 5.2 画出三辆汽车
+
+- 定义结构体变量，它包含了**汽车显示的位置以及汽车的控制按键**；
+- 再定义三个汽车结构体实体，它们的初始位置不同，并且控制的按键也不同；
+- **IR_KEY_1、IR_KEY_2、IR_KEY_3是宏定义，分别对应着红外遥控器的三个数字：1、2、3；**
+- 然后先实现静态显示三辆小车，完整代码如下：
+
+```c
+/* 汽车结构体 */
+struct car {
+	int x;
+	int y;
+	int control_key;
+};
+
+/* 3辆汽车实例 */
+struct car g_cars[3] = {
+	{0, 0, IR_KEY_1},
+	{0, 17, IR_KEY_2},
+	{0, 34, IR_KEY_3},
+	
+};
+
+void car_game(void)
+{
+	int x;
+	int i, j;
+	
+	g_framebuffer = LCD_GetFrameBuffer(&g_xres, &g_yres, &g_bpp);
+    draw_init();
+    draw_end();
+	
+	/* 画出路标 */
+	for (i = 0; i < 3; i++)
+	{
+		for (j = 0; j < 8; j ++)
+		{
+			draw_bitmap(16 * j, 16 + 17 * i, clearImg, 8, 1, NOINVERT, 0);
+			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
+		}
+		
+	}
+	
+	/* 前面两个参数是位置，后面两个参数是大小 */
+	/* 画出3辆汽车 */
+	for (i = 0; i < 3; i ++)
+	{
+		draw_bitmap(g_cars[i].x, g_cars[i].y, clearImg, 15, 16, NOINVERT, 0);
+		draw_flushArea(g_cars[i].x, g_cars[i].y, 15, 16);
+	}
+	
+	while(1);
+}
+
+```
+
+### 5.3 创建三个汽车任务
+
+- 创建三个汽车任务，它们使用的是同一个任务函数；
+- 但是每一个任务传入给函数的参数是不同的，分别对应着三个汽车：g_cars[0]、g_cars[1]、g_cars[2]；
+
+```c
+void car_game(void)
+{
+	int x;
+	int i, j;
+	
+	g_framebuffer = LCD_GetFrameBuffer(&g_xres, &g_yres, &g_bpp);
+    draw_init();
+    draw_end();
+	
+	/* 画出路标 */
+	for (i = 0; i < 3; i++)
+	{
+		for (j = 0; j < 8; j ++)
+		{
+			draw_bitmap(16 * j, 16 + 17 * i, clearImg, 8, 1, NOINVERT, 0);
+			draw_flushArea(16 * j, 16 + 17 * i, 8, 1);
+		}
+		
+	}
+	
+#if 0
+	/* 前面两个参数是位置，后面两个参数是大小 */
+	/* 画出3辆汽车 */
+	for (i = 0; i < 3; i ++)
+	{
+		draw_bitmap(g_cars[i].x, g_cars[i].y, clearImg, 15, 16, NOINVERT, 0);
+		draw_flushArea(g_cars[i].x, g_cars[i].y, 15, 16);
+	}
+#endif	
+	
+	/* 创建3辆汽车的任务 */
+	xTaskCreate(CarTask, "car1", 128, &g_cars[0], osPriorityNormal, NULL);
+	xTaskCreate(CarTask, "car2", 128, &g_cars[1], osPriorityNormal, NULL);
+	xTaskCreate(CarTask, "car3", 128, &g_cars[2], osPriorityNormal, NULL);
+}
+```
+
+
+
+## 6.数据分发队列的改造
+
+### 6.1 数据分发框架
+
+- 我们的任务函数要做的应该是**读取红外接收的队列**，然后去判断接收到的是哪一个按键，然后再去控制对应的车辆进行移动；
+- 但是，由于在之前的硬件中，红外中断接收并处理数据后只是写一个队列；
+- **如果写入的2号按键，但是此时这个数据被1号小车给读走了，这样2号小车就无法再度到这个数据了**，导致按键使用不了；
+- 我们采用**队列分发的方式**解决这个问题，这就是这节课的主要内容；
+- 整体的数据分发框架如下：**红外中断广播数据到每个队列中，每个任务读取队列判断数据；**
+
+<img src="3.images/8-3-4队列实验_分发数据给多个任务(赛车游戏)/数据分发.png" alt="数据分发" style="zoom:67%;" />
+
+### 6.2 数据分发丑陋版本实现
+
+- 修改红外接收的底层代码，定义一个**分发函数**，这个函数中会写三个队列；
+- 这样我们在**红外中断和红外重复码中断函数中，只需要调用这个函数并传入红外中断解析的数据**，它就可以把输入写入三个队列中了；
+- 但是这样代码耦合性太强了，只能用于car这个游戏；
+
+```c
+/* 数据分发函数 */
+void DispatchKey(struct ir_data *pidata)
+{
+	extern QueueHandle_t g_xQueueCar1;
+	extern QueueHandle_t g_xQueueCar2;
+	extern QueueHandle_t g_xQueueCar3;
+	
+	xQueueSendFromISR(g_xQueueCar1, &pidata, NULL);
+	xQueueSendFromISR(g_xQueueCar2, &pidata, NULL);
+	xQueueSendFromISR(g_xQueueCar3, &pidata, NULL);
+}
+
+static int IRReceiver_IRQTimes_Parse(void)
+{
+	// ...
+	/* 改为写队列 */
+	idata.dev = datas[0];
+	idata.val = datas[2];
+	
+	DispatchKey(&idata);
+    
+	return 0;
+    // ...
+}
+
+void IRReceiver_IRQ_Callback(void)
+{
+	// ...
+			/* 改为写队列 */
+			idata.dev = 0;
+			idata.val = 0;
+			DispatchKey(&idata);
+			
+			g_IRReceiverIRQ_Cnt = 0;
+	
+    // ...
+}
+```
+
+### 6.3 数据分发改进版本实现
+
+- 首先定义一个**元素为队列句柄的数组**，在这个数组中我们将存储那些创建的队列的句柄；
+- 接着写一个**动态注册队列的函数**，这个函数很简单，它只是把传入的队列句柄写入到这个数组中而已；
+- 这样对于所有的任务，它们创建的任何队列，只需要调用这个函数，我们就可以在这个数组中找到它创建的队列；
+- 最后在分发函数中，**将红外接收解析的数据写入这个数组的每一个队列，这样就实现了队列分发；**
+- **对于红外队列也一样，我们可以在红外初始化函数一开始就也把这个队列加入到这个数组中去；**
+
+```c
+/* 注册队列相关变量 */
+static QueueHandle_t g_xQueues[10];
+static int g_queue_cnt = 0;/* 队列注册函数 */
+
+void RegisterQueueHandle(QueueHandle_t queueHandle)
+{
+	if (g_queue_cnt < 10)
+	{
+		g_xQueues[g_queue_cnt] = queueHandle;
+		g_queue_cnt ++;
+	}
+	
+}
+
+/* 数据分发函数 */
+void DispatchKey(struct ir_data *pidata)
+{
+#if 0
+	extern QueueHandle_t g_xQueueCar1;
+	extern QueueHandle_t g_xQueueCar2;
+	extern QueueHandle_t g_xQueueCar3;
+	
+	xQueueSendFromISR(g_xQueueCar1, &pidata, NULL);
+	xQueueSendFromISR(g_xQueueCar2, &pidata, NULL);
+	xQueueSendFromISR(g_xQueueCar3, &pidata, NULL);
+#endif
+	int i;
+	for (i = 0; i < g_queue_cnt; i ++)
+	{
+		xQueueSendFromISR(g_xQueues[i], pidata, NULL);
+	}
+}
+
+void IRReceiver_Init(void)
+{
+    /* PA10在MX_GPIO_Init()中已经被配置为双边沿触发, 并使能了中断 */
+#if 0
+    /*Configure GPIO pin : PB10 */
+    GPIO_InitStruct.Pin = GPIO_PIN_10;
+    GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING_FALLING;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+#endif
+	/* 创建红外队列 */
+	g_xQueueIR = xQueueCreate(IR_QUEUE_LEN, sizeof(struct ir_data));
+	RegisterQueueHandle(g_xQueueIR);
+}
+```
+
+### 6.4 任务函数的创建
+
+- **这样我们在CatTask()函数中要做的就是**
+
+  - 创建一个队列，然后将这个队列注册进那个数组；
+  - 这样当红外中断函数解析完数据后，就会将数组写入这个队列，而不管这个队列到底是谁的；
+  - 然后再读取自己的队列，判断红外接收到的键值是否等于自己的键值，若等于则更新汽车的位置，这就是最简单的逻辑；
+  - 在进入循环前先显示小车，否则会等按下按键才有小车，在FreeRTOS操作系统中常常会忽略这样的问题；
+
+  ```c
+  static void CarTask(void *params)
+  {
+  	struct car *pcar = params;
+  	struct ir_data idata;
+  	
+  	/* 创建自己的队列 */
+  	QueueHandle_t xQueueIR = xQueueCreate(10, sizeof(struct ir_data));
+  	
+  	/* 注册队列 */
+  	RegisterQueueHandle(xQueueIR);
+  	
+      /* 先显示汽车 */
+  	ShowCar(pcar);
+      
+  	while(1)
+  	{
+  		/* 读取按键值:读队列 */
+  		xQueueReceive(xQueueIR, &idata, portMAX_DELAY);
+  		
+  		/* 控制汽车往右移动 */
+  		if (idata.val == pcar->control_key)
+  		{
+  			if (pcar->x < g_xres - CAR_LENGTH)
+  			{
+  				/* 隐藏汽车 */
+  				HideCar(pcar);
+  				
+  				/* 调整位置 */
+  				pcar->x += 20;
+  				if (pcar->x > g_xres - CAR_LENGTH)
+  				{
+  					pcar->x = g_xres - CAR_LENGTH;
+  				}
+  				
+  				/* 重新显示汽车 */
+  				ShowCar(pcar);
+  			}
+  		}
+  	}
+  }
+  ```
+
+- 在逻辑操作过程中，我们需要隐藏汽车、显示汽车，我们把他们定义为函数：
+
+```c
+/* game2.c文件中 */
+
+/* 汽车变换逻辑 */
+/* 显示汽车 */
+static void ShowCar(struct car *pcar)
+{
+	draw_bitmap(pcar->x, pcar->y, carImg, 15, 16, NOINVERT, 0);
+    draw_flushArea(pcar->x, pcar->y, 15, 16);
+}
+
+/* 隐藏汽车 */
+static void HideCar(struct car *pcar)
+{
+	draw_bitmap(pcar->x, pcar->y, clearImg, 15, 16, NOINVERT, 0);
+    draw_flushArea(pcar->x, pcar->y, 15, 16);
+}
+```
+
+### 6.5 入口函数调用
+
+- 最后回到freertos.c文件的MX_FREERTOS_Init()函数中调用**car_game()**函数即可，记得将car_test()注释掉；
+
+```c
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
+  // ...
+  
+  //car_test();
+    
+  // ...
+  extern void car_game(void);
+  car_game();
+  
+    // ...
+}
+```
+
+
+
+## 7.总结
+
+这个项目的总体逻辑如下：
+
+- 上电瞬间，初始化函数**调用car_game()函数**，在car_game()函数内部将创建三个汽车的任务，各任务轮流运行；
+- 在各自的任务中，会先显示静态的汽车和路标，并创建队列，然后**将队列注册到数组中**；
+- 直到红外遥控器发出指令，各任务开始读取指令，执行任务函数**CarTask()**并作出下一步的动作；
 
 ---
 
 
 
 # 9-1 信号量的本质
+
+## 1.内容介绍
+
+- 本节主要讲解FreeRTOS中的信号量；
+- 本节内容对应的课程资料为**第12章——信号量**；
+
+
+
+## 2.队列与信号量的区别
+
+### 2.1 生活例子的讲解
+
+可以用进城的票来比作信号量：
+
+- **想要进城时**
+  - 必须先买票，对应的就是**take操作**；
+  - 买票必然导致票数的减少，对应的是**cnt--操作**；
+  - 如果已经没有票了，可以选择等待，即**阻塞操作**；
+- **城市放票时**
+  - 放票对应的操作是**give操作**；
+  - 放票必然导致票数的增加，对应的是**cnt++操作**；
+  - 如果票数达到上限了，无法继续放票了，城市也不会在那等着，即give操作必然是**没有阻塞机制的**；
+
+<img src="3.images/9-1信号量的本质/进城例子.png" alt="进城例子" style="zoom: 50%;" />
+
+### 2.2 队列与信号量的区别
+
+- **对于队列**
+
+  - 包括**长度、写位置、读位置、计数值、接收等待者链表、发送等待者链表**；
+
+  - **写的时候**
+    - 用send命令，它会先copy数据（将数据写入环形缓冲区），然后计数值cnt＋＋，同时去唤醒等待读数据的人，若满可选择等待；
+  - **读的时候**
+    - 用receive命令，它会先copy数据（存入自己的存储地方），然后计数值cnt--，同时去唤醒等待写数据的人，若空可选择等待；
+
+- **对于信号量**
+
+  - 包括**最大信号量、信号量本身的值、接收等待者链表**；
+
+  - **发放信息量**
+    - 用give命令，信息量cnt自增，同时去唤醒等待的人，**即使是达到最大值了，它也不会去等待（阻塞），而是直接返回失败**；
+  - **获得信息量**
+    - 用take命令，信息量cnt自减，**不会去唤醒任何东西**，如果cnt已经为0，可以选择是否等待（阻塞）；
+    - 如果等待，任务就会进入**receive_list链表**中，发放信息时会按照**优先级/等待时间长短**去唤醒这个链表的任务；
+
+<img src="3.images/9-1信号量的本质/信号量与队列的区别.png" alt="区别" style="zoom: 50%;" />
+
+---
 
 
 
