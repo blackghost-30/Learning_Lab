@@ -4594,6 +4594,7 @@ void game1_task(void *params)
 # 8-2-4 勘误_解决旋转编码器不好用的问题
 
 - 前面的程序中，旋转编码器不是很好用，可以更改驱动代码中回调函数的两个地方；
+- 将上一节课的程序复制，并重命名为`14_Chapter11_Queue_Game_Multi_Input_Better；`
 - 完整代码如下：
 
 ```c
@@ -4686,7 +4687,58 @@ void RotaryEncoder_IRQ_Callback(void)
 
 
 
-## 3.最终的程序框架
+## 3.队列集相关API
+
+### 3.1 创建队列集
+
+- 函数原型
+
+```c
+QueueSetHandle_t xQueueCreateSet( const UBaseType_t uxEventQueueLength )
+```
+
+- 参数
+
+| **参数**      | **说明**                                                     |
+| ------------- | ------------------------------------------------------------ |
+| uxQueueLength | 队列集长度，最多能存放多少个数据(队列句柄)                   |
+| 返回值        | 非0：成功，返回句柄，以后使用句柄来操作队列NULL：失败，因为内存不足 |
+
+### 3.2 把队列加入队列集
+
+- 函数原型
+
+```c
+BaseType_t xQueueAddToSet(QueueSetMemberHandle_t xQueueOrSemaphore, QueueSetHandle_t xQueueSet);
+```
+
+- 参数
+
+| **参数**          | **说明**                       |
+| ----------------- | ------------------------------ |
+| xQueueOrSemaphore | 队列句柄，这个队列要加入队列集 |
+| xQueueSet         | 队列集句柄                     |
+| 返回值            | pdTRUE：成功pdFALSE：失败      |
+
+### 3.3 读取队列集
+
+- 函数原型
+
+```c
+QueueSetMemberHandle_t xQueueSelectFromSet(QueueSetHandle_t xQueueSet, TickType_t const xTicksToWait);
+```
+
+- 参数
+
+| **参数**     | **说明**                                                     |
+| ------------ | ------------------------------------------------------------ |
+| xQueueSet    | 队列集句柄                                                   |
+| xTicksToWait | 如果队列集空则无法读出数据，可以让任务进入阻塞状态，xTicksToWait表示阻塞的最大时间(Tick Count)。如果被设为0，无法读出数据时函数会立刻返回；如果被设为portMAX_DELAY，则会一直阻塞直到有数据可写 |
+| 返回值       | NULL：失败，队列句柄：成功                                   |
+
+
+
+## 4.最终的程序框架
 
 - 根据上面的队列集的思想，最终的程序框架如下：
 
@@ -4698,19 +4750,934 @@ void RotaryEncoder_IRQ_Callback(void)
 
 # 8-3-2 队列集实验_改进程序框架(编程)
 
+## 1.内容介绍
+
+- 本节课程完成对上一节课的最终程序框架；
+- 本节课程的工程项目基于上一节课`14_Chapter11_Queue_Game_Multi_Input_Better`的工程修改；
+- 复制`14_Chapter11_Queue_Game_Multi_Input_Better`工程，重命名为`15_Chapter11_QueueSet_Game`；
 
 
 
+## 2.红外改造
+
+### 2.1 修改数据结构体
+
+- 前面我们定义的input_data结构体，这个结构体是根据**游戏的挡球板队列的数据格式**来定义的；
+- 下面我们定义只针对**红外接收的硬件数据的结构体**；
+- 将先前**typedefs.h**文件中定义的结构体，复制到**driver_ir_receiver.h**文件中定义，这样我们从红外遥控器中得到的键值就存在**ir_data.val**中；
+- 在新的结构体中，val值只能取与红外遥控器硬件数据，即键值；
+
+```c
+/* 遥控器数据结构体 */
+struct ir_data {
+	uint32_t dev;
+	uint32_t val;
+};
+```
+
+### 2.2 修改红外遥控键值对应的宏
+
+- 在**driver_ir_receiver.c**文件中，我们定义了很多键值；
+
+```c
+/* driver_ir_receiver.c文件 */
+const char *IRReceiver_CodeToString(uint8_t code)
+{
+    const uint8_t codes[]= {0xa2, 0xe2, 0x22, 0x02, 0xc2, 0xe0, 0xa8, 0x90, \
+                            0x68, 0x98, 0xb0, 0x30, 0x18, 0x7a, 0x10, 0x38, \
+                            0x5a, 0x42, 0x4a, 0x52, 0x00};
+    const char *names[]= {"Power", "Menu", "Test", "+", "Return", "Left", "Play", "Right", \
+                            "0", "-", "C", "1", "2", "3", "4", "5", \
+                            "6", "7", "8", "9", "Repeat"};
+    int i;
+    
+    for (i = 0; i < sizeof(codes)/sizeof(codes[0]); i++)
+    {
+        if (code == codes[i])
+        {
+            return names[i];
+        }
+    }
+    return "Error";
+}
+```
+
+- 为了更好的可读性，将这些键值通过宏定义的方式写在**driver_ir_receiver.h**文件中；
+
+```c
+/* 红外键值宏定义 */
+#define IR_KEY_POWER	0xa2
+#define IR_KEY_MENU		0xe2
+#define IR_KEY_TEST		0x22
+#define IR_KEY_ADD		0x02
+#define IR_KEY_RETURN	0xc2
+#define IR_KEY_LEFT		0xe0
+#define IR_KEY_PLAY		0xa8
+#define IR_KEY_RIGHT	0x90
+#define IR_KEY_0		0x68
+#define IR_KEY_DEC		0x98
+#define IR_KEY_C		0xb0
+#define IR_KEY_1		0x30
+#define IR_KEY_2		0x18
+#define IR_KEY_3		0x7a
+#define IR_KEY_4		0x10
+#define IR_KEY_5		0x38
+#define IR_KEY_6		0x5a
+#define IR_KEY_7		0x42
+#define IR_KEY_8		0x4a
+#define IR_KEY_9		0x52
+#define IR_KEY_REPEAT	0x00
+```
+
+### 2.3 重复码数据的修改
+
+- 红外驱动中，写入队列的数据需要全部改为硬件数据；
+- 将中断服务函数对应的队列就是硬件数据，数据得到什么数据我们直接就写，不用处理；
+- 需要注意定义的结构体的修改；
+- **先前定义的g_last_val也可以删掉了；**
+
+```c
+void IRReceiver_IRQ_Callback(void)
+{
+    // ...
+	struct ir_data idata;
+    
+    // ...
+	
+	if (g_IRReceiverIRQ_Cnt == 4)
+	{
+		/* 是否重复码 */
+		if (isRepeatedKey())
+		{
+			/* device: 0, val: 0, 表示重复码 */
+			//PutKeyToBuf(0);
+			//PutKeyToBuf(0);
+			
+			/* 改为写队列 */
+			idata.dev = 0;
+			idata.val = 0;		// 修改
+			xQueueSendToBackFromISR(g_xQueuePlatform, &idata, NULL);
+			
+			g_IRReceiverIRQ_Cnt = 0;
+		}
+	}
+	// ...
+}
+```
+
+### 2.4 数据解析部分的修改
+
+- 直接将最原始的值写入队列中：
+
+```c
+static int IRReceiver_IRQTimes_Parse(void)
+{
+	// ...
+	
+	struct ir_data idata;	// 修改
+
+	// ...
+
+	//PutKeyToBuf(datas[0]);
+	//PutKeyToBuf(datas[2]);
+	
+	/* 改为写队列 */
+	idata.dev = datas[0];
+	idata.val = datas[2];
+	
+	xQueueSendToBackFromISR(g_xQueuePlatform, &idata, NULL);
+    
+	return 0;
+}
+```
+
+### 2.5 修改写入的队列
+
+现在不再是将中断函数的数据写入挡球板的队列，而是写入红外接收的队列。
+
+- **先定义队列的句柄**
+
+```c
+/* 红外队列,将原先的Platform队列改为红外队列 */
+static QueueHandle_t g_xQueueIR;
+```
+
+- **在初始化函数中创建队列**
+
+  - 我们在driver_ir_receiver.c文件的初始化函数中创建队列，并返回上面的句柄；
+  - 后续只要在freertos.c文件中调用这个初始化函数即可实现队列的创建；
+
+  ```c
+  void IRReceiver_Init(void)
+  {
+      /* PA10在MX_GPIO_Init()中已经被配置为双边沿触发, 并使能了中断 */
+  #if 0
+      /*Configure GPIO pin : PB10 */
+      GPIO_InitStruct.Pin = GPIO_PIN_10;
+      GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING_FALLING;
+      GPIO_InitStruct.Pull = GPIO_PULLUP;
+      HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  #endif
+  	/* 创建红外队列 */
+  	g_xQueueIR = xQueueCreate(10, sizeof(struct ir_data));
+  }
+  ```
+
+- **将写入的队列改为红外的队列**
+
+  - 需要将解析函数和回调函数中写入队列改为红外的队列；
+
+  ```c
+  static int IRReceiver_IRQTimes_Parse(void)
+  {
+  	// ...
+  	
+  	struct ir_data idata;
+  
+  	// ...
+  
+  	//PutKeyToBuf(datas[0]);
+  	//PutKeyToBuf(datas[2]);
+  	
+  	/* 改为写队列 */
+  	idata.dev = datas[0];
+  	idata.val = datas[2];
+  	
+  	xQueueSendToBackFromISR(g_xQueueIR, &idata, NULL);	// 修改
+      
+  	return 0;
+  }
+  
+  void IRReceiver_IRQ_Callback(void)
+  {
+      // ...
+  	struct ir_data idata;
+      
+      // ...
+  	
+  	if (g_IRReceiverIRQ_Cnt == 4)
+  	{
+  		/* 是否重复码 */
+  		if (isRepeatedKey())
+  		{
+  			/* device: 0, val: 0, 表示重复码 */
+  			//PutKeyToBuf(0);
+  			//PutKeyToBuf(0);
+  			
+  			/* 改为写队列 */
+  			idata.dev = 0;
+  			idata.val = 0;
+  			xQueueSendToBackFromISR(g_xQueueIR, &idata, NULL);	// 修改
+  			
+  			g_IRReceiverIRQ_Cnt = 0;
+  		}
+  	}
+  	// ...
+  }
+  ```
 
 
+
+## 3.旋转编码器改造
+
+### 3.1 创建数据结构体
+
+- 同样的，我们创建一个只与旋转编码器硬件相关的数据结构；
+- 由于前面在typedefs.h文件中定义了这个结构体，我们直接将它挪到driver_rotary_encoder.h中；
+
+```c
+/* 旋转编码器数据结构体 */
+struct rotary_data {
+	int32_t cnt;
+	int32_t speed;
+};
+```
+
+### 3.2 修改写入的队列
+
+- 之前是在game1.c文件中定义了旋转编码器的队列，我们现在将队列放在driver_rotary_encoder.c文件中进行定义；
+- 把game1.c文件中的相关变量剪切掉，然后复制到driver_rotary_encoder.c文件中；
+- 接着在初始化函数中创建队列，后续只需要在freertos.c文件中调用这个函数即可创建对应的队列；
+
+```c
+/* 旋转编码器队列 */
+static QueueHandle_t g_xQueueRotary;
+
+/* 旋转编码器的队列Buffer和队列句柄 */
+static uint8_t g_ucQueueRotaryBuf[10 * sizeof(struct rotary_data)];
+static StaticQueue_t g_xQueueRotaryStaticStructure;
+
+void RotaryEncoder_Init(void)
+{
+    /* PB0,PB1在MX_GPIO_Init中被配置为输入引脚 */
+    /* PB12在MX_GPIO_Init中被配置为中断引脚,上升沿触发 */
+	g_xQueueRotary = xQueueCreateStatic(10, sizeof(struct rotary_data), 
+										g_ucQueueRotaryBuf, &g_xQueueRotaryStaticStructure);
+}
+```
+
+### 3.3 调用初始化函数实现队列的创建
+
+- 在freertos.c文件中，调用两个初始化函数，这样上电即可创建两个队列：
+
+```c
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
+  LCD_Init();
+  LCD_Clear();
+  
+  RotaryEncoder_Init();
+  IRReceiver_Init();
+    
+  IRReceiver_Init();
+  LCD_PrintString(0, 0, "Starting");
+
+  // ...
+
+}
+```
+
+
+
+## 4.创建队列集
+
+### 4.1 定义句柄
+
+- 队列集是和游戏耦合的部分，直接在game1.c文件中定义即可；
+
+```c
+/* 队列集句柄 */
+static QueueSetHandle_t g_xQueueSetInput;
+```
+
+### 4.2 创建队列集
+
+- 如图所示在game1_task中创建队列集；
+- 为了增加代码的健壮性，其长度通过宏定义方式确定，两个宏定义分别定义在两个外设的.h文件中；
+- 注意需要把底层硬件驱动创建队列时的大小也换成宏；
+
+```c
+/* game1.c文件 */
+void game1_task(void *params)
+{		
+    // ...
+    
+	/* 创建队列 */
+	g_xQueuePlatform = xQueueCreate(10, sizeof(struct input_data));
+	
+	/* 创建队列集 */
+	g_xQueueSetInput = xQueueCreateSet(ROTARY_QUEUE_LEN + IR_QUEUE_LEN);
+	
+	// ...
+}
+
+/* driver_ir_receiver.h文件 */
+#define IR_QUEUE_LEN		10
+
+/*driver_rotary_encoder.h文件 */
+#define ROTARY_QUEUE_LEN	10
+```
+
+### 4.3 将队列加入队列集
+
+- **良好的编程习惯**
+
+  - 创建队列集时，需要得到两个底层驱动的队列；
+  - 各自的硬件驱动文件中，都采用了局部变量，以免变量暴露，可以采用函数的方式向外部文件提供这个队列的句柄；
+  - 红外驱动底层
+
+  ```c
+  /* .c文件实现 */
+  QueueHandle_t GetQueueIR(void)
+  {
+  	return g_xQueueIR;
+  }
+  
+  /* .h文件声明 */
+  QueueHandle_t GetQueueRotary(void);
+  ```
+
+  - 旋转编码器驱动底层
+
+  ```c
+  /* .c文件实现 */
+  QueueHandle_t GetQueueRotary(void)
+  {
+  	return g_xQueueRotary;
+  }
+  
+  /* .h文件声明 */
+  QueueHandle_t GetQueueIR(void);
+  ```
+
+- **将队列加入队列集**
+
+  - 在game1_task函数中完成上面功能，这样就将两个队列加入队列集了；
+
+  ```c
+  /* 红外队列句柄 */
+  static QueueHandle_t g_xQueueIR;
+  
+  /*  旋转编码器句柄*/
+  static QueueHandle_t g_xQueueRotary;
+  
+  /* 游戏任务 */
+  void game1_task(void *params)
+  {
+      // ...
+      
+  	/* 创建队列 */
+  	g_xQueuePlatform = xQueueCreate(10, sizeof(struct input_data));
+  	
+  	/* 创建队列集 */
+  	g_xQueueSetInput = xQueueCreateSet(ROTARY_QUEUE_LEN + IR_QUEUE_LEN);
+  	
+      /* 将队列加入队列集 */
+  	g_xQueueIR = GetQueueIR();
+  	g_xQueueRotary = GetQueueRotary();
+  	xQueueAddToSet(g_xQueueIR, g_xQueueSetInput);
+  	xQueueAddToSet(g_xQueueRotary, g_xQueueSetInput);
+  	
+  	// ...
+  }
+  ```
+
+
+
+## 5.创建InputTask
+
+### 5.1 创建数据处理任务InputTask
+
+- 将原先的旋转编码器数据处理任务改为InputTask，然后再在InputTask函数中进行操作的实现；
+
+```c
+void game1_task(void *params)
+{
+	// ...
+    
+	/* 创建输入任务 */
+	xTaskCreate(InputTask, "InputTask", 128, NULL, osPriorityNormal, NULL);
+	
+	// ...
+}
+```
+
+### 5.2 实现InputTask任务函数
+
+- 将原来的旋转编码器数据处理函数改为InputTask函数；
+- 这个函数做的事情主要有：读队列集，判断是否有数据，有数据再判断属于哪个设备，再进入对应的设备数据处理函数进行数据处理；
+
+```c
+/* 输入任务函数 */
+static void InputTask(void *params)
+{
+	QueueSetMemberHandle_t xQueueHandle;
+	
+	while (1)
+	{
+		/* 读队列集，得到队列句柄 */
+		xQueueHandle = xQueueSelectFromSet(g_xQueueSetInput, portMAX_DELAY);
+		
+		if (xQueueHandle)
+		{
+			/* 读队列句柄得到数据并处理数据 */
+			if (xQueueHandle == g_xQueueIR)
+			{
+				ProcessIRData();
+			}
+			else if (xQueueHandle == g_xQueueRotary)
+			{
+				ProcessRotaryData();
+			}
+		}
+	}
+}
+```
+
+### 5.3 数据处理函数
+
+- 然后实现ProcessIRData()函数和ProcessRotaryData()函数；
+- **读取对应结构体数据，然后将硬件结构体数据转换为需要写入挡球板队列的结构体形式；**
+
+```c
+/* 红外数据处理函数，将硬件数据转换成游戏数据 */
+static void ProcessIRData(void)
+{
+	struct ir_data idata;
+	static struct input_data input;
+	
+	xQueueReceive(g_xQueueIR, &idata, 0);
+	
+	if (idata.val == IR_KEY_LEFT)
+	{
+		input.dev = idata.dev;
+		input.val = UPT_MOVE_LEFT;
+	}
+	else if (idata.val == IR_KEY_RIGHT)
+	{
+		input.dev = idata.dev;
+		input.val = UPT_MOVE_RIGHT;
+	}
+	else if (idata.val == IR_KEY_REPEAT)
+	{
+		/* 保持不变 */
+	}
+	else
+	{
+		input.dev = idata.dev;
+		input.val = UPT_MOVE_NONE;
+	}
+	
+	/* 写挡球板队列 */
+	xQueueSend(g_xQueuePlatform, &input, 0);
+}
+
+/* 旋转编码器数据处理函数，将硬件数据转换成游戏数据 */
+static void ProcessRotaryData(void)
+{
+	struct rotary_data rdata;
+	static struct input_data idata;
+	int left;
+	int i, cnt;
+	
+	/* 读旋转编码器队列 */
+	xQueueReceive(&g_xQueueRotary, &rdata, 0);
+	
+	/* 处理数据 */
+	/* 判度速度:负数表示向左，正数表示向右 */
+	if (rdata.speed < 0)
+	{
+		left = 1;
+		rdata.speed = 0 - rdata.speed;
+	}
+	else
+	{
+		left = 0;
+	}
+	
+	if (rdata.speed > 100)
+		cnt = 4;
+	else if (rdata.speed > 50)
+		cnt = 2;
+	else
+		cnt = 1;
+	
+	/* 写挡球板队列 */
+	idata.dev = 1;
+	idata.val = left ? UPT_MOVE_LEFT : UPT_MOVE_RIGHT;
+	for (i = 0; i < cnt; i ++)
+	{
+		xQueueSend(g_xQueuePlatform, &idata, 0);
+	}
+}
+```
+
+### 5.4 开启使用队列集
+
+- 由于在STM32CubeMX中无法直接配置是否使用队列集，所以我们需要自己在配置文件中配置是否使用队列集；
+- 打开FreeRTOS.h文件，发现有如下代码
+  - 即默认下使用队列集是关闭的；
+  - 无法通过修改这里直接配置，因为用CubeMX再次生成代码时它会重新回到0；
+
+```c
+#ifndef configUSE_QUEUE_SETS
+	#define configUSE_QUEUE_SETS 0
+#endif
+```
+
+- 打开FreeRTOSConfig.h文件，直接在下方添加配置：
+
+```c
+/* USER CODE BEGIN Includes */
+#define configUSE_QUEUE_SETS 1
+/* Section where include file can be added */
+/* USER CODE END Includes */
+```
+
+### 5.5 默认任务自杀
+
+- 在默认任务中，我们也会去读红外接收的值，我们这里直接让它执行后就自杀，这样就不妨碍我们游戏那边的情况了；
+
+```c
+void StartDefaultTask(void *argument)
+{
+	// ...
+	TaskHandle_t xSoundTaskHandle = NULL;
+	BaseType_t ret;
+	
+	vTaskDelete(NULL);
+	
+	LCD_Init();
+	// ...
+}
+```
+
+### 5.6 栈的分配太小
+
+- 在前面我们分配的栈是3072，当我们使用队列集后，这个内存太小，我们可以将它增大到8000；
+
+<img src="3.images/8-3-2队列集实验_改进程序框架(编程)/改变栈大小.png" alt="改变栈大小" style="zoom: 67%;" />
+
+### 5.7 编译烧录
+
+- 完成上面的改造后，直接编译烧录；
+- 这个工程的效果和上一个工程的效果是一样的，只是程序框架更漂亮了；
+
+
+
+## 8.总结
+
+- 在本节课程中，通过队列集的引入，改善了整个程序的程序框架，效率更高了；
+- 整个程序的框架思路如下：
+  - 硬件驱动底层只负责把硬件原始数据写入各自的硬件队列中；
+  - 新建一个队列集，把原始硬件数据写入队列集中；
+  - 将原来的旋转编码器的数据处理任务改为上层的数据处理任务；
+  - 在数据处理任务函数中，根据句柄的不同，把不同的硬件原始数据处理成游戏格式的数据，这样就可以控制挡球板了；
+
+<img src="3.images/8-3-2队列集实验_改进程序框架(编程)/最终的程序框架.png" alt="程序框架" style="zoom:67%;" />
+
+---
 
 
 
 # 8-3-3 队列集实验_增加姿态控制
 
+## 1.内容介绍
+
+- 前面按照队列集的思想把红外接收和旋转编码器的整个项目框架给改造了一下，改造后的项目结构很适合我们去增加硬件设备；
+- 下面我们就在这个基础上去**增加MPU6050姿态控制**的效果；
+- 本节源码在`15_Chapter11_QueueSet_Game`的基础上，改出`16_Chapter11_QueueSet_Game_Add_MPU6050`，支持6轴传感器，使用姿态控制玩游戏；
+- MPU6050的操作可以参考：https://zhuanlan.zhihu.com/p/30621372；
+
+
+
+## 2.项目思路
+
+- 与前面两者不同的是，我们这里不使用中断的方式去写队列；
+- 而是**通过创建任务的方式，让任务去读I2C的数据**，并将数据写入到属于MPU6050的队列；
+- 然后再将MPU6050的队列加入到队列集，上层的**InputTask()函数**中需要增加处理MPU6050数据的函数；
+
+![项目框架](3.images/8-3-3队列集实验_增加姿态控制/程序框架.png)
+
+
+
+## 3.程序改造
+
+### 3.1 定义结构体形式及队列长度宏定义
+
+- 在驱动的头文件driver_mpu6050.h中定义好**结构体的形式，并写好MPU6050的队列的长度的宏定义**；
+
+```c
+#define MPU6050_QUEUE_LEN	10
+
+/* MPU6050数据结构体 */
+struct mpu6050_data {
+	int32_t angle_x;
+};
+```
+
+### 3.2 在初始化函数中完成队列的创建
+
+- 在**driver_mpu6050.c**件的初始化函数中创建队列；
+- 同时在该文件中**实现取句柄函数**，防止变量泄露，养成良好的编程习惯，别忘在在.h文件中声明；
+
+```c
+#include "FreeRTOS.h"
+#include "queue.h"
+
+/* MPU6050队列 */
+static QueueHandle_t g_xQueueMPU6050;
+
+QueueHandle_t GetQueueMPU6050(void)
+{
+	return g_xQueueMPU6050;
+}
+
+int MPU6050_Init(void)
+{
+	MPU6050_WriteRegister(MPU6050_PWR_MGMT_1, 0x00);	//解除休眠状态
+	MPU6050_WriteRegister(MPU6050_PWR_MGMT_2, 0x00);
+	MPU6050_WriteRegister(MPU6050_SMPLRT_DIV, 0x09);
+	MPU6050_WriteRegister(MPU6050_CONFIG, 0x06);
+	MPU6050_WriteRegister(MPU6050_GYRO_CONFIG, 0x18);
+	MPU6050_WriteRegister(MPU6050_ACCEL_CONFIG, 0x18);
+    return 0;
+	
+	g_xQueueMPU6050 = xQueueCreate(MPU6050_QUEUE_LEN, sizeof(struct mpu6050_data));
+}
+```
+
+### 3.3 调用初始化函数完成队列创建
+
+- 同前面一样的，在**freertos.c**文件中的入口函数中调用MPU6050的初始化函数，完成MPU6050的队列的创建；
+
+```c
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
+  LCD_Init();
+  LCD_Clear();
+  
+  RotaryEncoder_Init();
+  IRReceiver_Init();
+  MPU6050_Init();
+	
+  // ...
+}
+```
+
+### 3.4 任务函数的创建
+
+- 在任务函数中，我们**只读取x方向上的数值**，然后解析这个数值，最后写入队列中去；
+- 注意后面的vTaskDelay()函数，养成良好的编程习惯；
+
+```c
+/* MPU6050任务函数 */
+void MPU6050_Task(void *params)
+{
+	int16_t AccX;
+	struct mpu6050_data result;
+	
+	while(1)
+	{
+		/* 读数据 */
+		if (0 == MPU6050_ReadData(&AccX, NULL, NULL, NULL, NULL, NULL))
+		{
+			/* 解析数据 */
+			MPU6050_ParseData(AccX, 0, 0, 0, 0, 0, &result);
+			
+			/* 写队列 */
+			xQueueSend(g_xQueueMPU6050, &result, 0);
+		}
+		/* Delay */
+		vTaskDelay(50);
+	}
+}
+```
+
+### 3.5 把队列加入到队列集
+
+- 在game1.c文件中调用辅助函数获取句柄，然后将队列加入到队列集中去；
+- 注意要记得把队列集的大小加上MPU6050队列的大小；
+
+```c
+#include "driver_mpu6050.h"
+
+/* MPU6050队列 */
+static QueueHandle_t g_xQueueMPU6050;
+
+/* 游戏任务 */
+void game1_task(void *params)
+{		
+	// ...
+    
+	/* 创建队列集 */
+	g_xQueueSetInput = xQueueCreateSet(ROTARY_QUEUE_LEN + IR_QUEUE_LEN + MPU6050_QUEUE_LEN);
+	
+	/* 获取底层硬件队列的句柄 */
+	g_xQueueIR = GetQueueIR();
+	g_xQueueRotary = GetQueueRotary();
+	g_xQueueMPU6050 = GetQueueMPU6050();
+	
+	/* 将队列加入队列集 */
+	xQueueAddToSet(g_xQueueIR, g_xQueueSetInput);
+	xQueueAddToSet(g_xQueueRotary, g_xQueueSetInput);
+	xQueueAddToSet(g_xQueueMPU6050, g_xQueueSetInput);
+	
+    // ...
+}
+
+```
+
+### 3.6 创建MPU6050任务
+
+- 前面只是完成了任务函数的创建，接下来需要创建其任务；
+
+```c
+void MX_FREERTOS_Init(void) {
+  // ...
+    
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* 创建任务: 声 */
+  //extern void PlayMusic(void *params);
+  /* 创建游戏任务 */
+  xTaskCreate(game1_task, "GameTask", 128, NULL, osPriorityNormal, NULL);
+  
+  /* 创建MPU6050任务 */
+  extern void MPU6050_Task(void *params);
+  xTaskCreate(MPU6050_Task, "MPU6050Task", 128, NULL, osPriorityNormal, NULL);
+    
+  // ...
+}
+```
+
+### 3.7 添加队列集任务函数中处理MPU6050的操作
+
+- 在InputTask中添加处理MPU6050数据的操作，再定义MPU6050处理数据的函数，保持与前面完全相同的结构；
+
+```c
+/* MPU6050数据处理函数，将底层硬件数据转换成游戏数据 */
+void ProcessMPU6050Data()
+{
+	struct mpu6050_data mdata;
+	struct input_data idata;
+	
+	/* 读取MPU6050的数据 */
+	/* 判断角度，大于90表示向左，小于90表示向右 */
+	if (mdata.angle_x > 90)
+	{
+		idata.val = UPT_MOVE_LEFT;
+	}
+	else if (mdata.angle_x < 90)
+	{
+		idata.val = UPT_MOVE_RIGHT;
+	}
+	else
+	{
+		idata.val = UPT_MOVE_NONE;
+	}
+	
+	/* 写挡球板队列 */
+	idata.dev = 2;
+	xQueueSend(g_xQueuePlatform, &idata, 0);
+}
+
+/* 输入任务函数 */
+static void InputTask(void *params)
+{
+	QueueSetMemberHandle_t xQueueHandle;
+	
+	while (1)
+	{
+		/* 读队列集，得到队列句柄 */
+		xQueueHandle = xQueueSelectFromSet(g_xQueueSetInput, portMAX_DELAY);
+		
+		if (xQueueHandle)
+		{
+			/* 读队列句柄得到数据并处理数据 */
+			if (xQueueHandle == g_xQueueIR)
+			{
+				ProcessIRData();
+			}
+			else if (xQueueHandle == g_xQueueRotary)
+			{
+				ProcessRotaryData();
+			}
+			else if (xQueueHandle == g_xQueueMPU6050)
+			{
+				ProcessMPU6050Data();
+			}
+		}
+	}
+}
+```
+
+### 3.8 Bugger调试
+
+- 在上述代码烧写进去后，无法运行，可能是由于先创建了MPU6050，导致它已经将它的队列写满了，再放入到队列集中；
+- 这样它无法继续写入数据，也就无法唤醒InputTask任务；
+- 需要**先将它放入到队列集中再去创建任务**，也就是将创建任务从freertos.c文件中移到game1.c文件中；
+- 修改步骤：将freertos.c中创建任务的两句代码挪到加入队列集后面；
+
+```c
+void game1_task(void *params)
+{		
+   // ...
+	
+	/* 将队列加入队列集 */
+	xQueueAddToSet(g_xQueueIR, g_xQueueSetInput);
+	xQueueAddToSet(g_xQueueRotary, g_xQueueSetInput);
+	xQueueAddToSet(g_xQueueMPU6050, g_xQueueSetInput);
+	
+	/* 创建MPU6050任务，在将队列集加入后再创建，防止直接队列满了 */
+	extern void MPU6050_Task(void *params);
+	xTaskCreate(MPU6050_Task, "MPU6050Task", 128, NULL, osPriorityNormal, NULL);
+	
+	/* 创建输入任务 */
+	xTaskCreate(InputTask, "InputTask", 128, NULL, osPriorityNormal, NULL);
+    
+	// ...
+}
+```
+
+
+
+## 3.互斥问题解决
+
+- 屏幕显示和MPU6050读取数据都用到了I2C，两者会发生互斥，这里先用全局变量的方式保护一下；
+- 先前的OLED画面呈现逻辑
+  - 在draw.c文件中，它的函数实现也是用全局变量实现的；
+  - 现在我们也用这个全局变量，避免MPU6050访问的冲突；
+  - 将这个变量移到函数外，声明为全局变量；
+
+```c
+/* 修改前 */
+void draw_flushArea(byte x, byte y, byte w, byte h)
+{
+    static volatile int bInUsed = 0;
+    while (bInUsed);
+    //taskENTER_CRITICAL();
+    bInUsed = 1;
+    LCD_FlushRegion(x, y, w, h);
+    bInUsed = 0;
+    //taskEXIT_CRITICAL();
+}
+
+/* 修改后 */
+volatile int bInUsed = 0;
+void draw_flushArea(byte x, byte y, byte w, byte h)
+{
+    while (bInUsed);
+    //taskENTER_CRITICAL();
+    bInUsed = 1;
+    LCD_FlushRegion(x, y, w, h);
+    bInUsed = 0;
+    //taskEXIT_CRITICAL();
+}
+```
+
+- 然后在MPU6050的任务函数中，在访问数据时，也用这个全局变量；
+
+```c
+/* MPU6050任务函数 */
+void MPU6050_Task(void *params)
+{
+	int16_t AccX;
+	struct mpu6050_data result;
+	int ret;
+	extern volatile  int bInUsed;
+	
+	while(1)
+	{
+		/* 读数据 */
+		while (bInUsed);
+		bInUsed = 1;
+		ret = MPU6050_ReadData(&AccX, NULL, NULL, NULL, NULL, NULL);
+		bInUsed = 0;
+		
+		if (0 == ret)
+		{
+			/* 解析数据 */
+			MPU6050_ParseData(AccX, 0, 0, 0, 0, 0, &result);
+			
+			/* 写队列 */
+			xQueueSend(g_xQueueMPU6050, &result, 0);
+		}
+		/* Delay */
+		vTaskDelay(50);
+	}
+}
+```
+
+---
+
 
 
 # 8-4 队列实验_分发数据给多个任务(赛车游戏)
+
+
+
+---
 
 
 
