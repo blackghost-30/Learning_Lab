@@ -4657,25 +4657,409 @@ rosrun rviz rviz
 
 ![加载地图](images/50_地图的保存和加载/加载地图.png)
 
+---
+
 
 
 # 第五十一节课：Navigator导航系统
+
+## 1.内容介绍
+
+- 前面一节课中，我们已经完成了地图的保存和加载；
+- 有了地图，我们就可以在地图上导航，到达我们想要的目的地；
+- 本节课就介绍ROS中的导航系统——Navigator；
+
+
+
+## 2.实际生活中的导航
+
+下图所示为一个实际生活中的导航的构架图，它的主要流程如下：
+
+- 首先从地图服务器上下载全局地图数据，把这个全局地图数据输入到地图App中，这是地图的加载；
+- 接着在地图App上输入导航的目的地，地图App将会得出一条基于原始全局地图的最优导航路线；
+- 将这条最优导航路线输入到脑子，再由脑子控制运动神经带动腿脚运动；
+- 在实际的运动过程中，还需要眼睛、脚步数等更新自己的定位，避免走错路了；
+- 然后在实际运行中，导航的路线可能出现建图时没有的障碍物，这是可分为两种情况：
+  - 眼睛观察将障碍物信息更新到脑子中，如果周围有小路线可以绕过障碍物并重新回到原来的导航路线上，那就是局部规划；
+  - 若障碍物堵死了，不能继续回到原来航线，它就会把障碍物信息更新到全局地图上，并启动应急机制从更新的全局地图上重新规划一条新的路线；
+
+<img src="images/51_Navigator导航系统/实际生活的导航结构.png" alt="生活中的导航架构" style="zoom: 50%;" />
+
+
+
+## 3.ROS中的导航
+
+下面是ROS官方资料中的导航结构，它和上面的实际生活的导航结构有如下几点相同点：
+
+- **global_planner全局规划器**相当于上图的地图App；
+- **local_planner局部规划器**即脑子，里面有避障算法；
+- local_costmap是临时地图，即障碍物地图；
+- amcl即定位算法，实时更新自己的定位，避免走错路线；
+- base controller是底层通讯节点，即腿脚动作的施发者；
+
+<img src="images/51_Navigator导航系统/ROS的导航结构.png" alt="ROS导航" style="zoom:50%;" />
+
+---
 
 
 
 # 第五十二节课：move_base节点
 
+## 1.导航结构图再解析
+
+在下面的ROS导航架构中，主要有两类图形：
+
+- 一类是矩形，这些都是**一个个节点；**
+- 其中的**move_base**也是一个节点；
+
+<img src="images/52_move_base节点/ROS的导航结构.png" alt="导航节点" style="zoom: 50%;" />
+
+
+
+## 2.move_base节点介绍
+
+### 2.1 move_base官网介绍
+
+在ROS官网上搜索move_base，可以得到如下的解释：
+
+- move_base是一个软件包，该软件包下有一个move_base 节点；
+- 在这个节点中，会有一个全局规划器和一个局部规划器；
+- 而且还会管理着两个地图，分别给两个规划器使用；
+- 可见move_base节点就是上图中间的那个大节点，它里面就已经包含了那几个椭圆的内容；
+
+<img src="images/52_move_base节点/move_base节点.png" alt="move_base节点" style="zoom: 67%;" />
+
+### 2.2 move_base节点的使用
+
+- 上面介绍到，主要把move_base节点运行起来，它就可以把节点内的组件准备好；
+- **但是要使用move_base节点，需要提供下图所示的原数据，并给出目的地，这样move_base节点才能输出底盘节点数据，驱动底盘运行到目的地；**
+
+<img src="images/52_move_base节点/move_base节点的使用.png" alt="move_base节点的使用" style="zoom: 50%;" />
+
+- **原数据1：map_server**
+
+  - 该数据即全局地图数据；
+  - 直接运行map_server地图服务节点，将导航需要的地图文件加载进去，move_base就会自动获取数据；
+  - map_server节点对应的就是上一节课的内容；
+
+- **原数据2：sensor sources**
+
+  - 该数据为多个传感器节点；
+  - 在仿真机器人环节中，它会输出所有的这些sensor topics，这部分不需要操心；
+
+- **原数据3：odometry source**
+
+  - 该数据即里程计数据；
+
+  - 里程计节点可以由仿真机器人自己提供，不需要担心；
+
+- **数据4：tf**
+
+  - 该数据即传感器位置的tf；
+  - 仿真机器人也自带了，不需要担心；
+
+- **原数据5：amcl**
+
+  - 该数据即定位数据节点；
+  - 这个节点需要我们自己手动运行；
+  - amcl节点的具体介绍可见官网，它有一个软件包名为amcl和一个节点名为amcl；
+
+### 2.3 总结
+
+总结下来，要运行move_base节点，需要完成如下工作：
+
+- 运行move_base导航节点；
+- 运行map_server地图服务节点；
+- 运行amcl定位节点；
+- 给定目的地；
+
+
+
+## 3.实际操作
+
+### 3.1 环境配置
+
+- **仿真环境配置**
+
+  - 仿真环境用的还是wpr_simulation开源项目，先前已经配置好了，无需重新配置；
+
+- **配置机器人的驱动源码包**
+
+  - 导航过程中会用到里面的一些参数文件，使用这些参数文件可以简化参数设置步骤；
+  - 具体的参数后面会介绍，这里先用起来；
+  - 配置过程如下
+
+  ```bash
+  # 打开终端，进入工作空间的源码目录
+  cd catkin_ws/src
+  
+  # 下载源码包
+  git clone https://github.com/6-robot/wpb_home.git
+  
+  # 进入脚本文件夹
+  cd wpb_home/wpb_home_bringup/scripts/
+  
+  # 执行依赖项安装脚本
+  ./install_for_noetic.sh
+  
+  # 编译
+  cd ~/catkin_ws
+  catkin_make
+  ```
+
+- **准备导航用的地图**
+
+  - 前面课程已经完成了导航地图的建图和保存；
+  - 将前面保存地图生成的两个文件直接复制到wpr_simulation下的maps文件夹里；
+
+### 3.2 导航代码编写
+
+- 本小节的内容就是编写launch文件完成前面三个节点的启动工作；
+- **打开终端，创建软件包**
+
+```bash
+cd catkin_ws/src
+catkin_create_pkg nav_pkg roscpp rospy move_base_msgs actionlib
+```
+
+- **打开VsCode，进行编写**
+
+  - 在nav_pkg下，新建一个名为launch的文件夹；
+  - 在launch文件夹下新建nav.launch文件；
+  - 写入如下内容：其中第一个节点的中间部分的内容是复制wpr_simulation/launch/wpb_demo_nav.launch的内容，这些参数后续会讲；
+
+  ```c
+  <launch>
+  
+      <node pkg="move_base" type="move_base" name="move_base">
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+          <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+          <param name="base_local_planner" value="wpbh_local_planner/WpbhLocalPlanner" />
+      </node>
+  
+      <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+  
+      <node pkg="amcl" type="amcl" name="amcl"/>
+  
+  
+  </launch>
+  ```
+
+- **编译nav_pkg软件包**
+
+  - 终端执行下面代码
+
+  ```c
+  cd ~/catkin_ws
+  catkin_make
+  ```
+
+### 3.3 运行环境并导航
+
+- **运行仿真环境**
+
+```c
+roslaunch wpr_simulation wpb_stage_robocup.launch
+```
+
+- **运行导航程序**
+
+```c
+roslaunch nav_pkg nav.launch
+```
+
+- **设置目的地**
+
+  - 执行下面命令打开RVIZ
+
+  ```c
+  rviz
+  ```
+
+  - 然后在rviz中添加地图(话题/map)、机器人、path路线(话题选择第一个)；
+  - 然后点击2D Nav Gobal设定目的地，就可以实现导航了；
+
+- **运行的效果如下图所示**
+
+![运行效果](images/52_move_base节点/运行效果.gif)
+
+---
+
 
 
 # 第五十三节课：全局规划器
+
+## 1.全局规划器介绍
+
+- 全局规划器即下面架构图中的move_base中的global_planner；
+- 它相当于是手机上的导航App，如高德地图、百度地图中；
+- **在ROS中，就像手机的导航一样，也存在很多不同的全局规划器，而且每一种规划器还可以有不同的路径搜索算法；**
+- 全局规划器的选择和不同的路径搜索算法的选择就是上节课提到的参数的配置；
+
+<img src="images/53_全局规划器/ROS的导航结构.png" alt="ROS导航框架" style="zoom:50%;" />
+
+
+
+## 2.两种常见的导航算法
+
+- **Dijkstra算法**
+  - 它采用一种大水灌溉的方法搜索路径，是一种深度优先的算法；
+  - 有Dijkstra算法搜索的路径一般是最短的；
+- **A*算法**
+  - 它采用定向检索的方法，是一种广度优先的算法；
+  - A*算法的路径不一定是最短的，它是通过降低路径生成质量来降低了运算的数量；
+
+| <img src="images/53_全局规划器/Dijkstra算法.png" alt="Dijkstra算法" style="zoom:67%;" /> | <img src="images/53_全局规划器/A算法.png" alt="A*算法" style="zoom:67%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+
+
+## 3.全局规划器的参数设置
+
+- 在ROS中，内置了下表所示的3种全局规划器；
+
+- **Navfn/Global_planner**
+
+  - 前面两种的功能是完全一样的，只是后者是前面的一个迭代版本而已，一般采用前者即可，它也是ROS的默认规划器；
+  - 它们两者的内部都包含了Dijkstra算法和A算法，但是Navfn的A算法有bugger，Global_planner就是修复了A*算法的Navfn；
+  - 在默认下，使用Dijkstra算法即可，两者的算法消耗没有太大差别；
+
+- **arrot_planner**
+
+  - 它的代码简单，原理是原点和目的地连一条直线，遇到障碍物就避开它；
+  - 这种方式很简单，但是一般都不会使用它，**通常是以它为模板，进行自定义规划器的设计；**
+
+- **自定义规划器**
+
+  - move_base是支持自己编写全局规划器的；
+  - 它提供了一种Plugin插件接口，只需按照规定的格式就能把自己的算法写成新的规划器；
+
+  ![ROS内置的全局规划器](images/53_全局规划器/ROS内置的全局规划器.png)
+
+- **参数设置**
+
+  - 只需在上一节课提到的launch文件种，修改base_global_planner这个变量值即可；
+
+  ```yaml
+  <launch>
+  
+      <node pkg="move_base" type="move_base" name="move_base">
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+          <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+          <param name="base_local_planner" value="wpbh_local_planner/WpbhLocalPlanner" />
+      </node>
+  
+      <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+  
+      <node pkg="amcl" type="amcl" name="amcl"/>
+  
+  
+  </launch>
+  ```
+
+---
 
 
 
 # 第五十四节课：AMCL定位算法
 
+## 1.AMCL介绍
+
+### 1.1 AMCL基本介绍
+
+- 全称为Adaptive Monte Carlo Localization，即自适应蒙特卡洛定位算法；
+- 是一种使用粒子滤波在已知地图中进行定位的算法；
+- 它需要同时使用里程计和激光雷达数据，具有较强的自我纠错能力；
+
+### 1.2 AMCL中粒子滤波机制
+
+- 如下图所示就是AMCL算法在实际定位中的机理；
+- 它采用了粒子滤波的算法，即每一次都分裂粒子，粒子即自己的分身，它在位置和朝向上与本体会有所不同；
+- 然后每一次移动时，AMCL算法都会获取里程计信息和激光雷达信息，将这些信息叠加到粒子和本体中，采用末位淘汰方式将差别很大的粒子或本体淘汰掉；
+- 在实际的AMCL算法中，粒子数可达100到5000个；
+
+| <img src="images/54_AMCL定位算法/粒子滤波算法定位.png" alt="粒子滤波" style="zoom:50%;" /> | <img src="images/54_AMCL定位算法/AMCL的参数.png" alt="AMCL的参数" style="zoom: 67%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+
+
+## 2.AMCL的参数
+
+### 2.1 AMCL的参数示例
+
+- AMCL算法有很多的参数，可以打开官网搜索amcl，然后打开介绍网页；
+- 划到3.1.5节，可以查看它的所有参数，一些示例参数可见上图；
+
+### 2.2 AMCL的参数设置
+
+AMCL的参数设置可以参照如下两个.launch文件，实际开发中直接复制过来用即可：
+
+- **~/catkin_ws/src/wpb_home/wpb_home_tutorials/nav_lidar/amcl_diff.launch；**
+- **~/catkin_ws/src/wpb_home/wpb_home_tutorials/nav_lidar/amcl_omni.launch；**
+
+
+
+## 3.Rviz中显示定位的原理
+
+### 3.1 AMCL节点和里程计节点的TF输出机制
+
+- 在官网的3.1.6节中，还提到了AMCL节点和里程计节点的TF输出机制；
+- AMCL节点负责输出map到odom的tf关系；
+- 里程计负责输出odom到base_footprint的tf关系；
+- 两者结合就可以输出一条完整的map到base_footprint即地图到机器人底盘的tf关系；
+- 需要注意的是，AMCL节点切换本体和分身是通过map到odom这段tf关系产生跳跃突变来实现的；
+- 而里程计输出的odom到base_footprint这段tf是连续变化的，这在代价地图那还会讲到；
+
+<img src="images/54_AMCL定位算法/tf树.png" alt="TF树" style="zoom:67%;" />
+
+### 3.2 在Rviz中查看分身的位置
+
+- **运行仿真环境**
+
+```c
+roslaunch wpr_simulation wpb_stage_robocup.launch
+```
+
+- **运行导航程序**
+
+```c
+roslaunch nav_pkg nav.launch
+```
+
+- **打开Rviz**
+
+```c
+rviz
+```
+
+- **设置Rviz**
+  - 在rviz中添加地图(话题/map)、机器人、path路线(话题选择第一个)；
+  - 添加poseArray项目，并订阅话题/particlecloud，并将其设为绿色；
+  - 然后点击2D Nav Gobal设定目的地，就可以实现导航了并显示分身了；
+
+<img src="images/54_AMCL定位算法/运行效果.gif" alt="运行效果" style="zoom: 33%;" />
+
+---
+
 
 
 # 第五十五节课：代价地图Costmap
+
+
+
+
+
+
+
+
+
+---
 
 
 
