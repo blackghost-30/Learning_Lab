@@ -3535,7 +3535,7 @@ int LCD_PrintString(int x, int y, char *str)
 
 | **内核对象** | **生产者** | **消费者** | **数据/状态**                                                | **说明**                                                     |
 | ------------ | ---------- | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 队列         | ALL        | ALL        | 数据：若干个数据 谁都可以往队列里扔数据， 谁都可以从队列里读数据 | 用来传递数据， 发送者、接收者无限制， 一个数据只能唤醒一个接收者 |
+| 队列         | ALL        | ALL        | 数据：若干个数据 谁都可以往队列里扔数据， 谁都可以从队列里读数据 | 用来传递数据， 发送者、接收者无限制， **一个数据只能唤醒一个接收者 ** |
 | 事件组       | ALL        | ALL        | 多个位：或、与 谁都可以设置(生产)多个位， 谁都可以等待某个位、若干个位 | 用来传递事件， 可以是N个事件， 发送者、接受者无限制， 可以唤醒多个接收者：像广播 |
 | 信号量       | ALL        | ALL        | 数量：0~n 谁都可以增加一个数量， 谁都可消耗一个数量          | 用来维持资源的个数， 生产者、消费者无限制， 1个资源只能唤醒1个接收者 |
 | 任务通知     | ALL        | 只有我     | 数据、状态都可以传输， 使用任务通知时， 必须指定接受者       | N对1的关系： 发送者无限制， 接收者只能是这个任务             |
@@ -6582,21 +6582,929 @@ void car_game(void)
 
 # 9-2-2 信号量实验_优先级反转
 
+## 1.优先级反转
+
+- 低优先级的任务先创建并先运行，它take信号量，并开始运行；
+- 中优先级的任务不需要信号量，它就绪后马上运行，且由于优先级更高，所以它会阻塞低优先级的任务，直到跑完并把cpu资源让给低优先级的任务；
+- 对于高优先级的任务，当它就绪后想要take信号量，但是信号量已经被低优先级的任务给占有了，它也无法运行；
+- 所以最后运行情况是
+  - ①先运行，一段时间后②任务就绪，开始运行；
+  - 然后③任务就绪，想要运行，但是没有信号量了，只能阻塞，再到②任务运行；
+  - 若②任务运行完后放弃cpu资源那就会让①运行，否则另外两个都要一直等；
+
+<img src="3.images/9-2-2信号量实验_优先级反转/优先级反转.png" alt="优先级反转" style="zoom: 33%;" />
+
+
+
+## 2.实验演示
+
+### 2.1 项目移植
+
+- 本节源码在`20_Chapter12_Semaphore_Binary`的基础上，改出`21_Chapter12_Semaphore_Priority_Inversion`；
+- 复制上一个项目，然后重命名为`21_Chapter12_Semaphore_Priority_Inversion`；
+
+### 2.1 项目改造
+
+- v改变优先级**
+
+  - 先让上一节课的三个任务的优先级不同，构造低、中、高优先级任务；
+
+  ```c
+  /* car_game函数中 */
+  
+  /* 创建3辆汽车的任务 */
+  xTaskCreate(CarTask, "car1", 128, &g_cars[0], osPriorityNormal, NULL);
+  xTaskCreate(CarTask, "car2", 128, &g_cars[1], osPriorityNormal + 2, NULL);
+  xTaskCreate(CarTask, "car3", 128, &g_cars[2], osPriorityNormal + 3, NULL);
+  ```
+
+- **修改三个任务函数**
+
+  - 任务1：与先前的任务函数基本一致，显示获得信号量，然后运行完后释放任务量并自杀；
+  - 任务2：它创建之后先vTaskDelay(1000)，即创建后需要1s后才运行，并且它不获取信号量，**在while(1)里面使用的是mdelay()**，运行完后自杀；
+  - 任务3：它创建之后先vTaskDelay(2000)，即创建后需要2s后才运行，它需要获得信号量，**while(1)里面使用的是mdelay()**，运行完后自杀；
+
+  ```c
+  /* 汽车1任务函数 */
+  static void Car1Task(void *params)
+  {
+  	struct car *pcar = params;
+  	struct ir_data idata;
+  	
+  	/* 创建自己的队列 */
+  	QueueHandle_t xQueueIR = xQueueCreate(10, sizeof(struct ir_data));
+  	
+  	/* 注册队列 */
+  	RegisterQueueHandle(xQueueIR);
+  	
+  	/* 先显示汽车 */
+  	ShowCar(pcar);
+  	
+  	/* 先获取信号量 */
+  	xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	while(1)
+  	{
+  		/* 读取按键值:读队列 */
+  		//xQueueReceive(xQueueIR, &idata, portMAX_DELAY);
+  		
+  		/* 控制汽车往右移动 */
+  		//if (idata.val == pcar->control_key)
+  		{
+  			if (pcar->x < g_xres - CAR_LENGTH)
+  			{
+  				/* 隐藏汽车 */
+  				HideCar(pcar);
+  				
+  				/* 调整位置 */
+  				pcar->x += 1;
+  				if (pcar->x > g_xres - CAR_LENGTH)
+  				{
+  					pcar->x = g_xres - CAR_LENGTH;
+  				}
+  				
+  				/* 重新显示汽车 */
+  				ShowCar(pcar);
+  				
+  				vTaskDelay(50);
+  				
+  				if (pcar->x == g_xres - CAR_LENGTH)
+  				{
+  					/* 到达最右边后释放信号量 */
+  					xSemaphoreGive(g_xSemTicks);
+  					vTaskDelete(NULL);
+  				}
+  			}
+  		}
+  	}
+  }
+  
+  /* 汽车2任务函数 */
+  static void Car2Task(void *params)
+  {
+  	struct car *pcar = params;
+  	struct ir_data idata;
+  	
+  	vTaskDelay(1000);
+  	
+  	/* 创建自己的队列 */
+  	QueueHandle_t xQueueIR = xQueueCreate(10, sizeof(struct ir_data));
+  	
+  	/* 注册队列 */
+  	RegisterQueueHandle(xQueueIR);
+  	
+  	/* 先显示汽车 */
+  	ShowCar(pcar);
+  	
+  	/* 先获取信号量 */
+  	//xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	while(1)
+  	{
+  		/* 读取按键值:读队列 */
+  		//xQueueReceive(xQueueIR, &idata, portMAX_DELAY);
+  		
+  		/* 控制汽车往右移动 */
+  		//if (idata.val == pcar->control_key)
+  		{
+  			if (pcar->x < g_xres - CAR_LENGTH)
+  			{
+  				/* 隐藏汽车 */
+  				HideCar(pcar);
+  				
+  				/* 调整位置 */
+  				pcar->x += 1;
+  				if (pcar->x > g_xres - CAR_LENGTH)
+  				{
+  					pcar->x = g_xres - CAR_LENGTH;
+  				}
+  				
+  				/* 重新显示汽车 */
+  				ShowCar(pcar);
+  				
+  				//vTaskDelay(50);
+  				mdelay(50);
+  				
+  				if (pcar->x == g_xres - CAR_LENGTH)
+  				{
+  					/* 到达最右边后释放信号量 */
+  					//xSemaphoreGive(g_xSemTicks);
+  					vTaskDelete(NULL);
+  				}
+  			}
+  		}
+  	}
+  }
+  
+  /* 汽车3任务函数 */
+  static void Car3Task(void *params)
+  {
+  	struct car *pcar = params;
+  	struct ir_data idata;
+  	
+  	/* 创建自己的队列 */
+  	QueueHandle_t xQueueIR = xQueueCreate(10, sizeof(struct ir_data));
+  	
+  	/* 注册队列 */
+  	RegisterQueueHandle(xQueueIR);
+  	
+  	/* 先显示汽车 */
+  	ShowCar(pcar);
+  	
+  	vTaskDelay(2000);
+  	
+  	/* 先获取信号量 */
+  	xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	while(1)
+  	{
+  		/* 读取按键值:读队列 */
+  		//xQueueReceive(xQueueIR, &idata, portMAX_DELAY);
+  		
+  		/* 控制汽车往右移动 */
+  		//if (idata.val == pcar->control_key)
+  		{
+  			if (pcar->x < g_xres - CAR_LENGTH)
+  			{
+  				/* 隐藏汽车 */
+  				HideCar(pcar);
+  				
+  				/* 调整位置 */
+  				pcar->x += 1;
+  				if (pcar->x > g_xres - CAR_LENGTH)
+  				{
+  					pcar->x = g_xres - CAR_LENGTH;
+  				}
+  				
+  				/* 重新显示汽车 */
+  				ShowCar(pcar);
+  				
+  				//vTaskDelay(50);
+  				mdelay(50);
+  				
+  				if (pcar->x == g_xres - CAR_LENGTH)
+  				{
+  					/* 到达最右边后释放信号量 */
+  					xSemaphoreGive(g_xSemTicks);
+  					vTaskDelete(NULL);
+  				}
+  			}
+  		}
+  	}
+  }
+  ```
+
+- **项目效果**
+  - 上电后，任务1先运行，它占据信号量；
+  - 1s后，任务2就绪，它的优先级更高，它运行，任务1进入阻塞态；
+  - 等到任务2运行完后自杀，继续由任务1运行，任务1运行完后释放信号量并自杀，任务3才开始运行；
+  - **将任务2最后的自杀注释掉，由于它内部使用的是mdelay()，它将永远都不让出cpu资源，即使是任务2的车跑到最右边了，其余车也无法运行；**
+
+<img src="3.images/9-2-2信号量实验_优先级反转/运行效果.gif" alt="项目效果" style="zoom:67%;" />
+
+
+
+## 3.生活例子再现
+
+上面的情况可以用下面的生活例子来解释：
+
+- 学校有一个超算，学生先来按了指纹，它正在用超算；
+- 然后后面主任来了，他带了一群人来参观，说超算太吵了让学生先关了超算；
+- 后面校长又来了，他也要用超算，但是超算已经按了学生的指纹了，所以必须等学生的超算任务完成才能轮到校长；
+- 在这里，校长优先级最高，主任次之，学生再次之；
+- 但是最低优先级的学生被中优先级的主人卡住了，但最高优先级的校长又必须等待最低优先级的学生，这样就发生了优先级反转；
+
+<img src="3.images/9-2-2信号量实验_优先级反转/生活例子.png" alt="生活例子" style="zoom: 50%;" />
+
+---
+
 
 
 # 9-3 互斥量_领导临时提拔你(解决优先级反转)
+
+## 1.内容介绍
+
+- 本节课程讲解互斥量，对应的课程资料为**第13章——互斥量(mutex)；**
+- 本节源码在`21_Chapter12_Semaphore_Priority_Inversion`的基础上，改出`22_Chapter13_Mutex_Priority_Inversion`；
+- 复制上一节源码，重命名为`22_Chapter13_Mutex_Priority_Inversion`；
+
+
+
+## 2.互斥量的定义
+
+### 2.1 生活例子讲解
+
+- 学生正在用超算，这时候主任突然带一群人来参观，主任的优先级更高，学生只能先停等待主任参观完；
+- 这是校长也过来了，他也要用超算，但是学生没办法让给校长，因为有个高优先级的主任不让他用超算；
+- 这时候，校长提升学生的优先级至与自己相等，这样学生就能先用而不理主任了；
+- **等到学生用完后需要主动恢复自己的优先级，校长就可以运行了**，主任需要等到校长用完才能继续运行；
+- 互斥量就可以实现这样的目的，本质就是**学生继承了校长的优先级，所以互斥量又叫优先级继承**；
+- 这里的互斥量就是一开始Give的那个信号量，它们两个任务要抢一个东西，所以是互斥量，**互斥量即为互斥锁；**
+
+<img src="3.images/9-3互斥量_领导临时提拔你(解决优先级反转)/互斥量的生活例子.png" alt="互斥量生活例子" style="zoom: 67%;" />
+
+### 2.2 FreeRTOS中互斥量的本质
+
+- 三个任务：高优先级H、中优先级M、低优先级L；
+- **信号量的优先级反转**
+  - 低优先级L拿到**信号量**正在运行；
+  - 高优先级H也要这个信号量，阻塞等待；
+  - 此时中优先级M就绪开始跑；
+  - M一直占用CPU，L得不到运行、释放不了信号量；
+  - **高优先级 H 被中优先级 M 卡死；**
+  - **即普通信号量（二值 / 计数）存在优先级反转问题**
+- **互斥量内置优先级继承机制**
+  - 低优先级**L**持有互斥量；
+  - 高优先级**H**申请不到互斥量，阻塞；
+  - **FreeRTOS内核自动把L的优先级临时提升到和H一样高**；
+  - L变成高优先级，**不会被中优先级M抢占**；
+  - L快速跑完、释放互斥量；
+  - L优先级**自动恢复原值**，H立刻拿到互斥量运行；
+  - 互斥量可以完美避开中间优先级任务插队，**彻底解决优先级反转；**
+
+- 注意：优先级继承是互斥量的天然属性，是由FreeRTOS内核逻辑决定的，它不能在中断中执行，而且也不能在项目中一直使用互斥量；
+
+
+
+## 3.互斥量相关API
+
+### 3.1 创建
+
+- **信号量**
+
+  - **互斥量是一种特殊的二进制信号量，它的句柄类型和各个API保持与信号量的一致；**
+  - 使用互斥量时，先创建、然后去获得、释放它；
+  - 使用句柄来表示一个互斥量；
+
+- **创建互斥量**
+
+  - 创建互斥量的函数有2种：动态分配内存，静态分配内存，函数原型如下
+
+  ```c
+  /* 创建一个互斥量，返回它的句柄。
+   * 此函数内部会分配互斥量结构体 
+   * 返回值: 返回句柄，非NULL表示成功
+   */
+  SemaphoreHandle_t xSemaphoreCreateMutex( void );
+  
+  /* 创建一个互斥量，返回它的句柄。
+   * 此函数无需动态分配内存，所以需要先有一个StaticSemaphore_t结构体，并传入它的指针
+   * 返回值: 返回句柄，非NULL表示成功
+   */
+  SemaphoreHandle_t xSemaphoreCreateMutexStatic( StaticSemaphore_t *pxMutexBuffer );
+  ```
+
+- **使用互斥量的前提**
+
+  - **要想使用互斥量，需要在配置文件FreeRTOSConfig.h中定义**
+
+  ```c
+  #define configUSE_MUTEXES 1
+  ```
+
+### 3.2 其他函数
+
+- **要注意的是，互斥量不能在ISR中使用；**
+
+- 各类操作函数，比如删除、give/take，跟一般信号量一样；
+
+```c
+/*
+ * xSemaphore: 信号量句柄，你要删除哪个信号量, 互斥量也是一种信号量
+ */
+void vSemaphoreDelete( SemaphoreHandle_t xSemaphore );
+
+/* 释放 */
+BaseType_t xSemaphoreGive( SemaphoreHandle_t xSemaphore );
+
+
+/* 获得 */
+BaseType_t xSemaphoreTake(
+                   SemaphoreHandle_t xSemaphore,
+                   TickType_t xTicksToWait
+               );
+```
+
+
+
+## 4.程序实验
+
+### 4.1 把创建信号量改为创建互斥量
+
+- 在game2.c文件的car_game()函数中，把原来创建信息量的代码改为创建互斥量；
+- **系统创建时它会把互斥量默认的设为1**，这样应当三辆汽车按照上述的效果运行；
+
+```c
+/* 汽车业务层逻辑 */
+void car_game(void)
+{
+	// ...
+	
+	/* 创建信号量 */
+	//g_xSemTicks = xSemaphoreCreateCounting(3, 1);
+	g_xSemTicks = xSemaphoreCreateMutex();			// 初始值为1
+	
+	// ...
+}
+```
+
+- 但是实际效果中，当任务3想要获得互斥量并将任务1提高优先级后，任务1并没有继续走；
+
+<img src="3.images/9-3互斥量_领导临时提拔你(解决优先级反转)/运行效果1.gif" alt="实际效果" style="zoom:67%;" />
+
+- 这是因为在draw.c文件以及driver_mpu6050.c文件使用了**全局变量保护I2C**，这个全局变量在这里变得危险，两个任务产生了冲突；
+
+  - 任务2在跑的时候，才跑到LCD_FlushRegion()函数时，就被切换了，此时bInUsed变量还是1；
+  - 任务3跑来到这里，一直卡在while循环中，且它的优先级最高，任务2没有机会更改这个变量，所以导致卡住了；
+
+  ```c
+  /* draw.c文件 */
+  
+  volatile int bInUsed = 0;
+  void draw_flushArea(byte x, byte y, byte w, byte h)
+  {
+      while (bInUsed);		// 全局变量保护
+      //taskENTER_CRITICAL();
+      bInUsed = 1;
+      LCD_FlushRegion(x, y, w, h);
+      bInUsed = 0;
+      //taskEXIT_CRITICAL();
+  }
+  
+  /* driver_mpu6050.c文件 */
+  /* MPU6050任务函数 */
+  void MPU6050_Task(void *params)
+  {
+  	int16_t AccX;
+  	struct mpu6050_data result;
+  	int ret;
+  	extern volatile int bInUsed;
+  	
+  	while(1)
+  	{
+  		/* 读数据 */
+  		while (bInUsed);		// 全局变量保护
+  		bInUsed = 1;
+  		ret = MPU6050_ReadData(&AccX, NULL, NULL, NULL, NULL, NULL);
+  		bInUsed = 0;
+  		
+  		if (0 == ret)
+  		{
+  			/* 解析数据 */
+  			MPU6050_ParseData(AccX, 0, 0, 0, 0, 0, &result);
+  			
+  			/* 写队列 */
+  			xQueueSend(g_xQueueMPU6050, &result, 0);
+  		}
+  		/* Delay */
+  		vTaskDelay(50);
+  	}
+  }
+  
+  ```
+
+### 4.2 用互斥量解决I2C访问冲突的问题
+
+- 可以用互斥量改造**前面的draw.c文件以及driver_mpu6050.c文件**中使用全局变量来保护I2C这个临界资源的问题；
+- 在freertos.c文件中定义两个函数，它们实现对全局互斥量的获取和释放；
+
+```c
+#include "semphr.h"
+
+static SemaphoreHandle_t g_xI2CMutex;
+
+void GetI2C(void)
+{
+	/* 等待一个互斥量 */
+	xSemaphoreTake(g_xI2CMutex, portMAX_DELAY);
+}
+
+void PutI2C(void)
+{
+	/* 释放互斥量 */
+	xSemaphoreGive(g_xI2CMutex);
+}
+
+```
+
+- 接着把draw.c文件刷新显存函数中的全局变量保护改为互斥量保护；
+
+```c
+extern void GetI2C(void);
+extern void PutI2C(void);
+
+//volatile int bInUsed = 0;
+void draw_flushArea(byte x, byte y, byte w, byte h)
+{
+    //while (bInUsed);
+    //taskENTER_CRITICAL();
+    //bInUsed = 1;
+	GetI2C();
+    LCD_FlushRegion(x, y, w, h);
+	PutI2C();
+    //bInUsed = 0;
+    //taskEXIT_CRITICAL();
+}
+```
+
+- 同样的把driver_mpu6050.c文件中的全局变量也改为互斥量保护；
+
+```c
+/* MPU6050任务函数 */
+void MPU6050_Task(void *params)
+{
+	int16_t AccX;
+	struct mpu6050_data result;
+	int ret;
+	//extern volatile int bInUsed;
+	extern void GetI2C(void);
+	extern void PutI2C(void);
+	
+	while(1)
+	{
+		/* 读数据 */
+		//while (bInUsed);
+		//bInUsed = 1;
+		GetI2C();
+		ret = MPU6050_ReadData(&AccX, NULL, NULL, NULL, NULL, NULL);
+		//bInUsed = 0;
+		PutI2C();
+		
+		if (0 == ret)
+		{
+			/* 解析数据 */
+			MPU6050_ParseData(AccX, 0, 0, 0, 0, 0, &result);
+			
+			/* 写队列 */
+			xQueueSend(g_xQueueMPU6050, &result, 0);
+		}
+		/* Delay */
+		vTaskDelay(50);
+	}
+}
+```
+
+### 4.3 程序烧录
+
+- 经过这样改造之后，效果如下：
+  - 一开始任务1先跑，1s后任务2再跑，2s后任务3启动；
+  - 但是由于任务3没有互斥量，它无法运行，但它会提升任务1的优先级；
+  - 但是由于任务1内部有vTaskDelay()函数，所以后续任务1和任务2交替跑；
+  - 直到1跑完后，互斥量给到任务3，任务3跑完才轮到任务2跑；
+
+
+
+## 5.总结
+
+本节课主要学习了互斥量的问题，用它完成了两个问题：
+
+- 解决信号量中优先级反转的问题；
+- 解决OLED显示和MPU6050数据获取中全局变量保护的资源冲突隐患问题；
+
+---
 
 
 
 # 10-1 事件组的本质
 
+## 1.事件组的目的
+
+- 在前面的列表、信号量、互斥量中，写入或是读取都只是能够唤醒一个任务，无法唤醒多个任务；
+- 而事件组要解决的就是**能够唤醒多个任务**的问题；
+
+<img src="3.images/10-1事件组的本质/队列或信号量或互斥量的通知局限.png" alt="队列局限" style="zoom: 33%;" />
+
+
+
+## 2.事件组的机制
+
+如由下图所示即为事件组的实现机制。一个事件组除了有一个int数值外，还有一个链表，这个链表中存放着一个个正在等待的任务。
+
+- **int数值**
+  - 这个int数值中，高8位不用，它只用于表示事件的关系；
+  - 对于低位，每一位表示一个事件，当对应位的事件发生时它就在对应位写入1，否则为0；
+
+- **链表数据**
+  - 在链表中存放着一个个任务的结构体，这个结构体中也有一个int值；
+  - 对于高八位，它存放了各个事件的关系，低位则表示这个任务正在等待哪些事件发生；
+
+- **作用机制**
+  - 假设存在任务C，这个任务C会写入数据到事件组；
+  - 当事件组写入数据后它将遍历整个链表，看一下是否有任务满足目前的事件发生关系，若满足则唤醒否则继续阻塞等待；
+
+<img src="3.images/10-1事件组的本质/事件组机制.png" alt="事件组机制" style="zoom: 50%;" />
+
+
+
+## 3.事件组相关API
+
+### 3.1 创建
+
+- 有两种创建方法：动态分配内存、静态分配内存；
+- 函数原型如下
+
+```c
+/* 创建一个事件组，返回它的句柄。
+ * 此函数内部会分配事件组结构体 
+ * 返回值: 返回句柄，非NULL表示成功
+ */
+EventGroupHandle_t xEventGroupCreate( void );
+
+/* 创建一个事件组，返回它的句柄。
+ * 此函数无需动态分配内存，所以需要先有一个StaticEventGroup_t结构体，并传入它的指针
+ * 返回值: 返回句柄，非NULL表示成功
+ */
+EventGroupHandle_t xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer );
+```
+
+### 3.2 删除
+
+- 删除事件组的函数原型如下
+
+```c
+/*
+ * xEventGroup: 事件组句柄，你要删除哪个事件组
+ */
+void vEventGroupDelete( EventGroupHandle_t xEventGroup )
+```
+
+### 3.3 设置事件
+
+- 可以设置事件组的某个位、某些位，使用的函数有2个
+  - 在任务中使用**xEventGroupSetBits()**；
+  - 在ISR中使用**xEventGroupSetBitsFromISR()**
+
+- 函数原型如下
+
+```c
+/* 设置事件组中的位
+ * xEventGroup: 哪个事件组
+ * uxBitsToSet: 设置哪些位? 
+ *              如果uxBitsToSet的bitX, bitY为1, 那么事件组中的bitX, bitY被设置为1
+ *              可以用来设置多个位，比如 0x15 就表示设置bit4, bit2, bit0
+ * 返回值: 返回原来的事件值(没什么意义, 因为很可能已经被其他任务修改了)
+ */
+EventBits_t xEventGroupSetBits( EventGroupHandle_t xEventGroup,
+                                    const EventBits_t uxBitsToSet );
+
+/* 设置事件组中的位
+ * xEventGroup: 哪个事件组
+ * uxBitsToSet: 设置哪些位? 
+ *              如果uxBitsToSet的bitX, bitY为1, 那么事件组中的bitX, bitY被设置为1
+ *              可以用来设置多个位，比如 0x15 就表示设置bit4, bit2, bit0
+ * pxHigherPriorityTaskWoken: 有没有导致更高优先级的任务进入就绪态? pdTRUE-有, pdFALSE-没有
+ * 返回值: pdPASS-成功, pdFALSE-失败
+ */
+BaseType_t xEventGroupSetBitsFromISR( EventGroupHandle_t xEventGroup,
+									  const EventBits_t uxBitsToSet,
+									  BaseType_t * pxHigherPriorityTaskWoken );
+```
+
+- **xEventGroupSetBitsFromISR**函数问题
+  - ISR中的函数，比如队列函数**xQueueSendToBackFromISR**、信号量函数**xSemaphoreGiveFromISR**，它们会唤醒某个任务，最多只会唤醒1个任务；
+  - 但设置事件组时，有可能导致多个任务被唤醒，这会带来很大的不确定性；
+  - 所以**xEventGroupSetBitsFromISR**函数不直接设置事件组，而是给一个FreeRTOS后台任务daemon task发送队列数据，由这个任务来设置事件组；
+  - 如果后台任务的优先级比当前被中断的任务优先级高，**xEventGroupSetBitsFromISR**会设置**pxHigherPriorityTaskWoken**为pdTRUE；
+  - 如果daemon task成功地把队列数据发送给了后台任务，那么**xEventGroupSetBitsFromISR**的返回值就是pdPASS；
+
+### 3.4 等待事件
+
+- 使用**xEventGroupWaitBits**来等待事件
+  - 可以等待某一位、某些位中的任意一个，也可以等待多位；
+  - 等到期望的事件后，还可以清除某些位；
+
+- 函数原型如下
+
+```c
+EventBits_t xEventGroupWaitBits( EventGroupHandle_t xEventGroup,
+                                 const EventBits_t uxBitsToWaitFor,
+                                 const BaseType_t xClearOnExit,
+                                 const BaseType_t xWaitForAllBits,
+                                 TickType_t xTicksToWait );
+```
+
+- 函数参数说明列表如下
+
+|    **参数**     | **说明**                                                     |
+| :-------------: | :----------------------------------------------------------- |
+|   xEventGroup   | 等待哪个事件组？                                             |
+| uxBitsToWaitFor | 等待哪些位？哪些位要被测试？                                 |
+| xWaitForAllBits | 怎么测试？是"AND"还是"OR"？ pdTRUE: 等待的位，全部为1; pdFALSE: 等待的位，某一个为1即可 |
+|  xClearOnExit   | 函数提出前是否要清除事件？ pdTRUE: 清除uxBitsToWaitFor指定的位 pdFALSE: 不清除 |
+|  xTicksToWait   | 如果期待的事件未发生，阻塞多久。 可以设置为0：判断后即刻返回； 可设置为portMAX_DELAY：一定等到成功才返回； 可以设置为期望的Tick Count，一般用*pdMS_TO_TICKS()*把ms转换为Tick Count |
+|     返回值      | 返回的是事件值， 如果期待的事件发生了，返回的是"非阻塞条件成立"时的事件值； 如果是超时退出，返回的是超时时刻的事件值。 |
+
+- 举例如下
+  - 可以使用*xEventGroupWaitBits()*等待期望的事件，它发生之后再使用*xEventGroupClearBits()*来清除；
+  - 但是这两个函数之间，有可能被其他任务或中断抢占，它们可能会修改事件组；
+  - 可以使用设置*xClearOnExit*为pdTRUE，使得对事件组的测试、清零都在*xEventGroupWaitBits()*函数内部完成，这是一个原子操作；
+
+| 事件组的值 | uxBitsToWaitFor | xWaitForAllBits | 说明                                                         |
+| :--------: | :-------------: | :-------------: | :----------------------------------------------------------- |
+|    0100    |      0101       |     pdTRUE      | 任务期望bit0,bit2都为1， 当前值只有bit2满足，任务进入阻塞态； 当事件组中bit0,bit2都为1时退出阻塞态 |
+|    0100    |      0110       |     pdFALSE     | 任务期望bit0,bit2某一个为1， 当前值满足，所以任务成功退出    |
+|    0100    |      0110       |     pdTRUE      | 任务期望bit1,bit2都为1， 当前值不满足，任务进入阻塞态； 当事件组中bit1,bit2都为1时退出阻塞态 |
+
+### 3.5 同步点
+
+- 使用 **xEventGroupSync()** 函数可以同步多个任务
+  - 可以设置某位、某些位，表示自己做了什么事
+  - 可以等待某位、某些位，表示要等等其他任务
+  - 期望的时间发生后， **xEventGroupSync()** 才会成功返回。
+  - **xEventGroupSync**成功返回后，会清除事件
+
+- **xEventGroupSync** 函数原型如下：
+
+```text
+EventBits_t xEventGroupSync(    EventGroupHandle_t xEventGroup,
+                                const EventBits_t uxBitsToSet,
+                                const EventBits_t uxBitsToWaitFor,
+                                TickType_t xTicksToWait );
+```
+
+- 参数列表如下：
+
+|    **参数**     | **说明**                                                     |
+| :-------------: | ------------------------------------------------------------ |
+|   xEventGroup   | 哪个事件组？                                                 |
+|   uxBitsToSet   | 要设置哪些事件？我完成了哪些事件？ 比如0x05(二进制为0101)会导致事件组的bit0,bit2被设置为1 |
+| uxBitsToWaitFor | 等待那个位、哪些位？ 比如0x15(二级制10101)，表示要等待bit0,bit2,bit4都为1 |
+|  xTicksToWait   | 如果期待的事件未发生，阻塞多久。 可以设置为0：判断后即刻返回； 可设置为portMAX_DELAY：一定等到成功才返回； 可以设置为期望的Tick Count，一般用*pdMS_TO_TICKS()*把ms转换为Tick Count |
+|     返回值      | 返回的是事件值， 如果期待的事件发生了，返回的是"非阻塞条件成立"时的事件值； 如果是超时退出，返回的是超时时刻的事件值。 |
+
+---
+
 
 
 # 10-2 事件组实验_车辆协同
 
+## 1.事件组广播
+
+### 1.1 内容介绍
+
+- 本节源码在`22_Chapter13_Mutex_Priority_Inversion`的基础上，改出`23_Chapter14_Eventgroup_Broadcast`；
+- 复制`22_Chapter13_Mutex_Priority_Inversion`，重命名为`23_Chapter14_Eventgroup_Broadcast`；
+
+* `23_Chapter14_Eventgroup_Broadcast`功能：car1到站后，广播通知car2，car3启动；
+
+### 1.2 项目改造
+
+- **创建一个事件组并修改优先级**
+
+  - 注释原来的互斥量，并创建一个事件组，同样的是需要先在前面定义一个全局的事件组变量；
+  - 除此之外，为了让任务2和任务3同时运行，将两者的优先级改为相同；
+
+  ```c
+  /* 事件组 */
+  static EventGroupHandle_t g_xEventCar;
+  
+  /* 汽车业务层逻辑 */
+  void car_game(void)
+  {
+  	// ...
+  	
+  	/* 创建信号量 */
+  	//g_xSemTicks = xSemaphoreCreateCounting(3, 1);
+  	//g_xSemTicks = xSemaphoreCreateMutex();			// 初始值为1
+  	
+  	g_xEventCar = xEventGroupCreate();		/* 创建事件组 */
+  	
+  	//  ...
+  	
+  	/* 创建3辆汽车的任务 */
+  	xTaskCreate(Car1Task, "car1", 128, &g_cars[0], osPriorityNormal, NULL);
+  	xTaskCreate(Car2Task, "car2", 128, &g_cars[1], osPriorityNormal + 2, NULL);		/* 两者优先级一致 */
+  	xTaskCreate(Car3Task, "car3", 128, &g_cars[2], osPriorityNormal + 2, NULL);
+  }
+  ```
+
+- **任务1设置事件组**
+
+  - 任务1函数在到达最右边后设置事件组的bit0位；
+  - 并取消任务1的获取信号量，让它上电就能运行；
+
+  ```c
+  /* 汽车1任务函数 */
+  static void Car1Task(void *params)
+  {
+  	// ...
+  	
+  	/* 先获取信号量 */
+  	//xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	// ...
+  					/* 到达最右边后释放信号量 */
+  					//xSemaphoreGive(g_xSemTicks);
+  					
+  					/* 设置事件组：bit0 */
+  					xEventGroupSetBits(g_xEventCar, (1<<0));
+  					
+  					vTaskDelete(NULL);
+  	// ...
+  }
+  ```
+
+- **务2和任务3等待事件**
+
+  - 任务2函数和任务3函数在while(1)循环前都等待bit0事件，这样只有当任务1的车辆达到最右边后任务2和任务3才能运行；
+  - 删除一开始的阻塞vTaskDelay()、注释掉获取信号量、释放信号量等；
+
+  ```c
+  /* 汽车2任务函数 */
+  static void Car2Task(void *params)
+  {
+  	// ...
+  	
+  	/* 先获取信号量 */
+  	//xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	/* 等待事件组：bit0 */
+  	xEventGroupWaitBits(g_xEventCar, (1<<0), pdTRUE, pdFALSE, portMAX_DELAY);	/* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+  	
+  	// ...
+  					/* 到达最右边后释放信号量 */
+  					//xSemaphoreGive(g_xSemTicks);
+  					vTaskDelete(NULL);
+  	// ...
+  }
+  
+  /* 汽车3任务函数 */
+  static void Car3Task(void *params)
+  {
+  	// ...
+  	
+  	/* 先获取信号量 */
+  	//xSemaphoreTake(g_xSemTicks, portMAX_DELAY);
+  	
+  	/* 等待事件组：bit0 */
+  	xEventGroupWaitBits(g_xEventCar, (1<<0), pdTRUE, pdFALSE, portMAX_DELAY);	/* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+  	
+  	// ...
+  					/* 到达最右边后释放信号量 */
+  					//xSemaphoreGive(g_xSemTicks);
+  					vTaskDelete(NULL);
+  	// ...
+  }
+  ```
+
+- **编译烧录**
+  
+  - 编译烧录后，任务1小车先走，走到最右边后，任务2和任务3的小车同时一块走；
+
+
+
+## 2.等待或事件
+
+### 2.1 内容介绍
+
+- 本节源码在`23_Chapter14_Eventgroup_Broadcast`的基础上，改出`24_Chapter14_Eventgroup_Or`；
+- 复制`23_Chapter14_Eventgroup_Broadcast`，重命名为`24_Chapter14_Eventgroup_Or`；
+
+* `24_Chapter14_Eventgroup_Or`功能：car1或car2到站后，car3启动；
+
+### 2.2 项目改造
+
+- **对于任务1**
+
+  - 保持原有操作不变，即任务1函数在到达最右边后设置事件组的bit0位；
+
+- **对于任务2**
+
+  - 注释等待事件组的代码，将中间的mdelay()函数改为vTaskDelay()函数，让它和任务1同时运行；
+  - 在任务2函数在到达最右边后设置事件组的bit1位；
+
+  ```c
+  /* 汽车2任务函数 */
+  static void Car2Task(void *params)
+  {
+  	// ...
+  	
+  	/* 等待事件组：bit0 */
+  	//xEventGroupWaitBits(g_xEventCar, (1<<0), pdTRUE, pdFALSE, portMAX_DELAY);	/* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+  	
+  	while(1)
+  	{
+  	// ...
+  				
+  				vTaskDelay(50);
+  				//mdelay(50);
+  				
+  				if (pcar->x == g_xres - CAR_LENGTH)
+  				{
+  					/* 到达最右边后释放信号量 */
+  					//xSemaphoreGive(g_xSemTicks);
+  					
+  					/* 设置事件组：bit0 */
+  					xEventGroupSetBits(g_xEventCar, (1<<1));
+  					
+  					vTaskDelete(NULL);
+  				}
+  	// ...
+  }
+  ```
+
+- **对于任务3**
+
+  - 等待两个事件的或；
+
+  ```c
+  /* 汽车3任务函数 */
+  static void Car3Task(void *params)
+  {
+  	/* 等待事件组：bit0 or bit1 */
+      /* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+  	xEventGroupWaitBits(g_xEventCar, (1<<0) | (1<<1), pdTRUE, pdFALSE, portMAX_DELAY);
+      
+  	// ...
+  }
+  
+  ```
+
+- **编译烧录**
+
+  - 这样上电瞬间任务1的小车先跑，我们可以条件任务1和任务2中小车的vTaskDelay()的大小来控制小车的速度，以控制哪个小车先到达；
+  - 由于上一个工程将任务2和任务3的优先级设为一样了，所以如果任务1先达到，后面任务2和任务3会同时跑；
+  - 可以把任务3的优先级＋1；
+
+
+
+## 3.等待与事件
+
+### 3.1 内容介绍
+
+- 本节源码在`24_Chapter14_Eventgroup_Or`的基础上，改出`25_Chapter14_Eventgroup_And`；
+- 复制`24_Chapter14_Eventgroup_Or`，重命名为`25_Chapter14_Eventgroup_And`；
+
+* `25_Chapter14_Eventgroup_And`功能：car1和car2都到站后，car3启动；
+
+### 3.2 项目改造
+
+- 等待与事件只需把等待事件函数的第四个参数改为pdTRUE即可，这就表示等待与事件；
+- 修改后只有任务1和任务2两辆车都到达了才能跑第三辆车；
+
+```c
+/* 汽车3任务函数 */
+static void Car3Task(void *params)
+{
+	// ...
+    
+	/* 等待事件组：bit0 and bit1 */
+	/* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+	xEventGroupWaitBits(g_xEventCar, (1<<0) | (1<<1), pdTRUE, pdTRUE, portMAX_DELAY);
+	
+	// ...
+}
+```
+
+---
+
 
 
 # 10-3 事件组实验_改进姿态控制
+
+
+
+---
 
 
 

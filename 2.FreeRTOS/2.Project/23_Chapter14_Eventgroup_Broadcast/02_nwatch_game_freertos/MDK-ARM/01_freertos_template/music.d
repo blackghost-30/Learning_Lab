@@ -1,0 +1,14 @@
+01_freertos_template\music.o: ..\Core\Src\music.c
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+01_freertos_template\music.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+01_freertos_template\music.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+01_freertos_template\music.o: ../Core/Inc/FreeRTOSConfig.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+01_freertos_template\music.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+01_freertos_template\music.o: ../Drivers/DshanMCU-F103/driver_passive_buzzer.h
+01_freertos_template\music.o: ../Drivers/DshanMCU-F103/driver_timer.h

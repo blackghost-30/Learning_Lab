@@ -1,0 +1,87 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.42.0.0
+Copyright (C) 2025 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: blackghost ÁªÏë, SCNU, LIC=32B1Q-NAW8L-LQ30Q-NADTN-23WTG-XAM72
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.42.0.0
+Toolchain Path:  D:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 7 (build 960)
+Assembler:       Armasm.exe V5.06 update 7 (build 960)
+Linker/Locator:  ArmLink.exe V5.06 update 7 (build 960)
+Library Manager: ArmAr.exe V5.06 update 7 (build 960)
+Hex Converter:   FromElf.exe V5.06 update 7 (build 960)
+CPU DLL:         SARMCM3.DLL V5.42.0.0
+Dialog DLL:      DCM.DLL V1.17.5.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.3.0.0
+Dialog DLL:      TCM.DLL V1.56.6.0
+ 
+<h2>Project:</h2>
+E:\Learning_Lab\2.FreeRTOS\2.Project\21_Chapter12_Semaphore_Priority_Inversion\02_nwatch_game_freertos\MDK-ARM\01_freertos_template.uvprojx
+Project File Date:  04/29/2026
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
+Build target '01_freertos_template'
+compiling draw.c...
+compiling driver_mpu6050.c...
+..\Drivers\DshanMCU-F103\driver_mpu6050.c(124): warning:  #111-D: statement is unreachable
+  	g_xQueueMPU6050 = xQueueCreate(MPU6050_QUEUE_LEN, sizeof(struct mpu6050_data));
+..\Drivers\DshanMCU-F103\driver_mpu6050.c(214): warning:  #223-D: function "acos" declared implicitly
+  		result->angle_x = (int32_t)(acos((double)((double)(AccX + MPU6050_X_ACCEL_OFFSET) / 16384.0)) * 57.29577);
+..\Drivers\DshanMCU-F103\driver_mpu6050.c(290): warning:  #223-D: function "vTaskDelay" declared implicitly
+  		vTaskDelay(50);
+..\Drivers\DshanMCU-F103\driver_mpu6050.c: 3 warnings, 0 errors
+compiling freertos.c...
+../Core/Src/freertos.c(188): warning:  #177-D: variable "len"  was declared but never referenced
+      int len;
+../Core/Src/freertos.c(192): warning:  #550-D: variable "ret"  was set but never used
+  	BaseType_t ret;
+../Core/Src/freertos.c(69): warning:  #177-D: variable "g_pucStackOfLightTask"  was declared but never referenced
+  static StackType_t g_pucStackOfLightTask[128];
+../Core/Src/freertos.c(70): warning:  #177-D: variable "g_TCBofLightTask"  was declared but never referenced
+  static StaticTask_t g_TCBofLightTask;
+../Core/Src/freertos.c(71): warning:  #177-D: variable "xLightTaskHandle"  was declared but never referenced
+  static TaskHandle_t xLightTaskHandle;
+../Core/Src/freertos.c(73): warning:  #177-D: variable "g_pucStackOfColorTask"  was declared but never referenced
+  static StackType_t g_pucStackOfColorTask[128];
+../Core/Src/freertos.c(74): warning:  #177-D: variable "g_TCBofColorTask"  was declared but never referenced
+  static StaticTask_t g_TCBofColorTask;
+../Core/Src/freertos.c(75): warning:  #177-D: variable "xColorTaskHandle"  was declared but never referenced
+  static TaskHandle_t xColorTaskHandle;
+../Core/Src/freertos.c: 8 warnings, 0 errors
+linking...
+Program Size: Code=21956 RO-data=2476 RW-data=4288 ZI-data=15552  
+FromELF: creating hex file...
+"01_freertos_template\01_freertos_template.axf" - 0 Error(s), 11 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                https://www.keil.com/pack/ARM.CMSIS.6.2.0.pack
+                ARM::CMSIS@6.2.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 6.1.1
+
+Package Vendor: Keil
+                https://www.keil.com/pack/Keil.STM32F1xx_DFP.2.4.1.pack
+                Keil::STM32F1xx_DFP@2.4.1
+                STMicroelectronics STM32F1 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  ./RTE/_01_freertos_template
+  D:/Keil_v5/ARM/Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include
+  D:/Keil_v5/ARM/Packs/Keil/STM32F1xx_DFP/2.4.1/Device/Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE@6.1.1
+      Include file:  CMSIS/Core/Include/tz_context.h
+Build Time Elapsed:  00:00:02
+</pre>
+</body>
+</html>
