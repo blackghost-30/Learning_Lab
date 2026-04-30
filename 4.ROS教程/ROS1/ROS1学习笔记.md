@@ -5051,13 +5051,100 @@ rviz
 
 # 第五十五节课：代价地图Costmap
 
+## 1.代价地图介绍
+
+### 1.1 代价地图简介
+
+- 在下面的导航框架中，**global_costmap和local_costmap**分别是全局代价地图和局部代价地图；
+- 代价地图的作用是在障碍物的周围膨胀，如果机器人走进了这块膨胀的部分，是不允许的；
+- 代价地图的设置，可以让机器人在路径规划时，有充分的空间避免因为没有考虑自身体积而导致装上障碍物；
+
+<img src="images/55_代价地图Costmap/ROS的导航结构.png" alt="代价地图" style="zoom: 50%;" />
+
+### 1.2 全局代价地图与局部代价地图
+
+- 如下图所示是真实的代价地图；
+- **全局代价地图global_costmap**
+  - 全局代价地图是用来全局路径规划用的；
+  - 全局代价地图只需要在一开始的路径规划时生成一遍，它比较耗费时间，但一般只算一次；
+- **局部代价地图local_costmap**
+  - 局部代价地图是用来实际运行时的避障用的；
+  - 局部代价地图需要实时计算，它计算很快，不需要浪费很多时间；
+  - 不能采用全局代价地图的切片来做，因为在实时运行中可能随时会出现新的障碍物；
+
+![代价地图](images/55_代价地图Costmap/代价地图.png)
 
 
 
+## 2.Rviz中代价地图的加载
 
+- **运行仿真环境**
 
+```c
+roslaunch wpr_simulation wpb_stage_robocup.launch
+```
 
+- **运行导航程序**
 
+```c
+roslaunch nav_pkg nav.launch
+```
+
+- **打开Rviz**
+
+```c
+rviz
+```
+
+- **设置Rviz**
+
+  - 在rviz中添加map(话题/map)、机器人、path路线(话题选择第一个、并将Line Style选择为BillBoards、颜色选择为紫色)；
+  - 重新选择map，将其名称改为GlobalCostMap，然后选择其话题为/move_base/global_costmap/costmap，ColorScheme选择为costmap；
+  - 再次选择map，将其名称改为LocalCostMap，然后选择其话题为/move_base/local_costmap/costmap；
+
+- **将Rviz配置保存**
+
+  - 点击Rviz的File选项，将这个配置保存到nav_pkg下的rviz文件夹(自己新建)下，命名为nav.rviz；
+
+- **修改launch文件**
+
+  - 修改launch文件，将Rviz启动写入launch文件中；
+
+  ```yaml
+  <launch>
+  
+      <node pkg="move_base" type="move_base" name="move_base">
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+          <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+          <param name="base_local_planner" value="wpbh_local_planner/WpbhLocalPlanner" />
+      </node>
+  
+      <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+  
+      <node pkg="amcl" type="amcl" name="amcl"/>
+  
+      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/nav.rviz"/>
+  
+  </launch>
+  ```
+
+- **重新加载**
+
+  - 这样配置完后，直接按照之前的方式启动，就可以看见代价地图了；
+
+  ```bash
+  roslaunch wpr_simulation wpb_stage_robocup.launch
+  
+  # 新开一个终端
+  roslaunch nav_pkg nav.launch
+  ```
+
+- **运行效果：最终运行效果如图所示**
+
+![运行效果](images/55_代价地图Costmap/跑出来的代价地图.png)
 
 ---
 
@@ -5065,13 +5152,327 @@ rviz
 
 # 第五十六节课：代价地图的参数设置
 
+## 1.参数设置回顾
+
+回顾之前的launch文件中配置的参数，它们是通过文件的形式来配置的：
+
+- 中间前面的4行就是给代价地图设置的参数；
+- 其中第1行和第3行都是为全局代价地图设置的参数；
+- 第2和第4行是为局部代价地图设置的参数；
+
+```yaml
+<launch>
+
+    <node pkg="move_base" type="move_base" name="move_base">
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+        <param name="base_local_planner" value="wpbh_local_planner/WpbhLocalPlanner" />
+    </node>
+
+    <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+
+    <node pkg="amcl" type="amcl" name="amcl"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/nav.rviz"/>
+
+</launch>
+```
+
+
+
+## 2.配置文件概述
+
+### 2.1 代价地图的形状配置文件
+
+- 文件的路径为：~/catkin_ws/src/wpb_home/wpb_home_tutorials/nav_lidar/costmap_common_params.yaml；
+
+- **该文件的内容如下**
+
+  - 它没有命名空间，需要在设置参数时通过ns关键字来指定命名空间；
+  - **这样做的目的是让同一个配置文件可以同时用于两个地图，避免分发给全局规划器和局部规划器的地图形状不同；**
+
+  ```c
+  robot_radius: 0.25
+  inflation_radius: 0.5
+  obstacle_range: 1.0
+  raytrace_range: 6.0
+  observation_sources: base_lidar
+  base_lidar: {
+      data_type: LaserScan,
+      topic: /scan, 
+      marking: true, 
+      clearing: true
+      }
+  ```
+
+### 2.2 全局代价地图的配置文件
+
+- 文件路径为：~/catkin_ws/src/wpb_home/wpb_home_tutorials/nav_lidar/global_costmap_params.yaml；
+
+- 该文件的内容如下：
+
+  - 其中一开头的local_costmap下面参数所从属的命名空间；
+  - 通过命名空间就可以知道参数是为哪个代价地图设置的；
+
+  ```c
+  global_costmap:
+    global_frame: map
+    robot_base_frame: base_footprint
+    static_map: true
+    update_frequency: 1.0
+    publish_frequency: 1.0
+    transform_tolerance: 1.0
+  
+  recovery_behaviors:
+    - name: 'conservative_reset'
+      type: 'clear_costmap_recovery/ClearCostmapRecovery'
+    - name: 'rotate_recovery'
+      type: 'rotate_recovery/RotateRecovery'
+    - name: 'aggressive_reset'
+      type: 'clear_costmap_recovery/ClearCostmapRecovery'
+  
+  conservative_reset:
+    reset_distance: 2.0
+    layer_names: ["obstacle_layer"]
+  
+  aggressive_reset:
+    reset_distance: 0.0
+    layer_names: ["obstacle_layer"]
+  ```
+
+### 2.3 局部代价地图的配置文件
+
+- 文件路径为：~/catkin_ws/src/wpb_home/wpb_home_tutorials/nav_lidar/local_costmap_params.yaml；
+
+- 该文件的内容如下
+
+  - 其中一开头的local_costmap下面参数所从属的命名空间；
+  - 通过命名空间就可以知道参数是为哪个代价地图设置的；
+
+  ```c
+  local_costmap:
+    global_frame: odom
+    robot_base_frame: base_footprint
+    static_map: false
+    rolling_window: true
+    width: 3.0
+    height: 3.0
+    update_frequency: 10.0
+    publish_frequency: 10.0
+    transform_tolerance: 1.0
+  ```
+
+
+
+## 3.costmap_common_params.yaml文件
+
+```c
+robot_radius: 0.25
+inflation_radius: 0.5
+obstacle_range: 1.0
+raytrace_range: 6.0
+observation_sources: base_lidar
+base_lidar: {
+    data_type: LaserScan,
+    topic: /scan, 
+    marking: true, 
+    clearing: true
+    }
+```
+
+### 3.1 代价地图膨胀参数
+
+- 代价地图的膨胀参数主要是robot_radius和inflation_radius，前者为机器人底盘半径，后者为膨胀半径；
+- **用下面的单个像素来讲解**
+  - **robot_radius**圆圈内是绝对不能进去的，否则会发送撞墙；
+  - **inflation_radius**是可以进去的，它可以保证不状态，但是越靠近证明越容易撞墙；
+
+| <img src="images/56_代价地图的参数设置/地图膨胀参数.png" alt="单像素的代价地图"  /> | ![只有最大圆](images/56_代价地图的参数设置/只有最大圆画代价地图.png) | ![正常画代价地图](images/56_代价地图的参数设置/正常画代价地图.png) |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+- **为什么不直接用最大半径画圆？**
+  - 在只有最大圆的情况下，它会贴着墙壁走，如果定位稍有误差，就可以撞墙；
+  - 在正常的代价地图中，规划的路线可以在门口的中间，安全性提高很多；
+
+### 3.2 检测范围参数
+
+- obstacle_range：激光雷达检测的(obstacle_range)米内的障碍物加入到代价地图中，一般设置为激光雷达的有效检测距离；
+- raytrace_range：在这个举例内被激光雷达穿透的栅格都认为没有障碍物存在；
+- observation_sources：动态障碍物的观测来源；
+- base_lidar：数据来源的数据参数，它的名称是可以改的，只要和observation_sources中的值一样即可；
+
+### 3.3 文件的拓展
+
+- 在这个示例，只有激光雷达的扫描数据，也可以添加其他的数据源来为代价地图添加信息；
+- **比如下面添加的头部相机数据**
+
+```c
+robot_radius: 0.25
+inflation_radius: 0.5
+obstacle_range: 6.0
+raytrace_range: 6.0
+observation_sources: base_lidar head_kinect2
+base_lidar: {
+    data_type: LaserScan,
+    topic: /scan, 
+    marking: true, 
+    clearing: true
+    }
+head_kinect2: {
+    data_type: PointCloud2,
+    topic: /kinect2/sd/points,
+    marking: true,
+    clearing: true,
+    max_obstcale_height: 1.5,
+    min_obstcale_height: 0.2
+}
+```
+
+
+
+## 4.global_costmap_params.yaml文件
+
+```c
+global_costmap:
+  global_frame: map			// 地图坐标系名称
+  robot_base_frame: base_footprint		// 底盘坐标系名称
+  static_map: true			// 是否将map_server发来的地图作为原始地图，如果目的地是一些还没建图的区域可以将其设为false
+  update_frequency: 1.0		// 把障碍物添加到代价地图的频率
+  publish_frequency: 1.0	// 发布给Rviz显示的频率
+  transform_tolerance: 1.0	// transform的荣忍值
+```
+
+- transform_tolerance参数所指的transform指的是laser_frame到map的这一整个transform
+
+![transform_tolerance的TF](images/56_代价地图的参数设置/transform_tolerance的TF关系.png)
+
+
+
+## 5.local_costmap_params.yaml文件
+
+```c
+local_costmap:
+  global_frame: odom					// 地图的坐标系
+  robot_base_frame: base_footprint		// 机器人底盘坐标系
+  static_map: false						// 使用当前激光雷达实时扫描的地图
+  rolling_window: true					// 局部代价地图的框是否跟着机器人移动
+  width: 3.0
+  height: 3.0
+  update_frequency: 10.0
+  publish_frequency: 10.0
+  transform_tolerance: 1.0
+```
+
+---
+
 
 
 # 第五十七节课：恢复行为Recovery Behaviour
 
+## 1.恢复行为的发生条件
+
+- 在下图的ROS导航框架中，当机器人遇到障碍物无法通过局部规划器避障时，会发生恢复行为；
+- 恢复行为会更新障碍物到全局地图上，然后在更新的全局地图的前提下规划新的路线，让机器人回到正常的导航状态上；
+
+<img src="images/57_恢复行为_Recovery_Behaviour/ROS的导航结构.png" alt="ROS导航框架" style="zoom:50%;" />
+
+
+
+## 2.恢复行为的介绍
+
+- 在正常情况下，它处于正常导航状态；
+- 如果某个时刻它被困住了，它就会进行保守重置，如果保守重置成功就会回到正常导航状态；
+- 如果没有成功，就会进行旋转清除，重新扫描周围的障碍物，如果成功则回到正常导航；
+- 后面的激进重置和旋转清除是一样的；
+
+| <img src="images/57_恢复行为_Recovery_Behaviour/恢复行为的框图.png" alt="恢复行为的框架" style="zoom: 50%;" /> | <img src="images/57_恢复行为_Recovery_Behaviour/中文版的恢复行为框图.png" alt="中文版本的恢复行为框图" style="zoom:50%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+- **在这个机制中，一般在激光雷达只能扫描半周的前提下是好用的，在旋转清除下可重新更新地图；**
+- 在rviz的终端中，可以查看到这几种状态的转变；
+
+---
+
 
 
 # 第五十八节课：恢复行为的参数设置
+
+## 1.恢复行为的参数解析
+
+- 在之前的恢复行为框图中，本质上只有两种行为：重置行为和旋转行为，两个重置行为只是参数不一样；
+- 重置行为对应的类型为：clear_costmap_recovery/ClearCostmapRecovery，前面的clear_costmap_recovery是命名空间；
+- 旋转行为对应的类型为：rotate_recovery/RotateRecovery，前面的rotate_recovery是命名空间；
+- 除了这两种行为外，还有一种类型是move_slow_and_clear/MoveSlowAndClear，它会在几个点间来回，但一般不用；
+
+<img src="images/58_恢复行为的参数设置/恢复行为的几种类型.png" alt="恢复行为的几种类型" style="zoom:50%;" />
+
+- **这三种行为类型是ROS自带的，那就可以通过它们的组合，得到不同执行顺序的恢复行为；**
+
+
+
+## 2.自定义恢复行为
+
+- 恢复行为主要是为了全局规划路线使用的，所以在global_costmap_params.yaml文件中定义；
+- **在global_costmap_params.yaml中添加如下代码**
+  - recovery_behaviors指明了这个命名空间是给恢复行为用的；
+  - 下面两个name指明了两个行为，一个是旋转行为，一个清除行为；
+  - 下面的reset_recovery又单独对清除行为做了属性的约定，约定了重置的距离和重置的图层；
+  - 这里的重置行为的距离，指的是以机器人中心为中心，周围的reset_distance边长的正方形外的所有都重置；
+
+```yaml
+recovery_behaviors:
+  - name: 'rotate_recovery'
+    type: 'rotate_recovery/RotateRecovery'
+  - name: 'reset_recovery'
+    type: 'clear_costmap_recovery/ClearCostmapRecovery'
+
+reset_recovery:
+  reset_distance: 0
+  layer_names: ['obstacle_layer']
+```
+
+- **地图的分层**
+
+  - 在上面的最后一行中，有一个layer_name，这指的是地图的层级；
+  - 在ROS的地图中可以分为四层：
+    - 第一层是用map_server加载的之前已经建好的地图，它是一个静态的地图；
+    - 第二次是Obstacles层，它是障碍物地图，是由机器人在实际运行过程中实时生成的；
+    - 第三层是Inflation层，它是基于前面两层添加后，再进行膨胀得到的地图；
+    - 最后一层是Master层，它是前面三层的叠加，它就是Rviz中看到的代价地图；
+
+  <img src="images/58_恢复行为的参数设置/地图的分层.png" alt="地图的分层" style="zoom:80%;" />
+
+- **默认恢复行为中的距离**
+  - 在默认恢复行为中，即使是激进重置，它的距离也都还有1.84米；
+  - 在我们自己定义的恢复行为中，我们直接将它设置为0.0，也就是所有的Obsta层都清除；
+
+
+
+## 3.自定义恢复行为的实际效果
+
+- 先在大门口的位置放置一个大正方形，让它更新障碍地图，显示大门口是出不去的；
+- 然后再将大正方形沿着x方向移动，挡住机器人扫描大门口，这样原来的大门口的障碍物阴影它也无法消除；
+- 然后在房间外给它设置一个目的地，让它开始路径规划；
+- 会发现它先进性旋转，然后再进性清除，当清除了大门口的障碍物阴影时，它就可以找出路径顺利出去了；
+
+![运行效果](images/58_恢复行为的参数设置/运行效果.gif)
+
+
+
+## 4.图形层数细节
+
+- 在恢复行为的代码实现底层，图形的障碍物层叫做obstacles；
+- 但是在costmap_2d_ros即代价地图底层代码实现上，障碍物层是叫做obstacles_layer的；
+- 所有在恢复行为中，重置行为要想将代价地图中的障碍物层清除，必须要保持两者之间名字的一致，否则会失败；
+  - 方法1：在代价层函数中，将obstacles_layer改为obstacles；
+  - 方法2：像前面一样，在恢复行为中，将obstacles改为obstacles_layer；
+
+<img src="images/58_恢复行为的参数设置/图层设置问题.png" alt="图形层数细节" style="zoom:50%;" />
+
+---
 
 
 
