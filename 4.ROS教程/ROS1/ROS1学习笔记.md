@@ -5478,21 +5478,599 @@ reset_recovery:
 
 # 第五十九节课：局部规划器Local Planner
 
+## 1.局部规划器概述
+
+- 局部规划器即图中的local_planner；
+- 全局规划器global_planner生成导航路线，但最终走成什么效果是由local_planner决定的；
+- 局部规划器local_planner就是机器人的运动控制器；
+
+<img src="images/59_局部规划器_Local_Planner/ROS的导航结构.png" alt="ROS导航框架" style="zoom:50%;" />
+
+
+
+## 2.局部规划器的选择
+
+- 在ROS中，有如下几种局部规划器，如下表所示；
+- Trajectory Planner：ROS默认局部规划器，使用DMA算法，但代码质量不高，有了后面的DWA Planner；
+- DWA Planner：ROS自带的局部规划器，一般用来取代Trajectory Planner；
+- Eband Planner：实现思路与后面的TEB Planner相似，是第三方的局部规划器；
+- TEB Planner：加入了时间因素的考虑，同时还提供了代价地图的优化插件，是第三方的局部规划器；
+- 前面四种规划器一般会选择DMA Planner和TEB Planner；
+- WpbhLocalPlanner是本课程会使用到的局部规划器；
+
+![局部规划器选择](images/59_局部规划器_Local_Planner/局部规划器.png)
+
+
+
+## 3.局部规划器的指定
+
+### 3.1 局部规划器使用
+
+- 只需要在launch文件中，指定base_local_planner的value值即可；
+- 在先前的launch文件中，选择的局部规划器就是WpbhLocalPlanner；
+
+```c
+<launch>
+
+    <node pkg="move_base" type="move_base" name="move_base">
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+        <param name="base_local_planner" value="wpbh_local_planner/WpbhLocalPlanner" />
+    </node>
+
+    <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+
+    <node pkg="amcl" type="amcl" name="amcl"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/nav.rviz"/>
+
+</launch>
+```
+
+### 3.2 WpbhLocalPlanner规划器
+
+- WpbhLocalPlanner规划器的文件在**~/catkin_ws/src/wpb_home/wpbh_local_planner**文件夹中；
+- 当编译整个空间目录时，它就会自动安装到ROS系统中；
+- WpbhLocalPlanner在实际运动过程中**根据激光雷达采集到的障碍点信息，把代价地图、Dijkstra算法在局部规划器又实现一遍；**
+
+---
+
 
 
 # 第六十节课：DWA规划器
+
+## 1.DWA规划器概述
+
+- DWA全称为Dynamic Window Approach，即动态窗口方法；
+
+- **DWA规划器的原理**
+  - 根据当前位置和导航路线生成轨迹，其中撞上障碍物的轨迹会被抛弃；
+  - 其余的剩下来的生成轨迹以及在轨迹上可能的速度变化就是所谓的窗口；
+  - DWA算法根据剩下来的窗口，选择最合适的窗口，最终到达终点；
+- **DWA算法挑选窗口的原则**
+  - 窗口和全局导航路线的贴合程度；
+  - 窗口末端与终点的距离；
+  - 窗口路线和障碍物之间的距离；
+- 可见，DWA算法是以平滑的弧线到达终点为目的的，所以实际过程中的路线一般不与全局规划路线重合；
+
+<img src="images/60_DWA规划器/DWA算法.png" alt="DWA规划器" style="zoom: 50%;" />
+
+
+
+## 2.DWA规划器的使用
+
+- **修改launch文件**
+
+  - 将局部规划器改为DWA规划器；
+  - 为DWA规划器添加参数；
+
+  ```yaml
+  <launch>
+  
+      <node pkg="move_base" type="move_base" name="move_base">
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+          <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+          <param name="base_local_planner" value="dwa_local_planner/DWALocalPlannerROS" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/dwa_local_planner_params.yaml" command="load" />
+      </node>
+  
+      <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+  
+      <node pkg="amcl" type="amcl" name="amcl"/>
+  
+      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/nav.rviz"/>
+  
+  </launch>
+  ```
+
+- **启动仿真环境**
+
+  - 修改完launch文件后，直接按照之前的方式启动，就可以看见代价地图了；
+
+  ```bash
+  roslaunch wpr_simulation wpb_stage_robocup.launch
+  
+  # 新开一个终端
+  roslaunch nav_pkg nav.launch
+  ```
+
+- **设置Rviz**
+
+  - 先设置Rviz，添加DWA的路径显示项目；
+  - 添加Path，话题选择为/move_base/DWAPlannerROS/local_plan；线条样式Line Style改为BillBoards；
+  - 接着显示备选的生成轨迹；
+  - 选择添加PointCloud2，话题名称选择/move_bse/DWAPlannerROS/trajectory_cloud；
+
+- **运行效果**
+
+  - 设置一个目标点，机器人开始移动，会出现不同的生成轨迹，其中只有一条被选中；
+
+  ![实际运行效果](images/60_DWA规划器/运行效果.gif)
+
+
+
+## 3.DWA规划器的参数
+
+### 3.1 DWA规划器的参数介绍
+
+- 在前面修改的launch文件中，**wpb_home_tutorials)/nav_lidar/dwa_local_planner_params.yaml**就是DWA规划器的参数文件；
+- 打开该文件，内容如下
+
+```yaml
+DWAPlannerROS:
+  # 速度参数
+  max_vel_x: 0.3      # 最大x方向速度
+  min_vel_x: -0.05    # 最小x方向速度（设置负数将会允许倒车）
+  max_vel_y: 0.0      # 差分驱动机器人的最大y方向速度为 0.0
+  min_vel_y: 0.0      # 差分驱动机器人的最小y方向速度为 0.0
+  max_vel_trans: 0.3  # 最大平移速度
+  min_vel_trans: 0.01 # 最小平移速度（建议不要设置为 0.0 ）
+  trans_stopped_vel: 0.1  # 当平移速度小于这个值，就让机器人停止
+  acc_lim_trans: 2.5      # 最大平移加速度
+  acc_lim_x: 2.5          # x方向的最大加速度上限
+  acc_lim_y: 0.0          # y方向的加速度上限（差分驱动机器人应该设置为 0.0 ）
+  
+  max_vel_theta: 1.0      # 最大旋转速度，略小于基座的功能
+  min_vel_theta: -0.01    # 当平移速度可以忽略时的最小角速度
+  theta_stopped_vel: 0.1  # 当旋转速度小于这个值，就让机器人停止
+  acc_lim_theta: 6.0      # 旋转的加速度上限
+
+  # 目标容差参数
+  yaw_goal_tolerance: 0.1         # 目标航向容差
+  xy_goal_tolerance: 0.05         # 目标xy容差
+  latch_xy_goal_tolerance: false  # 到达目标容差范围后，停止移动，只旋转调整航向
+
+  # 向前模拟参数
+  sim_time: 1.7       # 模拟时间，默认值 1.7
+  vx_samples: 3       # x方向速度采样数，默认值 3
+  vy_samples: 1       # 差分驱动机器人y方向速度采样数，只有一个样本
+  vtheta_samples: 20  # 旋转速度采样数，默认值 20
+
+  # 轨迹评分参数
+  path_distance_bias: 32.0  # 靠近全局路径的权重，默认值 32.0
+  goal_distance_bias: 24.0  # 接近导航目标点的权重，默认值 24.0
+  occdist_scale: 0.01       # 控制器避障的权重，默认值 0.01
+  forward_point_distance: 0.325 # 从机器人到评分点的位置，默认值 0.325
+  stop_time_buffer: 0.2     # 在碰撞前机器人必须停止的时间长度，留出缓冲空间，默认值 0.2
+  scaling_speed: 0.25       # 缩放机器人速度的绝对值，默认值 0.25
+  max_scaling_factor: 0.2   # 机器人足迹在高速时能缩放的最大系数，默认值 0.2
+
+  # 防振动参数
+  oscillation_reset_dist: 1.05 # 重置振动标志前需要行进的距离，默认值 0.05
+
+  # 辅助调试选项
+  publish_traj_pc : true      # 是否在 RViz 里发布轨迹
+  publish_cost_grid_pc: true  # 是否在 RViz 里发布代价网格
+  global_frame_id: odom       # 基础坐标系
+
+  # 差分驱动机器人配置
+  holonomic_robot: false # 是否全向移动机器人
+```
+
+- 更详细的参数可以参考官网，搜索dwa，选择dwa_local_planner即可；
+- 可以对照着官网对参数的介绍，然后修改对应的参数，保存后再次运行即可更新参数；
+
+### 3.2 DWA规划参数的可视化调节平台
+
+- 终端执行下面命令
+
+```bash
+rosrun rqt_reconfigure rqt_reconfigure
+```
+
+- 可视化界面如图所示
+
+![可视化调参画面](images/60_DWA规划器/可视化调参画面.png)
+
+- 可以通过可视化界面调整参数，找到比较好的参数，然后再回填到参数文件中，这样就可以更方便的调参了；
+- 注意，这个可视化调参界面需要在仿真环境启动的情况下才能打开；
+
+### 3.3 DWA规划器的几个重要参数
+
+- 第一个参数如果设置为大于0的数，将不允许倒车；
+- 后面三个参数是轨迹的评分参数，对应数值越大，该因素的评分占比越大；
+
+```yaml
+  min_vel_x: -0.05    # 最小x方向速度（设置负数将会允许倒车）
+  
+  # 轨迹评分参数
+  path_distance_bias: 32.0  # 靠近全局路径的权重，默认值 32.0
+  goal_distance_bias: 24.0  # 接近导航目标点的权重，默认值 24.0
+  occdist_scale: 0.01       # 控制器避障的权重，默认值 0.01
+```
+
+---
 
 
 
 # 第六十一节课：TEB规划器
 
+## 1.TEB规划器概述
+
+- TEB全称为Timed Elastic Band，即时间弹力带；
+
+- **TEB规划器的原理**
+
+  - TEB规划器根据全局地图，选择一小段路径进性优化，在起点和终点间画一条直线；
+  - 接着全局路线起到吸引作用，障碍物起到排斥作用，对这条直线作用得到实际的路线，这就是弹力带；
+  - 接着TEB会在每一条弹力带上预测未来几个时间单位内机器人的位置，选择时间最短的弹力带；
+
+  ![TEB规划器原理](images/61_TEB规划器/TEB规划器的原理.png)
+
+
+
+## 2.TEB规划器的使用
+
+### 2.1 规划器的安装
+
+- TEB不属于ROS官方自带的规划器，所以需要另外安装；
+- **终端安装**
+
+```bash
+sudo apt install ros-noetic-teb-local-planner
+```
+
+### 2.2 启动TEB规划器
+
+- **修改launch文件**
+
+  - 打开之前的launch文件；
+  - 将规划器改为TEB规划器，并修改相关的参数；
+
+  ```yaml
+  <launch>
+  
+      <node pkg="move_base" type="move_base" name="move_base">
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+          <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+          <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+          <rosparam file="$(find wpb_home_tutorials)/nav_lidar/teb_local_planner_params.yaml" command="load" />
+          <param name="controller_frequency" value="10" type="double" />
+      </node>
+  
+      <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+  
+      <node pkg="amcl" type="amcl" name="amcl"/>
+  
+      <node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/nav.rviz"/>
+  
+  </launch>
+  ```
+
+- **启动规划器**
+
+  - 修改完launch文件后，直接按照之前的方式启动；
+
+  ```bash
+  roslaunch wpr_simulation wpb_stage_robocup.launch
+  
+  # 新开一个终端
+  roslaunch nav_pkg nav.launch
+  ```
+
+- **设置Rviz**
+
+  - 先设置Rviz，添加TEB的路径显示项目；
+  - 添加Path，话题选择为/move_base/TebPlannerROS/local_plan；线条样式Line Style改为BillBoards；
+  - 接着显示备选的生成轨迹；
+  - 选择添加PoseArray，话题名称选择/move_bse/TebPlannerROS/teb_poses；
+
+- **运行效果**
+
+  - 在实际运行中,会出现一个个红色箭头,那就是TEB预测的未来几个时间内的运动位置；
+  - 在最后到达终点时，TEB规划器会采用倒车入库的方式调整方向；
+
+  ![实际运行效果](images/61_TEB规划器/运行效果.gif)
+
+- **选择原则**
+  - 由于TEB规划器在到达终点时，倾向于使用倒车入库的方式调整方向，所以天生适合于像阿克曼底盘这样无法原地旋转的底盘结构；
+  - 但也正是因为它采用倒车入库的方式，所以对于机器人后方没有雷达视野的,就需要谨慎考虑TEB规划器了;
+
+
+
+## 3.TEB规划器的参数
+
+### 3.1 TEB规划器的参数介绍
+
+- 在前面修改的launch文件中，**wpb_home_tutorials)/nav_lidar/teb_local_planner_params.yaml**就是TEB规划器的参数文件；
+- 打开该文件，内容如下
+
+```yaml
+TebLocalPlannerROS:
+ odom_topic: odom
+
+ # 策略相关
+ teb_autosize: True  # 是否允许改变轨迹的时域长度，也就是改变 dt_ref
+ dt_ref: 0.5         # 路径上的两个相邻姿态的默认距离
+ dt_hysteresis: 0.1  # 允许改变的时域解析度的浮动范围
+ global_plan_overwrite_orientation: True # 是否修正全局路径中的临时局部路径点的朝向
+ max_global_plan_lookahead_dist: 2.0     # 最大向前看距离
+ feasibility_check_no_poses: 2           #在判断生成的轨迹是否冲突时使用，此时设置为2，即从轨迹起点开始逐个检查轨迹上的2个点，若2个点均不发生碰撞，则认为本次轨迹有效。
+    
+ # 运动相关     
+ max_vel_x: 0.4           # 最大速度
+ max_vel_x_backwards: 0.2 # 最大倒车速度，设置为0或者负数将导致错误。减少倒车应该修改倒车权重，不改这里。
+ max_vel_theta: 1.0       # 最大转向角速度，跟 min_turning_radius 相关 (r = v / omega)
+ acc_lim_x: 0.5           # 最大线加速度
+ acc_lim_theta: 1.0       # 最大角加速度
+
+ # ********************** 转弯半径相关 ********************
+ min_turning_radius: 0.0         # 小转弯半径。如果设为 0，表示可以原地转弯。
+ wheelbase: 0.31                 # 只有在 cmd_angle_instead_rotvel为true时才有效
+ cmd_angle_instead_rotvel: False # 是否将收到的角速度消息转换为操作上的角度变化。设置成 True 时，话题 vel_msg.angular.z 内的数据是转轴角度。
+ # ********************************************************************
+
+# 车体轮廓
+ footprint_model: # types可选项: "point", "circular", "two_circles", "line", "polygon"
+   type: "circular"
+   # 对 type "circular" 有效的参数：
+   radius: 0.17
+   # 对 type "line" 有效的参数：        
+   line_start: [0.0, 0.0] 
+   line_end: [0.35, 0.0]
+   # 对 type "two_circles" 有效的参数：
+   front_offset: 0.35
+   front_radius: 0.35
+   rear_offset: 0.35
+   rear_radius: 0.35
+   # 对 type "polygon" 有效的参数：
+   vertices: [ [0.35, 0.0], [-0.2, -0.25], [0.2, -0.25]] 
+
+ # 到达目标点的判断容差   
+ xy_goal_tolerance: 0.2
+ yaw_goal_tolerance: 0.1
+    
+ # 障碍物相关 
+ min_obstacle_dist: 0.1  # 与障碍物的最小间距
+ inflation_dist: 0.4     # 障碍物膨胀距离
+ include_costmap_obstacles: True          # 是否检测动态障碍物
+ costmap_obstacles_behind_robot_dist: 1.0 # 身后多远距离内障碍物加入检测范围
+ obstacle_poses_affected: 25              # 障碍物对附近多少个关键点产生影响
+ costmap_converter_plugin: ""             # costmap_converter 插件名称，这里不使用
+
+ # 路径优化相关
+ no_inner_iterations: 3     # 图优化optimizer的迭代次数
+ no_outer_iterations: 3     # 外循环迭代次数
+ penalty_epsilon: 0.1       # 为所有的惩罚项增加一个小的安全余量
+ weight_max_vel_x: 2        # 平移速度的优化权重
+ weight_max_vel_theta: 1    # 角速度的优化权重
+ weight_acc_lim_x: 1        # 平移加速度的优化权重
+ weight_acc_lim_theta: 1    # 角加速度的优化重量
+ weight_kinematics_nh: 1000 # 非完整运动学的优化权重
+ weight_kinematics_forward_drive: 1 # 往前移动的权重
+ weight_optimaltime: 1      # 耗时权重
+ weight_obstacle: 50        # 与障碍物保持距离的权重
+
+ # 多线规划
+ enable_homotopy_class_planning: True # 激活多线规划
+ enable_multithreading: True          # 多线程计算
+ max_number_classes: 2                # 规划的路径线数上限
+ selection_cost_hysteresis: 1.0       # 路径轨迹入选的评价上限
+ selection_obst_cost_scale: 1.0       # 障碍物评价在入选标准中的缩放倍率
+ selection_alternative_time_cost: False # 时间成本是否要进行平方计算
+ roadmap_graph_no_samples: 15         # 为创建 roadmap graph 而生成的样本数
+ roadmap_graph_area_width: 5          # 关键点采样的宽度，单位为米。
+```
+
+- 更详细的参数可以参考官网，搜索teb，选择teb_local_planner即可；
+- 可以对照着官网对参数的介绍，然后修改对应的参数，保存后再次运行即可更新参数；
+
+### 3.2 DWA规划参数的可视化调节平台
+
+- 终端执行下面命令
+
+```bash
+rosrun rqt_reconfigure rqt_reconfigure
+```
+
+- 可视化界面如图所示
+
+![可视化调参画面](images/61_TEB规划器/可视化界面.png)
+
+- 可以通过可视化界面调整参数，找到比较好的参数，然后再回填到参数文件中，这样就可以更方便的调参了；
+- 注意，这个可视化调参界面需要在仿真环境启动的情况下才能打开；
+
+### 3.3 DWA规划器的几个重要参数
+
+- 第一个参数表示到达终点时的倒车半径；
+- 第二个参数表示是否开启插件，这里默认没有开启；
+
+```yaml
+ min_turning_radius: 0.0         # 小转弯半径。如果设为 0，表示可以原地转弯。
+ costmap_converter_plugin: ""             # costmap_converter 插件名称，这里不使用
+```
+
+---
+
 
 
 # 第六十二节课：导航的Action编程接口
 
+## 1.问题提出
+
+### 1.1 背景
+
+- 在前面中已经基本介绍完了**Navigation导航系统；**
+- 但是在前面都是通过手动的方式设置目的地的，实际开发中是需要机器人能够自主导航的；
+- 即实际开发中是需要**编写程序来实现自主导航功能的；**
+
+<img src="images/62_导航的Action编程接口/两种目的地设置方法.png" alt="导航设置方法" style="zoom: 50%;" />
+
+### 1.2 导航Client节点
+
+- 要实现程序指定导航目的地的效果，需要使用到**Navigation的导航接口；**
+- Navigation的导航接口有好几个，但是ROS推荐使用**Action接口**实现导航接口功能；
+
+<img src="images/62_导航的Action编程接口/导航节点到move_base.png" alt="导航节点到move_base" style="zoom: 50%;" />
+
+
+
+## 2.Action接口介绍
+
+- Topic通信中，信息的流动是单向的，由某个节点流向另一个节点；
+- Action通信中，信息的流向是双向的，由Client和Server两个实体组成；
+- 在Navigation导航中，Action通信这样实现：
+  - 自己写一个Client节点，它会向move_base这个Server节点发送导航请求，其中导航请求中包含了导航的目的地和期待的姿态角；
+  - move_base接收到请求后，按之前的逻辑进性导航，并不断的向Client节点反回导航的进度；
+  - 导航完成后可以向Client返回成功的消息，若失败也会返回失败的消息；
+
+| ![Topic通信](images/62_导航的Action编程接口/Topic通信.png) | ![Action通信](images/62_导航的Action编程接口/Action通信.png) |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+
+---
+
 
 
 # 第六十三节课：坐标导航的C++编程实现
+
+## 1.坐标导航C++节点的步骤
+
+- 编写节点代码；
+- 设置编译规则；
+- 编译节点文件；
+- 运行节点文件；
+
+
+
+## 2.编写节点代码
+
+- 打开VsCode，在nav_pkg的src目录下，新建文件**nav_client.cpp；**
+
+- **move_base的Action接口的数据格式**
+
+  - move_base用Action接口进行通信时，需要目标、结果和过程反馈三个消息包类型；
+  - MoveBaseAction Message消息包包含了这三种消息包，所以代码中包含这一个消息包头文件即可；
+
+  ![数据格式](images/63_坐标导航的C++编程实现/move_base的action消息包.png)
+
+- **编写如下代码**
+
+```cpp
+#include <ros/ros.h>
+#include <move_base_msgs/MoveBaseAction.h>              /* MoveBaseAction的消息包格式 */
+#include <actionlib/client/simple_action_client.h>      /* 简单的Action客户端模式 */
+
+typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;   /* 将客户端类型重定义 */
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "nav_client");
+
+    /* 生成客户端对象 */
+    MoveBaseClient ac("move_base", true);   /* true表示自动阻塞等待结果 */
+
+    while(!ac.waitForServer(ros::Duration(5.0)))    /* 等待导航启动 */
+    {
+        ROS_INFO("Waiting for the move_base action server to come up");
+    }
+
+    /* 目的地信息 */
+    move_base_msgs::MoveBaseGoal goal;
+
+    goal.target_pose.header.frame_id = "amp";
+    goal.target_pose.header.stamp = ros::Time::now();
+
+    goal.target_pose.pose.position.x = -3.0;
+    goal.target_pose.pose.position.y = 2.0;
+    goal.target_pose.pose.orientation.w = 1.0;
+
+    ROS_INFO("Sending goal");
+
+    /* 发送目标 */
+    ac.sendGoal(goal);
+
+    /* 等待结果 */
+    ac.waitForResult();
+
+    /* 查询返回i状态 */
+    if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+        ROS_INFO("Mission complete!");
+    else
+        ROS_INFO("Mission failed ...");
+
+    return 0;
+}
+```
+
+
+
+## 3.添加编译规则并编译
+
+### 3.1 添加编译规则
+
+- 打开CMakeList.txt文件，在最后添加编译规则
+
+```c
+add_executable(nav_client src/nav_client.cpp)
+
+add_dependencies(nav_client ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(nav_client ${catkin_LIBRARIES})
+```
+
+### 3.2 编译
+
+- 打开终端，执行命令
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
+
+- 如果有报错，可参考~catkin_ws/src/wpr_simulation/src/demo_simple_goal.cpp文件；
+
+
+
+## 4.运行
+
+- 终端执行
+
+```bash
+# 终端1
+roslaunch wpr_simulation wpb_stage_robocup.launch
+
+# 终端2
+roslaunch nav_pkg nav.launch
+
+# 终端3
+rosrun nav_pkg nav_client
+```
+
+- 运行效果如下图所示
+
+![运行效果](images/63_坐标导航的C++编程实现/运行效果.gif)
+
+---
 
 
 
