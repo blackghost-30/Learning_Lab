@@ -6356,23 +6356,66 @@ rosrun waterplus_map_tools wp_saver
 
 # 第六十六节课：航点导航插件的集成和启动
 
+## 1.航点导航插件的框架
+
+- 航点导航的主体仍然是Navigation导航系统中的move_base节点；
+- 与之前不同的是，这次的Action接口的Client变成了wp_navi_server节点；
+- wp_navi_server节点会与wp_manager节点建立通讯，从waypoints.xml文件中获取航点数据；
+- 除此之外，它还会订阅一个目标航点话题，目标航点话题会指定节点需要导航到哪个航点；
+- 同时，它还会发布一个导航结果话题，返回导航的状态和结果；
+- 这节课要做的就是把这个框架实现到之前我们自己写的launch文件中；
+
+![框架](images/66_航点导航插件的集成和启动/航点导航插件的框架.png)
 
 
 
+## 2.修改launch文件
+
+### 2.1 添加节点启动项
+
+- 在launch文件中的最后，添加如下两行代码，以启动对应的两个节点
+
+```xml
+<node pkg="waterplus_map_tools" type="wp_navi_server" name="wp_navi_server" output="screen" />
+<node pkg="waterplus_map_tools" type="wp_manager" name="wp_manager" output="screen" />
+```
+
+### 2.2 修改Rviz配置文件
+
+- 直接从wpr_simulation中拷贝配置文件；
+- 打开~/catkin_ws/src/wpr_simulation/rviz，把文件map_tool.rviz拷贝到~/catkin_ws/src/nav_pkg/rviz下；
+
+- 然后把launch文件中的rviz文件修改为拷贝的rviz文件
+
+```xml
+<node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/map_tool.rviz"/>
+```
 
 
 
+## 3.实际运行
+
+- 3个终端窗口中分别执行
+
+```bash
+roslaunch wpr_simulation wpb_stage_robocup.launch
+
+roslaunch nav_pkg nav.launch
+
+rosrun wpr_simulation demo_map_tool
+```
+
+- 实际运行效果如下图所示
+
+![实际运行效果](images/66_航点导航插件的集成和启动/运行效果.gif)
 
 
 
+## 4.总结
 
-
-
-
-
-
-
-
+- 这样就为launch文件添加了航点导航功能；
+- 只不过现在还是用**demo_map_tool**节点为launch文件提供目的地；
+- 后面两节课将**用C++/python实现demo_map_tool节点**的功能；
 
 ---
 
@@ -6380,19 +6423,91 @@ rosrun waterplus_map_tools wp_saver
 
 # 第六十七节课：航点导航功能的C++实现
 
+## 1.内容介绍
+
+- 本节课的内容就是把上一节的**demo_map_tool**节点改为**wp_node**节点；
+- 这个节点只需要发布一个话题并订阅一个话题即可；
+
+![框架](images/67_航点导航功能的C++实现/框架结构图.png)
 
 
 
+## 2.编程实现
+
+### 2.1 编写节点
+
+- 在nav_pkg/src目录下，新建文件wp_node.cpp文件；
+- 在文件中实现如下功能
+
+```cpp
+#include <ros/ros.h>
+#include <std_msgs/String.h>    // 目标航点名称为字符串格式
+
+void NavResultCallback(const std_msgs::String &msg)
+{
+    ROS_WARN("[NavResultCallback] %s", msg.data.c_str());
+}
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "wp_node");       // 初始化ros
+
+    ros::NodeHandle n;      // 节点对象
+
+    ros::Publisher nav_pub = n.advertise<std_msgs::String>("/waterplus/navi_waypoint", 10);     // 发布话题
+    ros::Subscriber res_sub = n.subscribe("/waterplus/navi_result", 10, NavResultCallback);     // 订阅话题
+
+    sleep(1);
+
+    std_msgs::String nav_msg;
+    nav_msg.data = "1";			// 可修改不同的数字，去往不同的航点
+    nav_pub.publish(nav_msg);
+
+    ros::spin();
+
+    return 0;
+}
+```
+
+### 2.2 添加编译规则
+
+- 在CMakeList.txt文件的最后添加如下编译规则
+
+```c
+add_executable(wp_node src/wp_node.cpp)
+add_dependencies(wp_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(wp_node ${catkin_LIBRARIES})
+```
+
+### 2.3 编译
+
+- 打开终端，执行命令
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
+
+- 如果有报错，可参考~catkin_ws/src/wpr_simulation/src/demo_map_tool.cpp文件；
 
 
 
+## 3. 实际运行
 
+- 3个终端窗口中分别执行
 
+```bash
+roslaunch wpr_simulation wpb_stage_robocup.launch
 
+roslaunch nav_pkg nav.launch
 
+rosrun nav_pkg wp_node
+```
 
+- 实际运行效果如下图所示
 
-
+![实际运行效果](images/67_航点导航功能的C++实现/运行效果.gif)
 
 ---
 
@@ -6400,145 +6515,1456 @@ rosrun waterplus_map_tools wp_saver
 
 # 第六十八节课：航点导航功能的Python实现
 
+## 1.编写节点
+
+- 在nav_pkg/scripts文件夹下新建文件wp_node.py；
+- 添加如下内容
+
+```python
+#!/usr/bin/env python3
+# coding=utf-8
+
+import rospy
+from std_msgs.msg import String
+
+def NavResultCallback(msg):
+    rospy.logwarn("导航结果 = %s", msg.data)
+
+if __name__ == "__main__":
+    rospy.init_node("wp_node")
+
+    navi_pub = rospy.Publisher("/waterplus/navi_waypoint", String, queue_size=10)
+    res_sub = rospy.Subscriber("/waterplus/navi_result", String, NavResultCallback, queue_size=10)
+
+    rospy.sleep(1)
+
+    navi_msg = String()
+    navi_msg.data = '1'		# 可修改不同的数字，去往不同的航点
+
+    navi_pub.publish(navi_msg)
+
+    rospy.spin()
+```
 
 
 
+## 2.添加可执行权限并运行
 
+### 2.1 添加可执行权限
 
+- 终端执行如下命令
 
+```bash
+cd ~/catkin_ws/src/nav_pkg/scripts
 
+chmod +x wp_node.py
+```
 
+### 2.2 实际运行
 
+- 3个终端窗口中分别执行
 
+```bash
+roslaunch wpr_simulation wpb_stage_robocup.launch
 
+roslaunch nav_pkg nav.launch
 
+rosrun nav_pkg wp_node.py
+```
 
+- 实际运行效果如下图所示；
+- 如果有报错，可参考~catkin_ws/src/wpr_simulation/scripts/demo_map_tool.py文件；
+
+![实际运行效果](images/68_航点导航功能的Python实现/实际运行效果.gif)
 
 ---
 
 
 
-
-
 # 第六十九节课：ROS中的相机话题
+
+## 1.ROS中常用相机
+
+- 在ROS中，最常见的相机有普通的彩色相机和有立体感知能力的RGB-D相机；
+
+| ![彩色相机](images/69_ROS中的相机话题/彩色相机.png) | ![RGB-D相机](images/69_ROS中的相机话题/RGB-D相机.png) |
+| --------------------------------------------------- | ----------------------------------------------------- |
+
+
+
+## 2.相机的话题
+
+- ROS中，相机数据的获取也是通过话题来获取的，但是相机的话题特别多；
+
+- 彩色图像话题
+
+  - /image_raw话题：每个像素只有RGB某个颜色的强度；
+  - /image_color话题：每个像素通过插值方法得到RGB3个原色的强度和；
+  - /image_color_rect话题：对彩色图像数据畸变矫正后的数据，其发送频率与相机帧率有关；
+  - /camera_info：相机相关参数话题，可获取参数自行进行矫正图像；
+  - 在一般的开发中，直接获取/image_color_rect话题即可；
+
+  ![彩色相机话题](images/69_ROS中的相机话题/彩色相机的话题.png)
+
+- 查看话题频率
+
+  - 可以在终端中执行下方命令查看频率；
+  - 通常/image_color_rect话题的频率为30fps的倍数；
+
+  ```bash
+  rostopic hz /kinect2/qhd/image_color_rect
+  ```
+
+  
+
+## 3.话题格式
+
+- /image_color_rect话题的消息格式是**sensor_msgs/Image类型**；
+- **一般开发中都会把它转换成OpenCV中的Mat格式，利用OpenCV的图像处理函数进行操作；**
+- **sensor_msgs/Image类型**了解即可，不需要深入理解；
+
+---
 
 
 
 # 第七十节课：相机图像获取的C++实现
 
+## 1.内容框架
+
+- 本节课学习ROS中相机图像获取的话题；
+- 本节框架如下，订阅相机话题获取图像数据，然后将其转换为OpenCV的Mat格式，再用OpenCV函数显示；
+
+![内容框架](images/70_相机图像获取的C++实现/实现框架.png)
+
+
+
+## 2.实际实现
+
+### 2.1 创建软件包
+
+- 在终端中执行如下命令，完成软件包创建
+
+```bash
+cd ~/catkin_ws/src
+
+catkin_create_pkg cv_pkg roscpp cv_bridge
+```
+
+### 2.2 创建节点
+
+- 打开VsCode，打开cv_pkg，在其下面的src目录中新建文件cv_image_node.cpp文件；
+- 给文件写上如下内容
+
+```cpp
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>            // 转换格式头文件
+#include <sensor_msgs/image_encodings.h>    // 图像编码头文件
+#include <opencv2/imgproc/imgproc.hpp>      // OpenCV的图像处理头文件
+#include <opencv2/highgui/highgui.hpp>      // OpenCV的图形化显示头文件
+
+using namespace cv;     /* 使用命名空间 */
+
+void Cam_RGB_Callback(const sensor_msgs::Image msg)
+{
+    cv_bridge::CvImagePtr cv_ptr;      // OpenCV图像类型指针
+
+    try
+    {
+        /* 调用toCvCopy()函数将ROS中的图片消息包转换成OpenCV格式的图像对象 */
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        /* 错误提示 */
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    /* 定义OpenCV自己的图像格式，将cv_ptr的image取出来并显示 */
+    Mat imgOriginal = cv_ptr->image;
+    imshow("RGB", imgOriginal);
+    waitKey(1);
+}
+
+int main(int argc, char** argv)
+{
+    /* 初始化ROS */
+    ros::init(argc, argv, "cv_image_node");
+
+    /* 订阅相机话题 */
+    ros::NodeHandle nh;
+    ros::Subscriber rgb_sub = nh.subscribe("/kinect2/qhd/image_color_rect", 1, Cam_RGB_Callback);
+
+    /* 图像显示窗口 */
+    namedWindow("RGB");
+    ros::spin();
+}
+```
+
+### 2.3 添加编译规则
+
+- 打开CMakeList.txt文件，添加如下的编译规则
+
+```c
+// 第17行，引入OpenCV的环境参数，REQUIRED表示这个环境参数是必须的，若不存在编译将终止
+find_package(OpenCV REQUIRED)
+    
+// 第117行
+include_directories(
+# include
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}		// 添加OpenCV的头文件路径
+)
+
+// 文件末尾，最后一行与之前不一样，在链接库规则里新增了一个OpenCV的库文件列表
+add_executable(cv_image_node src/cv_image_node.cpp)
+add_dependencies(cv_image_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_image_node ${catkin_LIBRARIES} ${OpenCV_LIBS})
+```
+
+- **在CMake软件中导入一个第三方函数库的步骤**
+  - 先find_package；
+  - 然后添加include头文件路径；
+  - 最后在为节点添加编译规则时，多加一条库文件列表；
+- 注意：ROS中是自带安装了OpenCV的；
+
+### 2.4 编译节点
+
+- 在终端执行如下命令
+
+```bash
+cd ~/catkin_ws/
+
+catkin_make
+```
+
+
+
+## 3.运行效果
+
+- 在3个终端中执行以下指令；
+- 如果出现问题，可参考~/catkin_ws/src/wpr_simulation/src/demo_cv_image.cpp文件；
+
+```bash
+roslaunch wpr_simulation wpb_balls.launch
+
+rosrun cv_pkg cv_image_node
+
+rosrun wpr_simulation ball_random_move
+```
+
+- 实际运行效果如下图所示
+
+![实际运行效果](images/70_相机图像获取的C++实现/运行效果.gif)
+
+---
+
 
 
 # 第七十一节课：颜色目标识别与定位的C++实现
+
+## 1.内容框架
+
+- 本节课基于上节课的基础，完成对颜色目标的识别及其定位；
+
+<img src="images/71_颜色目标识别与定位的C++实现/框架.png" alt="总体框架" style="zoom:50%;" />
+
+- 整个项目只需要3个部分
+  - **颜色空间转换：RGB->HSV；**
+
+  <img src="images/71_颜色目标识别与定位的C++实现/RGB到HSV空间.png" alt="颜色空间转换" style="zoom: 50%;" />
+
+  - **二值化，即分割提取目标物；**
+
+  <img src="images/71_颜色目标识别与定位的C++实现/阈值分割.png" alt="阈值分割" style="zoom:50%;" />
+
+  - **计算目标物的质心坐标；**
+
+  <img src="images/71_颜色目标识别与定位的C++实现/计算质心.png" alt="计算质心" style="zoom:67%;" />
+
+
+
+## 2.实际实现
+
+### 2.1 节点编写
+
+- 在cv_pkg/src目录下，新建文件cv_hsv_node.cpp；
+- 在文件中添加如下内容
+
+```cpp
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>            // 转换格式头文件
+#include <sensor_msgs/image_encodings.h>    // 图像编码头文件
+#include <opencv2/imgproc/imgproc.hpp>      // OpenCV的图像处理头文件
+#include <opencv2/highgui/highgui.hpp>      // OpenCV的图形化显示头文件
+
+/* 使用命名空间 */
+using namespace cv;
+using namespace std;
+
+/* 颜色阈值 */
+static int iLowH = 10;
+static int iHighH = 40;
+
+static int iLowS = 90;
+static int iHighS = 255;
+
+static int iLowV = 1;
+static int iHighV = 255;
+
+/* 回调函数 */
+void Cam_RGB_Callback(const sensor_msgs::Image msg)
+{
+    cv_bridge::CvImagePtr cv_ptr;      // OpenCV图像类型指针
+
+    try
+    {
+        /* 调用toCvCopy()函数将ROS中的图片消息包转换成OpenCV格式的图像对象 */
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        /* 错误提示 */
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    /* 定义OpenCV的图像格式，将cv_ptr的image取出来，这就是RGB空间下的原始图像 */
+    Mat imgOriginal = cv_ptr->image;
+
+    /* 将RGB图片转换成HSV */
+    Mat imgHSV;
+    cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV);
+
+    /* HSV空间做直方图均衡化 */
+    vector<Mat> hsvSplit;
+    split(imgHSV, hsvSplit);
+    equalizeHist(hsvSplit[2], hsvSplit[2]);     // 对V值均衡化
+    merge(hsvSplit, imgHSV);
+
+    /* 使用阈值范围进行二值化 */
+    Mat imgThresholded;
+    inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded);
+
+    /* 开操作即腐蚀，去除噪声 */
+    Mat element = getStructuringElement(MORPH_RECT, Size(5, 5));
+    morphologyEx(imgThresholded, imgThresholded, MORPH_OPEN, element);
+
+    /* 闭操作，连接一些连通域 */
+    morphologyEx(imgThresholded, imgThresholded, MORPH_CLOSE, element);
+
+    /* 遍历二值化后的图像数据 */
+    int nTargetX = 0;
+    int nTargetY = 0;
+    int nPixCount = 0;
+    int nImgWidth = imgThresholded.cols;
+    int nImgHeight = imgThresholded.rows;
+    int nImgChannels = imgThresholded.channels();
+    for (int y = 0; y < nImgHeight; y ++)
+    {
+        for (int x = 0; x < nImgWidth; x ++)
+        {
+            if (imgThresholded.data[y*nImgWidth + x] == 255)
+            {
+                nTargetX += x;
+                nTargetY += y;
+                nPixCount ++;
+            }
+        }
+    }
+
+    if (nPixCount > 0)
+    {
+        nTargetX /= nPixCount;
+        nTargetY /= nPixCount;
+        printf("颜色质心坐标( %d, %d ) 点数 = %d\n", nTargetX, nTargetY, nPixCount);
+        /* 画坐标 */
+        Point line_begin = Point(nTargetX - 10, nTargetY);
+        Point line_end = Point(nTargetX + 10, nTargetY);
+        line(imgOriginal, line_begin, line_end, Scalar(255, 0, 0));
+        line_begin.x = nTargetX;
+        line_begin.y = nTargetY + 10;
+        line_end.x = nTargetX;
+        line_end.y = nTargetY + 10;
+        line(imgOriginal, line_begin, line_end, Scalar(255, 0, 0));
+
+    }
+    else
+    {
+        printf("目标颜色消失...\n");
+    }
+
+    imshow("RGB", imgOriginal);
+    imshow("HSV", imgHSV);
+    imshow("Result", imgThresholded);
+    cv::waitKey(5);
+}
+
+
+int main(int argc, char** argv)
+{
+    /* 初始化ROS */
+    ros::init(argc, argv, "cv_image_node");
+
+    /* 订阅相机话题 */
+    ros::NodeHandle nh;
+    ros::Subscriber rgb_sub = nh.subscribe("/kinect2/qhd/image_color_rect", 1, Cam_RGB_Callback);
+
+    /* 生成图像显示和参数调节的窗口 */
+    namedWindow("Threshold", WINDOW_AUTOSIZE);
+
+    /* 生成滑杆控件 */
+    createTrackbar("LowH", "Threshold", &iLowH, 179);       // Hue (0 - 179)
+    createTrackbar("HighH", "Threshold", &iHighH, 179);
+
+    createTrackbar("LowS", "Threshold", &iLowS, 255);       // Saturation (0 - 255)
+    createTrackbar("HighS", "Threshold", &iHighS, 255);
+
+    createTrackbar("LowV", "Threshold", &iLowV, 255);       // Value (0 - 255)
+    createTrackbar("HighV", "Threshold", &iHighV, 255);
+    
+    /* 图像显示窗口 */
+    namedWindow("RGB");
+    namedWindow("HSV");
+    namedWindow("Result");
+
+    /* 即spin()函数 */
+    ros::Rate loop_rate(30);
+    while(ros::ok())
+    {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
+}
+```
+
+### 2.2 添加编译规则
+
+- 在确保上节课的的CMakeList文件的前两部分没漏，然后在最后添加如下代码
+
+```c
+add_executable(cv_hsv_node src/cv_hsv_node.cpp)
+add_dependencies(cv_hsv_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_hsv_node ${catkin_LIBRARIES} ${OpenCV_LIBS})
+```
+
+### 2.3 编译
+
+- 在终端中执行
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
+
+
+
+## 3.运行效果
+
+- 在3个终端中执行以下指令；
+- 如果出现问题，可参考~/catkin_ws/src/wpr_simulation/src/demo_cv_hsv.cpp文件；
+
+```bash
+roslaunch wpr_simulation wpb_balls.launch
+
+rosrun cv_pkg cv_hsv_node
+
+rosrun wpr_simulation ball_random_move
+```
+
+- 实际运行效果如下图所示
+
+![实际运行效果](images/71_颜色目标识别与定位的C++实现/运行效果.gif)
+
+---
 
 
 
 # 第七十二节课：颜色目标跟随的C++实现
 
+## 1.内容框架
+
+- 本节课在前面的基础上，添加运动控制功能，实现机器人对小球的跟随功能；
+
+<img src="images/72_颜色目标跟随的C++实现/总体框架.png" alt="总体框架" style="zoom: 50%;" />
+
+
+
+## 2.实际实现
+
+### 2.1 节点编写
+
+- 打开VsCode，在src目录下新建文件cv_follow_node.cpp；
+- 在文件中写入如下内容：即通过PID控制器让目标球始终出现在画面正中间；
+
+```cpp
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>            // 转换格式头文件
+#include <sensor_msgs/image_encodings.h>    // 图像编码头文件
+#include <opencv2/imgproc/imgproc.hpp>      // OpenCV的图像处理头文件
+#include <opencv2/highgui/highgui.hpp>      // OpenCV的图形化显示头文件
+#include <geometry_msgs/Twist.h>            // 消息包类型头文件
+
+/* 使用命名空间 */
+using namespace cv;
+using namespace std;
+
+/* 颜色阈值 */
+static int iLowH = 10;
+static int iHighH = 40;
+
+static int iLowS = 90;
+static int iHighS = 255;
+
+static int iLowV = 1;
+static int iHighV = 255;
+
+/* 相当于声明为全局变量 */
+geometry_msgs::Twist vel_cmd;   // 速度消息包
+ros::Publisher vel_pub;         // 速度发布对象
+
+
+/* 回调函数 */
+void Cam_RGB_Callback(const sensor_msgs::Image msg)
+{
+    cv_bridge::CvImagePtr cv_ptr;      // OpenCV图像类型指针
+
+    try
+    {
+        /* 调用toCvCopy()函数将ROS中的图片消息包转换成OpenCV格式的图像对象 */
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        /* 错误提示 */
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    /* 获取OpenCV中最原始的彩色图像 */
+    Mat imgOriginal = cv_ptr->image;
+
+    /* 将RGB图片转换成HSV */
+    Mat imgHSV;
+    vector<Mat> hsvSplit;
+    cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV);
+
+    /* HSV空间做直方图均衡化 */
+    split(imgHSV, hsvSplit);
+    equalizeHist(hsvSplit[2], hsvSplit[2]);     // 对V值均衡化
+    merge(hsvSplit, imgHSV);
+
+    /* 使用阈值范围进行二值化 */
+    Mat imgThresholded;
+    inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded);
+
+    /* 开操作即腐蚀，去除噪声 */
+    Mat element = getStructuringElement(MORPH_RECT, Size(5, 5));
+    morphologyEx(imgThresholded, imgThresholded, MORPH_OPEN, element);
+
+    /* 闭操作，连接一些连通域 */
+    morphologyEx(imgThresholded, imgThresholded, MORPH_CLOSE, element);
+
+    /* 遍历二值化后的图像数据 */
+    int nTargetX = 0;
+    int nTargetY = 0;
+    int nPixCount = 0;
+    int nImgWidth = imgThresholded.cols;
+    int nImgHeight = imgThresholded.rows;
+    int nImgChannels = imgThresholded.channels();
+    printf("横向宽度= %d 纵向宽度= %d \n", nImgWidth, nImgHeight);
+    for (int y = 0; y < nImgHeight; y ++)
+    {
+        for (int x = 0; x < nImgWidth; x ++)
+        {
+            if (imgThresholded.data[y*nImgWidth + x] == 255)
+            {
+                nTargetX += x;
+                nTargetY += y;
+                nPixCount ++;
+            }
+        }
+    }
+
+    if (nPixCount > 0)
+    {
+        /* 物体质心画十字标记 */
+        nTargetX /= nPixCount;
+        nTargetY /= nPixCount;
+        printf("颜色质心坐标( %d, %d ) 点数 = %d\n", nTargetX, nTargetY, nPixCount);
+        /* 画坐标 */
+        Point line_begin = Point(nTargetX - 10, nTargetY);
+        Point line_end = Point(nTargetX + 10, nTargetY);
+        line(imgOriginal, line_begin, line_end, Scalar(255, 0, 0));
+        line_begin.x = nTargetX;
+        line_begin.y = nTargetY + 10;
+        line_end.x = nTargetX;
+        line_end.y = nTargetY + 10;
+        line(imgOriginal, line_begin, line_end, Scalar(255, 0, 0));
+
+        /* PID计算机器人运动速度 */
+        float fVelFoward = (nImgHeight / 2 - nTargetY) * 0.002;
+        float fVelTurn = (nImgWidth / 2 - nTargetX) * 0.003;
+        vel_cmd.linear.x = fVelFoward;
+        vel_cmd.linear.y = 0;
+        vel_cmd.linear.z = 0;
+        vel_cmd.angular.x = 0;
+        vel_cmd.angular.y = 0;
+        vel_cmd.angular.z = fVelTurn;
+    }
+    else
+    {
+        printf("目标颜色消失...\n");
+        vel_cmd.linear.x = 0;
+        vel_cmd.linear.y = 0;
+        vel_cmd.linear.z = 0;
+        vel_cmd.angular.x = 0;
+        vel_cmd.angular.y = 0;
+        vel_cmd.angular.z = 0;
+    }
+
+    /* 发送速度 */
+    vel_pub.publish(vel_cmd);
+    printf("机器人运动速度(linear.x = %.2f, angular.z = %.2f)\n", vel_cmd.linear.x, vel_cmd.angular.z);
+
+    /* 显示处理结果 */
+    imshow("RGB", imgOriginal);
+    imshow("Result", imgThresholded);
+    cv::waitKey(1);
+}
+
+int main(int argc, char** argv)
+{
+    /* 初始化ROS */
+    ros::init(argc, argv, "cv_follow_node");
+
+    /* 订阅相机话题 */
+    ros::NodeHandle nh;
+    ros::Subscriber rgb_sub = nh.subscribe("/kinect2/qhd/image_color_rect", 1, Cam_RGB_Callback);
+    vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 30);
+
+    /* 生成图像显示和参数调节的窗口 */
+    namedWindow("Threshold", WINDOW_AUTOSIZE);
+
+    /* 生成滑杆控件 */
+    createTrackbar("LowH", "Threshold", &iLowH, 179);       // Hue (0 - 179)
+    createTrackbar("HighH", "Threshold", &iHighH, 179);
+
+    createTrackbar("LowS", "Threshold", &iLowS, 255);       // Saturation (0 - 255)
+    createTrackbar("HighS", "Threshold", &iHighS, 255);
+
+    createTrackbar("LowV", "Threshold", &iLowV, 255);       // Value (0 - 255)
+    createTrackbar("HighV", "Threshold", &iHighV, 255);
+    
+    /* 图像显示窗口 */
+    namedWindow("RGB");
+    namedWindow("Result");
+
+    /* 保存程序的持续运行 */
+    ros::Rate loop_rate(30);
+    while(ros::ok())
+    {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
+}
+
+```
+
+### 2.2 添加编译规则
+
+- 在确保上节课的的CMakeList文件的前两部分没漏，然后在最后添加如下代码
+
+```c
+add_executable(cv_follow_node src/cv_follow_node.cpp)
+add_dependencies(cv_follow_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_follow_node ${catkin_LIBRARIES} ${OpenCV_LIBS})
+```
+
+### 2.3 编译
+
+- 在终端中执行
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
+
+
+
+## 3.运行效果
+
+- 在3个终端中执行以下指令；
+- 如果出现问题，可参考~/catkin_ws/src/wpr_simulation/src/demo_cv_follow.cpp文件；
+
+```bash
+roslaunch wpr_simulation wpb_balls.launch
+
+rosrun cv_pkg cv_follow_node
+
+rosrun wpr_simulation ball_random_move
+```
+
+- 实际运行效果如下图所示
+
+![实际运行效果](images/72_颜色目标跟随的C++实现/运行效果.gif)
+
+---
+
 
 
 # 第七十三节课：人脸检测的C++实现
 
+## 1.内容框架
+
+- 本节课在前面的基础上，实现人脸检测功能；
+
+<img src="images/73_人脸检测的C++实现/框架.png" alt="总体框架" style="zoom: 50%;" />
 
 
 
+## 2.Haar特征的级联分类器
+
+- 基于Haar特征不断的比对输入图像的各个区域；
+- 然后用级联分类器进行不断的判断，只有满足了级联分配器的要求才认为是人脸；
+
+| ![Haar特征](images/73_人脸检测的C++实现/Haar特征.png) | ![级联分类器](images/73_人脸检测的C++实现/\级联分类器.png) |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
 
 
 
+## 3.实际实现
+
+### 3.1 节点编写
+
+- 打开VsCode，在cv_pkg文件夹下的src目录下新建文件cv_face_detect.cpp；
+- 在文件中写入如下内容；
+
+```cpp
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>            // 转换格式头文件
+#include <sensor_msgs/image_encodings.h>    // 图像编码头文件
+#include <opencv2/imgproc/imgproc.hpp>      // OpenCV的图像处理头文件
+#include <opencv2/highgui/highgui.hpp>      // OpenCV的图形化显示头文件
+#include <opencv2/objdetect/objdetect.hpp>  // OpenCV检测头文件
+
+/* 使用命名空间 */
+using namespace cv;
+using namespace std;
+
+/* 分类器对象 */
+static CascadeClassifier face_cascade;
+
+/* Mat对象用于存放黑白图像，输入给分类器 */
+static Mat frame_gray;
+
+/* 容器，相当于数组，存放检测结果 */
+static vector<Rect> faces;
+static vector<Rect>::const_iterator face_iter;  /* 与前面数组配套的迭代器 */
+
+/* 回调函数 */
+void callbackRGB(const sensor_msgs::Image msg)
+{
+    cv_bridge::CvImagePtr cv_ptr;      // OpenCV图像类型指针
+
+    try
+    {
+        /* 调用toCvCopy()函数将ROS中的图片消息包转换成OpenCV格式的图像对象 */
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        /* 错误提示 */
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    /* 获取OpenCV中最原始的彩色图像 */
+    Mat imgOriginal = cv_ptr->image;
+
+    /* 转换成黑白图像 */
+    cvtColor(imgOriginal, frame_gray, CV_BGR2GRAY);
+    equalizeHist(frame_gray, frame_gray);
+
+    /* 检测人脸,结果存在faces中 */
+    face_cascade.detectMultiScale(frame_gray, faces, 1.1, 9, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+
+    /* 在彩色原图上标注人脸位置 */
+    if (faces.size() > 0)
+    {
+        /* 遍历所有人脸 */
+        for (face_iter = faces.begin(); face_iter != faces.end(); ++face_iter)
+        {
+            /* 标注人脸 */
+            rectangle(
+                imgOriginal,
+                Point(face_iter->x, face_iter->y),
+                Point(face_iter->x + face_iter->width, face_iter->y + face_iter->height),
+                CV_RGB(255, 0, 255),
+                2);
+        }
+        imshow("faces", imgOriginal);
+        waitKey(1);
+    }
+}
+
+/* 主函数 */
+int main(int argc, char** argv)
+{
+    /* 初始化ROS */
+    ros::init(argc, argv, "cv_face_detect");
+
+    namedWindow("faces");
+
+    /* 读取人脸特征文件 */
+    std::string strLoadFile;
+    char const* home = getenv("HOME");  /* 获取主文件夹路径 */
+    strLoadFile = home;
+    strLoadFile += "/catkin_ws";
+    strLoadFile += "/src/wpr_simulation/config/haarcascade_frontalface_alt.xml";    /* 人脸特征模板 */
+
+    /* 加载特征模板 */
+    bool res = face_cascade.load(strLoadFile);
+    if (res == false)
+    {
+        ROS_ERROR("fail to load haarcascade_frontalface_alt.xml");
+        return 0;
+    }
+
+    /* 订阅话题 */
+    ros::NodeHandle nh;
+    ros::Subscriber rgb_sub = nh.subscribe("/kinect2/qhd/image_color_rect", 1, callbackRGB);
+
+    ros::spin();
+    return 0;
+}
+
+```
+
+### 3.2 添加编译规则
+
+- 在确保上节课的的CMakeList文件的前两部分没漏，然后在最后添加如下代码
+
+```c
+add_executable(cv_face_detect src/cv_face_detect.cpp)
+add_dependencies(cv_face_detect ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_face_detect ${catkin_LIBRARIES} ${OpenCV_LIBS})
+```
+
+### 3.3 编译
+
+- 在终端中执行
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
 
 
 
+## 4.运行效果
 
+- 在3个终端中执行以下指令；
+- 如果出现问题，可参考~/catkin_ws/src/wpr_simulation/src/demo_cv_face_detect.cpp文件；
 
+```bash
+roslaunch wpr_simulation wpr1_single_face.launch
 
+rosrun cv_pkg cv_face_detect
 
+# 这一行可选择性执行，可用键盘控制机器人移动查看不同的视角
+rosrun wpr_simulation keyboard_vel_ctrl
+```
 
+- 实际运行效果如下图所示
 
+![实际运行效果](images/73_人脸检测的C++实现/运行效果.gif)
 
-
-
-
+---
 
 
 
 # 第七十四节课：相机图像获取的Python实现
 
+## 1.内容框架
+
+- 本节课学习ROS中如何基于Python实现相机图像获取的话题；
+- 本节框架如下，订阅相机话题获取图像数据，然后将其转换为OpenCV的Mat格式，再用OpenCV函数显示；
+
+<img src="images/74_相机图像获取的Python实现/实现框架.png" alt="内容框架" style="zoom: 67%;" />
+
+
+
+## 2.实际实现
+
+### 2.1 节点编写
+
+- 建立一个新的软件包，在终端中执行
+
+```bash
+cd ~/catkin_ws/src
+
+catkin_create_pkg cv_py_pkg rospy sensor_msgs cv_bridge
+```
+
+- 然后打开VsCode，在cv_py_pkg下，新=新建文件夹scripts，并在文件夹下新建文件image_node.py；
+- 在文件中写入如下内容
+
+```python
+#!/usr/bin/env python3
+# coding=utf-8
+
+import rospy
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError       # 格式转换相关文件
+
+# 回调函数
+def Cam_RGB_Callback(msg):
+    bridge = CvBridge()         # 图像格式转换器对象
+
+    # 图像格式转换
+    try:
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+    except CvBridgeError as e:
+        rospy.logerr("格式转换错误：%s", e)
+        return
+    
+    # 弹出窗口进行显示
+    cv2.imshow("RGB", cv_image)
+    cv2.waitKey(1)
+
+
+# 主函数
+if __name__ == "__main__":
+    # ROS初始化
+    rospy.init_node("cv_image_node")
+
+    # 订阅相机话题
+    rgb_sub = rospy.Subscriber("/kinect2/qhd/image_color_rect", Image, Cam_RGB_Callback, queue_size=10)
+
+    rospy.spin()
+```
+
+### 2.2 添加可执行权限并编译
+
+- 终端执行如下命令
+
+```bash
+cd ~/catkin_ws/src/cv_py_pkg/scripts
+
+chmod +x image_node.py
+```
+
+- 由于该软件包是新建的，需要再编译一下
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
+
+### 2.3 实际运行
+
+- 3个终端窗口中分别执行
+
+```bash
+roslaunch wpr_simulation wpb_balls.launch
+
+rosrun cv_py_pkg image_node.py
+
+rosrun wpr_simulation ball_random_move
+```
+
+- 实际运行效果如下图所示；
+- 如果有报错，可参考~catkin_ws/src/wpr_simulation/scripts/demo_cv_iamge.py文件；
+
+![实际运行效果](images/74_相机图像获取的Python实现/运行效果.gif)
+
+---
+
 
 
 # 第七十五节课：颜色目标识别与定位的Python实现
+
+## 1.内容框架
+
+- 本节课基于上节课的基础，完成对颜色目标的识别及其定位；
+
+<img src="images/75_颜色目标识别与定位的Python实现/框架.png" alt="总体框架" style="zoom:50%;" />
+
+- 整个项目只需要3个部分
+
+  - **颜色空间转换：RGB->HSV；**
+
+  <img src="images/75_颜色目标识别与定位的Python实现/RGB到HSV空间.png" alt="颜色空间转换" style="zoom: 50%;" />
+
+  - **二值化，即分割提取目标物；**
+
+  <img src="images/75_颜色目标识别与定位的Python实现/阈值分割.png" alt="阈值分割" style="zoom:50%;" />
+
+  - **计算目标物的质心坐标；**
+
+  <img src="images/75_颜色目标识别与定位的Python实现/计算质心.png" alt="计算质心" style="zoom:67%;" />
+
+
+
+## 2.实际实现
+
+### 2.1 节点编写
+
+- 在cv_py_pkg/scripts目录下，新建文件cv_hsv_node.py；
+- 在文件中添加如下内容
+
+```python
+#!/usr/bin/env python3
+# coding=utf-8
+
+import rospy
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError       # 格式转换相关文件
+
+# 范围阈值
+hue_min = 10
+hue_max = 40
+satu_min = 90
+satu_max = 255
+val_min = 1
+val_max = 255
+
+
+# 滑杆事件的回调函数
+def nothing(x):
+    pass
+
+
+# 节点的回调函数
+def Cam_RGB_Callback(msg):
+    # 声明为全局变量，避免函数内部当成局部变量
+    global hue_min, hue_max, satu_min, satu_max , val_min , val_max
+
+    bridge = CvBridge()         # 图像格式转换器对象
+
+    # 图像格式转换
+    try:
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+    except CvBridgeError as e:
+        rospy.logerr("格式转换错误：%s", e)
+        return
+    
+    # RGB图片转换成HSV
+    hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
+    # 在HSV空间做均衡化
+    h, s, v = cv2.split(hsv_image)
+    v = cv2.equalizenHist(v)
+    hsv_image = cv2.merge([h, s, v])
+
+    # 二值化
+    th_image = cv2.inRange(hsv_image, (hue_min, satu_min, val_min), (hue_max, satu_max, val_max))
+
+    # 开操作去除噪点
+    element = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    th_image = cv2.morphologyEx(th_image, cv2.MORPH_OPEN, element)
+
+    # 闭操作
+    th_image = cv2.morphologyEx(th_image, cv2.MORPH_CLOSE, element)
+
+    # 遍历处理后的图像
+    target_x, target_y, pix_count = 0, 0, 0
+    image_height, image_width = th_image.shape[:2]
+    for y in range(image_height):
+        for x in range(image_width):
+            if th_image[y, x] == 255:
+                target_x += x
+                target_y += y
+                pix_count += 1
+    if pix_count > 0:
+        target_x //= pix_count
+        target_y //= pix_count
+        print(f"颜色质心坐标({target_x}, {target_y}) 点数 = {pix_count}")
+        # 画作标
+        cv2.line(cv_image, (target_x - 10, target_y), (target_x + 10, target_y), (255, 0, 0), 2)
+        cv2.line(cv_image, (target_x, target_y - 10), (target_x, target_y + 10), (255, 0, 0), 2)
+    else:
+        print("目标颜色消失...")
+
+    # 显示主要图像
+    cv2.imshow("RGB", cv_image)
+    cv2.imshow("HSV", hsv_image)
+    cv2.imshow("Result", th_image)
+    cv2.waitKey(5)
+
+
+# 主函数
+if __name__ == "__main__":
+    # ROS初始化
+    rospy.init_node("cv_hsv_node")
+
+    # 订阅相机话题
+    rgb_sub = rospy.Subscriber("/kinect2/qhd/image_color_rect", Image, Cam_RGB_Callback, queue_size=10)
+
+    # 添加生成滑杆控件,最后一个参数是滑杆的回调函数
+    cv2.namedWindow("Threshold")
+    cv2.createTrackbar("hue_min", "Threshold", hue_min, 179, nothing)       # Hue (0 - 179)
+    cv2.createTrackbar("hue_max", "Threshold", hue_max, 179, nothing)
+
+    cv2.createTrackbar("satu_min", "Threshold", satu_min, 255, nothing)     # Saturation (0 - 255)
+    cv2.createTrackbar("satu_max", "Threshold", satu_max, 255, nothing)
+
+    cv2.createTrackbar("val_min", "Threshold", val_min, 255, nothing)       # Value (0 - 255)
+    cv2.createTrackbar("val_max", "Threshold", val_max, 255, nothing)
+
+    # 生成窗口
+    cv2.namedWindow("RGB")
+    cv2.namedWindow("HSV")
+    cv2.namedWindow("Result")
+
+    rate = rospy.Rate(30)
+
+    # 这里统一处理滑杆数据，所以滑杆回调函数什么都不做
+    while not rospy.is_shutdown():
+        hue_min = cv2.getTrackbarPos("hue_min", "Threshold")
+        hue_max = cv2.getTrackbarPos("hue_max", "Threshold")
+        satu_min = cv2.getTrackbarPos("satu_min", "Threshold")
+        satu_max = cv2.getTrackbarPos("satu_max", "Threshold")
+        val_min = cv2.getTrackbarPos("val_min", "Threshold")
+        val_max = cv2.getTrackbarPos("val_max", "Threshold")
+
+        rate.sleep()
+
+    cv2.destroyAllWindows()
+```
+
+### 2.2 添加可执行权限并编译
+
+- 终端执行如下命令
+
+```bash
+cd ~/catkin_ws/src/cv_py_pkg/scripts
+
+chmod +x cv_hsv_node.py
+```
+
+- 由于该软件包是已经编译过了，添加的是python文件不需要重新编译；
+
+### 2.3 实际运行
+
+- 3个终端窗口中分别执行
+
+```bash
+roslaunch wpr_simulation wpb_balls.launch
+
+rosrun cv_py_pkg cv_hsv_node.py
+
+rosrun wpr_simulation ball_random_move
+```
+
+- 实际运行效果如下图所示；
+- 如果有报错，可参考~catkin_ws/src/wpr_simulation/scripts/demo_cv_hsv.py文件；
+
+![实际运行效果](images/75_颜色目标识别与定位的Python实现/运行效果.gif)
+
+---
 
 
 
 # 第七十六节课：颜色目标跟随的Python实现
 
+## 1.内容框架
+
+- 本节课在前面的基础上，添加运动控制功能，实现机器人对小球的跟随功能；
+
+<img src="images/76_颜色目标跟随的Python实现/总体框架.png" alt="总体框架" style="zoom: 50%;" />
+
+
+
+## 2.实际实现
+
+### 2.1 节点编写
+
+- 在cv_py_pkg/scripts目录下，新建文件cv_follow_node.py；
+
+- 在文件中写入如下内容：即通过PID控制器保持目标球在图像中间；
+
+```python
+#!/usr/bin/env python3
+# coding=utf-8
+
+import rospy
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError       # 格式转换相关文件
+from geometry_msgs.msg import Twist                 # 速度消息包
+
+# 全局变量
+vel_cmd = Twist()
+vel_pub = None
+
+# 范围阈值
+hue_min = 10
+hue_max = 40
+satu_min = 90
+satu_max = 255
+val_min = 1
+val_max = 255
+
+# 滑杆事件的回调函数
+def nothing(x):
+    pass
+
+# 节点的回调函数
+def Cam_RGB_Callback(msg):
+    # 声明为全局变量，避免函数内部当成局部变量
+    global hue_min, hue_max, satu_min, satu_max , val_min , val_max
+    global vel_cmd, vel_pub
+
+    bridge = CvBridge()         # 图像格式转换器对象
+
+    # 图像格式转换
+    try:
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+    except CvBridgeError as e:
+        rospy.logerr("格式转换错误：%s", e)
+        return
+    
+    # RGB图片转换成HSV
+    hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
+    # 在HSV空间做均衡化
+    h, s, v = cv2.split(hsv_image)
+    v = cv2.equalizenHist(v)
+    hsv_image = cv2.merge([h, s, v])
+
+    # 二值化
+    th_image = cv2.inRange(hsv_image, (hue_min, satu_min, val_min), (hue_max, satu_max, val_max))
+
+    # 开操作去除噪点
+    element = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    th_image = cv2.morphologyEx(th_image, cv2.MORPH_OPEN, element)
+
+    # 闭操作
+    th_image = cv2.morphologyEx(th_image, cv2.MORPH_CLOSE, element)
+
+    # 遍历处理后的图像
+    target_x, target_y, pix_count = 0, 0, 0
+    image_height, image_width = th_image.shape[:2]
+    for y in range(image_height):
+        for x in range(image_width):
+            if th_image[y, x] == 255:
+                target_x += x
+                target_y += y
+                pix_count += 1
+    if pix_count > 0:
+        target_x //= pix_count
+        target_y //= pix_count
+        print(f"颜色质心坐标({target_x}, {target_y}) 点数 = {pix_count}")
+        
+        # 画作标
+        cv2.line(cv_image, (target_x - 10, target_y), (target_x + 10, target_y), (255, 0, 0), 2)
+        cv2.line(cv_image, (target_x, target_y - 10), (target_x, target_y + 10), (255, 0, 0), 2)
+
+        # 计算机器人运动速度
+        vel_forward = (image_height / 2 - target_y) * 0.001
+        vel_turn = (image_width / 2 - target_x) * 0.0005
+        vel_cmd.linear.x = vel_forward
+        vel_cmd.angular.z = vel_turn
+    else:
+        print("目标颜色消失...")
+        vel_cmd.linear.x = 0
+        vel_cmd.angular.z = 0
+
+    # 显示主要图像
+    cv2.imshow("RGB", cv_image)
+    cv2.imshow("Result", th_image)
+    cv2.waitKey(1)
+
+    vel_pub.publish(vel_cmd)
+    print(f"机器人运动速度(linear.x = {vel_cmd.linear.x:.2f}, angular.z = {vel_cmd.angular.z:.2f})")
+
+# 主函数
+if __name__ == "__main__":
+    # ROS初始化
+    rospy.init_node("cv_follow_node", anonymous=True)
+
+    # 订阅相机话题
+    rgb_sub = rospy.Subscriber("/kinect2/qhd/image_color_rect", Image, Cam_RGB_Callback, queue_size=1)
+
+    # 发布速度话题
+    vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=30)
+
+    # 添加生成滑杆控件,最后一个参数是滑杆的回调函数
+    cv2.namedWindow("Threshold")
+    cv2.createTrackbar("hue_min", "Threshold", hue_min, 179, nothing)       # Hue (0 - 179)
+    cv2.createTrackbar("hue_max", "Threshold", hue_max, 179, nothing)
+
+    cv2.createTrackbar("satu_min", "Threshold", satu_min, 255, nothing)     # Saturation (0 - 255)
+    cv2.createTrackbar("satu_max", "Threshold", satu_max, 255, nothing)
+
+    cv2.createTrackbar("val_min", "Threshold", val_min, 255, nothing)       # Value (0 - 255)
+    cv2.createTrackbar("val_max", "Threshold", val_max, 255, nothing)
+
+    # 生成窗口
+    cv2.namedWindow("RGB")
+    cv2.namedWindow("Result")
+
+    rate = rospy.Rate(30)
+
+    # 这里统一处理滑杆数据，所以滑杆回调函数什么都不做
+    while not rospy.is_shutdown():
+        hue_min = cv2.getTrackbarPos("hue_min", "Threshold")
+        hue_max = cv2.getTrackbarPos("hue_max", "Threshold")
+        satu_min = cv2.getTrackbarPos("satu_min", "Threshold")
+        satu_max = cv2.getTrackbarPos("satu_max", "Threshold")
+        val_min = cv2.getTrackbarPos("val_min", "Threshold")
+        val_max = cv2.getTrackbarPos("val_max", "Threshold")
+
+        rate.sleep()
+
+    cv2.destroyAllWindows()
+```
+
+### 2.2 添加可执行权限并编译
+
+- 终端执行如下命令
+
+```bash
+cd ~/catkin_ws/src/cv_py_pkg/scripts
+
+chmod +x cv_follow_node.py
+```
+
+- 由于该软件包是已经编译过了，添加的是python文件不需要重新编译；
+
+### 2.3 实际运行
+
+- 3个终端窗口中分别执行
+
+```bash
+roslaunch wpr_simulation wpb_balls.launch
+
+rosrun cv_py_pkg cv_follow_node.py
+
+rosrun wpr_simulation ball_random_move
+```
+
+- 实际运行效果如下图所示；
+- 如果有报错，可参考~catkin_ws/src/wpr_simulation/scripts/demo_cv_follow.py文件；
+
+![实际运行效果](images/76_颜色目标跟随的Python实现/运行效果.gif)
+
+---
+
 
 
 # 第七十七节课：人脸检测的Python实现
 
+## 1.内容框架
 
+- 本节课在前面的基础上，实现人脸检测功能；
 
+<img src="images/77_人脸检测的Python实现/框架.png" alt="总体框架" style="zoom: 50%;" />
 
 
 
+## 2.Haar特征的级联分类器
 
+- 基于Haar特征不断的比对输入图像的各个区域；
+- 然后用级联分类器进行不断的判断，只有满足了级联分配器的要求才认为是人脸；
 
+| ![Haar特征](images/77_人脸检测的Python实现/Haar特征.png) | ![级联分类器](images/77_人脸检测的Python实现/\级联分类器.png) |
+| -------------------------------------------------------- | ------------------------------------------------------------ |
 
 
 
+## 3.实际实现
 
+### 3.1 节点编写
 
+- 在cv_py_pkg/scripts目录下，新建文件cv_face_detect.py；
 
+- 在文件中写入如下内容
 
+```python
+#!/usr/bin/env python3
+# coding=utf-8
 
+import rospy
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError       # 格式转换相关文件
 
+# 回调函数
+def Cam_RGB_Callback(msg):
+    bridge = CvBridge()         # 图像格式转换器对象
+    
+    # 转换成OpenCV格式
+    cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
 
+    # 转换为灰度图
+    gray_img = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
 
+    # 创建一个级联分类器，注意第二个横杠后面是用户名
+    face_casecade = cv2.CascadeClaaifier(\
+        '/home/blackghost/catkin_ws/src/wpb_home/wpb_home_python/config/haarcascade_frontalface_alt.xml'\
+        )
 
+    # 加载文件，人脸检测
+    face = face_casecade.detectMultiScale(gray_img, 1.3, 5)
 
+    # 遍历人脸
+    for (x, y, w, h) in face:
+        cv2.rectangle(cv_image, (x, y), (x + w, y + h), (0, 0, 255), 3)
+    
+    # 显示结果
+    cv2.imshow("face window", cv_image)
+    cv2.waitKey(1)
 
+# 主函数
+if __name__ == "__main__":
+    # ROS初始化
+    rospy.init_node("cv_face_detect")
 
+    # 订阅相机话题
+    rgb_sub = rospy.Subscriber("/kinect2/qhd/image_color_rect", Image, Cam_RGB_Callback, queue_size=1)
 
+    rospy.spin()
 
+```
 
+### 3.2 添加可执行权限并编译
 
+- 终端执行如下命令
 
+```bash
+cd ~/catkin_ws/src/cv_py_pkg/scripts
 
+chmod +x cv_face_detect.py
+```
 
+- 由于该软件包是已经编译过了，添加的是python文件不需要重新编译；
 
+### 3.3 实际运行
 
+- 3个终端窗口中分别执行
 
+```bash
+roslaunch wpr_simulation wpb_single_face.launch
 
+rosrun cv_py_pkg cv_face_detect.py
 
+# 这一行可选择性执行，可用键盘控制机器人移动查看不同的视角
+rosrun wpr_simulation keyboard_vel_ctrl
+```
 
+- 实际运行效果如下图所示；
+- 如果有报错，可参考~/catkin_ws/src/wpr_simulation/scripts/demo_cv_face_detect.py文件；
 
+![实际运行效果](images/77_人脸检测的Python实现/运行效果.gif)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+---
 
