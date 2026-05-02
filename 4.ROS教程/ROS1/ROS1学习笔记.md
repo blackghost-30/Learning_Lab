@@ -6076,21 +6076,281 @@ rosrun nav_pkg nav_client
 
 # 第六十四节课：坐标导航的Python编程实现
 
+## 1.内容介绍
+
+- 本节介绍用Python实现上一节的功能；
+- 整个过程分为3步
+  - 编写节点文件；
+  - 添加可执行权限；
+  - 运行节点文件；
 
 
 
+## 2.编程实现
 
+### 2.1 编写节点文件
 
+- 打开VsCode，在nav_pkg下新建文件夹scripts，然后在文件夹下新建文件nav_client.py；
 
+- 在文件中写入如下内容
 
+```python
+#!/usr/bin/env python3
+# coding=utf-8
 
+import rospy
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal		# 引入两个消息包类型
 
+if __name__ == "__main__":
+    rospy.init_node("nav_client")
+    
+    ac = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+    
+    ac.wait_for_server()
+    
+    goal = MoveBaseGoal()
+    
+    goal.target_pose.header.frame_id = "map"
+    goal.target_pose.pose.position.x = -3.0
+    goal.target_pose.pose.position.y = 2.0
+    goal.target_pose.pose.position.z = 0.0
+    
+    goal.target_pose.pose.orientation.x = 0.0
+    goal.target_pose.pose.orientation.y = 0.0
+    goal.target_pose.pose.orientation.z = 0.0
+    goal.target_pose.pose.orientation.w = 1.0
+    
+    ac.send_goal(goal)
+    
+    rospy.loginfo("开始导航...")
+    ac.wait_for_result()
+    
+    if ac.get_state() == actionlib.GoalStatus.SUCCEEDED:
+        rospy.loginfo("导航成功！")
+    else:
+        rospy.loginfo("导航失败...")
 
+```
 
+### 2.2 添加可执行权限
+
+- 终端执行如下命令
+
+```bash
+cd ~/catkin_ws/src/nav_pkg/scripts
+
+chmod +x nav_client.py
+```
+
+### 2.3 运行效果
+
+- 打开3个终端，分别执行
+
+```bash
+roslaunch wpr_simulation wpb_stage_robocup.launch
+
+roslaunch nav_pkg nav.launch
+
+rosrun nav_pkg nav_client.py
+```
+
+- 最后效果
+
+![最后效果](images/64_坐标导航的Python编程实现/运行效果.gif)
+
+### 2.4 例子程序
+
+- 如果运行过程中出现问题，可直接打开~/catkin_ws/src/wpr_simulation/scripts/demo_nav_client.py；
+- 这个是wpr_simulation的例子程序，可对照着改；
+
+---
 
 
 
 # 第六十五节课：航点导航插件介绍
+
+## 1.内容介绍
+
+- 前面几节课介绍了如何通过**设置坐标值的方法**来实现自主导航，但是这样不太方便；
+- 这节课介绍一款**开源的ROS导航插件**，它有如下功能：
+  - **能够在地图上设置多个目标航点；**
+  - 通过编写节点代码指定机器人导航去往指定航点；
+
+
+
+## 2.环境配置
+
+### 2.1 下载源码
+
+- 打开GitHub，搜索仓库waterplus_map_tools；
+- 复制它的URL链接https://github.com/6-robot/waterplus_map_tools.git；
+- 回到终端，执行命令下载
+
+```bash
+cd ~/catkin_ws/src
+
+git clone https://github.com/6-robot/waterplus_map_tools.git
+```
+
+### 2.2 安装依赖项并编译
+
+- 在终端中执行如下命令安装依赖项
+
+```bash
+cd waterplus_map_tools/scripts
+
+./install_for_noetic.sh
+```
+
+- 执行如下命令完成编译
+
+```bash
+cd ~/catkin_ws
+
+catkin_make
+```
+
+
+
+## 3.导航插件设置目标航点
+
+### 3.1 确保地图
+
+- 在前面的课程中，已经完成了仿真环境的建图，地图文件保存在了catkin_ws/src/wpr_simulation/maps下；
+- 如果还没有地图文件的需要重新建图并保存至该位置；
+
+### 3.2 航点设置
+
+- 在终端中执行如下命令打开**航点设置程序**
+
+```bash
+roslaunch waterplus_map_tools add_waypoint_simulation.launch
+```
+
+- **添加航点**
+
+  - 执行后会弹出Rviz窗口，地图就是catkin_ws/src/wpr_simulation/maps下的地图；
+  - 点击上方的Add Waypoint功能，为地图添加航点，其方法同前面的设置目标点；
+  - 添加的航点的效果如下图所示：
+
+  ![航点添加](images/65_航点导航插件介绍/航点设置程序界面.png)
+
+- **航点元素：对于每个航点有如下元素**
+
+  - 序号：每一个航点上方都有一个标号，这就是航点的序号；
+  - 方向：每个航点的上方都有一个箭头，表示的是航点的方向；
+  - 3维调整：对于每一个航点，分别有x、y和方向3个维度，每一个维度都可以单独调节；
+
+### 3.3 航点保存
+
+- **航点的保存**
+
+  - 这些航点可以像地图一样保存在文件里，后面导航时就可以直接使用了；
+  - 在终端中执行如下命令打开航点保存程序
+
+  ```bash
+  rosrun waterplus_map_tools wp_saver
+  ```
+
+  - 运行后它会自动生成文件：/home/blackghost/waypoints.xml；
+
+- **航点信息文件**
+
+  - 打开/home/blackghost/waypoints.xml文件，其内容如下；
+  - 每个航点的信息和之前直接坐标设置航点的信息是完全一样的；
+
+  ```xml
+  <Waterplus>
+      <Waypoint>
+          <Name>1</Name>
+          <Pos_x>-2.99927</Pos_x>
+          <Pos_y>1.99989</Pos_y>
+          <Pos_z>0</Pos_z>
+          <Ori_x>0</Ori_x>
+          <Ori_y>0</Ori_y>
+          <Ori_z>-0.705292</Ori_z>
+          <Ori_w>0.708917</Ori_w>
+      </Waypoint>
+      <Waypoint>
+          <Name>2</Name>
+          <Pos_x>4.14557</Pos_x>
+          <Pos_y>1.30697</Pos_y>
+          <Pos_z>0</Pos_z>
+          <Ori_x>0</Ori_x>
+          <Ori_y>0</Ori_y>
+          <Ori_z>0.999803</Ori_z>
+          <Ori_w>0.0198674</Ori_w>
+      </Waypoint>
+      <Waypoint>
+          <Name>3</Name>
+          <Pos_x>2.43256</Pos_x>
+          <Pos_y>-2.11224</Pos_y>
+          <Pos_z>0</Pos_z>
+          <Ori_x>0</Ori_x>
+          <Ori_y>0</Ori_y>
+          <Ori_z>0.673089</Ori_z>
+          <Ori_w>0.739561</Ori_w>
+      </Waypoint>
+      <Waypoint>
+          <Name>4</Name>
+          <Pos_x>-3.4626</Pos_x>
+          <Pos_y>-1.02481</Pos_y>
+          <Pos_z>0</Pos_z>
+          <Ori_x>0</Ori_x>
+          <Ori_y>0</Ori_y>
+          <Ori_z>-0.0300008</Ori_z>
+          <Ori_w>0.99955</Ori_w>
+      </Waypoint>
+  </Waterplus>
+  ```
+
+
+
+## 4.基于航点信息进行导航
+
+- 终端中执行如下命令打开仿真环境
+
+```bash
+roslaunch wpr_simulation wpb_map_tool.launch
+```
+
+- 修正机器人的位置
+
+  - 仿真环境的机器人位置和Rviz中机器人的位置不同；
+  - 点击`2D Pose Estimate`选项修正Rviz中机器人的位置即可，让它和仿真环境中的位置基本相同；
+
+- 运行航点导航例子程序
+
+  - 终端执行如下命令运行程序，这个程序会让机器人自动走到1号航点；
+
+  ```bash
+  rosrun wpr_simulation demo_map_tool
+  ```
+
+![运行效果](images/65_航点导航插件介绍/运行效果.gif)
+
+
+
+## 5.航点信息的修改
+
+- 终端中再次运行添加航点的launch文件
+
+```bash
+roslaunch waterplus_map_tools add_waypoint_simulation.launch
+```
+
+- 按前面说的，可以改变3个维度的信息，更改航点的位置和朝向；
+
+- 运行航点保存指令保存更改后的航点信息
+
+```bash
+rosrun waterplus_map_tools wp_saver
+```
+
+- 后面就可以按照“基于航点信息进行导航”部分进行导航了；
+
+---
 
 
 
@@ -6098,7 +6358,43 @@ rosrun nav_pkg nav_client
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+
+
 # 第六十七节课：航点导航功能的C++实现
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
 
 
 
@@ -6117,6 +6413,8 @@ rosrun nav_pkg nav_client
 
 
 
+
+---
 
 
 
