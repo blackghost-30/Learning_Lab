@@ -4,15 +4,15 @@
 
 ### 1.1 以前的手机开发模式
 
-![手机操作系统](images/01_ROS是什么/手机操作系统.png)
+<img src="images/01_ROS是什么/手机操作系统.png" alt="手机操作系统" style="zoom:50%;" />
 
 ### 1.2 后来的手机开发模式
 
 - **Android：**
 
-  - Linux——>Android：
+  - Linux——>Android；
 
-  - Android在Linux内核的基础上添加了原生App，并集成了一个虚拟环境可以运行Java开发的应用；
+  - **Android在Linux内核的基础上添加了原生App，并集成了一个虚拟环境可以运行Java开发的应用；**
   - 开发者只要将应用上传到应用商店即可下载；
 
 - **IOS：**
@@ -28,12 +28,14 @@
 
 ### 2.2 后来的机器人开发模式
 
-- **“模块化”的开发方式：**
-  - 每个传感器对应一个特定的程序模块、每个执行器对应一个特定的程序模块、每个算法对应一个特定的程序模块;
+- **“模块化”的开发方式**
+  
+  - 每个传感器对应一个特定的程序模块、每个执行器对应一个特定的程序模块、每个算法对应一个特定的程序模块；
   - 下次再开发机器人时，只需要把它们组合起来就可以跑了；
   
-- **“分布式”的开发方式：**
-  - 每个模块可以独立运行在不同的电脑;
+- **“分布式”的开发方式**
+  
+  - 每个模块可以独立运行在不同的电脑；
   - 比如用单独的电脑运行视觉算法，这样整体的效率就大大提高了；
   
   <img src="images/01_ROS是什么/ROS与安卓的比较.png" alt="ROS与安卓的比较" style="zoom:150%;" />
@@ -42,17 +44,19 @@
 
 - **ROS的模式**
   
-  - 每个**“launch”**文件是**一个乐高房子**；
-  - 每个node相当于**一个乐高砖块**；
+  - 每个**“launch”**文件是**一个乐高房子**，由不同的乐高砖块构成；
+  - 每个node相当于**一个乐高砖块**，由它组成乐高房子；
   - 而每个Package相当于是**一袋乐高砖块**；
   
-- **ROS的开发方式：**
+- **ROS的开发方式**
 
-  - 从官方**APT源**中下载安装包；
-  - 从**Github**中下载源码；
+  - 从官方**APT源**中下载安装包，可以直接用无需编译；
+  - 从**Github**中下载源码，编译之后再运行；
   - 自己按照**接口规范**写源码并编译运行；
 
   <img src="images/01_ROS是什么/ROS的开发方式.png" alt="ROS的开发方式" style="zoom:150%;" />
+
+---
 
 
 
@@ -69,7 +73,9 @@
 ## 2.学习的方式
 
 - 自己买一个机器人；
-- 基于ROS自带的仿真环境进行学习；
+- 基于**ROS自带的仿真环境**进行学习；
+
+---
 
 
 
@@ -77,10 +83,12 @@
 
 Ubuntu系统的安装主要可以有以下几种选择：
 
-- 虚拟机方式；
-- 双系统的方式；
-- WSL的方式；
-- 安装在树莓派上；
+- 虚拟机方式：跑在虚拟机软件上，性能较差；
+- 双系统的方式：开机选择系统；
+- WSL的方式：只有命令行；
+- 安装在树莓派上：特定的硬件上，性能可能不足；
+
+---
 
 
 
@@ -106,9 +114,10 @@ Ubuntu系统的安装主要可以有以下几种选择：
 
 - **主目录：**
   - 即HOME目录；
-  - 可通过：cd ~快速回到主目录
+  - 可通过：`cd ~`快速回到主目录
 - **根目录/：**
   - 整个系统的系统盘；
+  - 对应的就是下图的其他位置；
 - 大部分时间都只需要在主目录下操作即可；
 
 ![文件系统](images/04_Ubuntu使用入门/文件系统.png)
@@ -121,7 +130,7 @@ Ubuntu系统的安装主要可以有以下几种选择：
 
 - 虚拟机：只要主机连接了WiFi，它就会连接；
 
-- 注意几种连接方式的不同（NAT、桥接等）、如何给虚拟机配置代理（ip地址）
+- **注意几种连接方式的不同（NAT、桥接等）、如何给虚拟机配置代理（ip地址）；**
 
 
 
@@ -153,12 +162,12 @@ Ubuntu系统的安装主要可以有以下几种选择：
 
 - **edit命令：**
   - **gedit [文件名称]**；
-  - 是一个文本编辑器（Windows中的记事本）；
+  - 是一个文本编辑器（相当于Windows中的记事本）；
   - 我们要改某个文件的内容都是通过这个指令来改的；
 
 - **其他文本编辑器：**
-  - vim；
-  - nano；
+  - vim：老牌编辑器，通过状态转换来使用；
+  - nano：同普通的文本编辑器相同；
 
 
 
@@ -169,7 +178,7 @@ Ubuntu系统的安装主要可以有以下几种选择：
   - 它会执行这个文件中的一系列指令；
 
 - **.sh文件：**
-  - 一般会把一连串的指令写在.sh文件中；
+  - 一般会把一连串的指令写在.sh文件中，.sh文件是一个SHELL执行脚本；
   - echo指令是打印显示；
 
 
@@ -184,6 +193,7 @@ Ubuntu系统的安装主要可以有以下几种选择：
   - 终端的**初始化脚本**；
   - 每次执行终端程序时，都会首先执行这个脚本，完成一些**环境变量的赋值操作**；
   - 在ROS中，可以在该文件下加入ROS的初始化指令；
+  - **注意该文件中可以配置终端的VPN代理；**
 
  
 
@@ -194,6 +204,8 @@ Ubuntu系统的安装主要可以有以下几种选择：
 
 - **从APT源上下载安装包：**
   - sudo install [软件包名称]；
+
+---
 
 
 
@@ -229,12 +241,12 @@ Ubuntu系统的安装主要可以有以下几种选择：
 - 它会告诉APT包管理器下载ROS包的下载地址；
 - 其实就是相当于告诉Ubuntu：我可以从哪些源里面下载软件包，用安卓的角度来说就是给Ubuntu安装了一个ROS的应用商店；
 
-![添加ROS的安装源](images/05_ROS系统安装/第二步_添加ROS的安装源.png)
+<img src="images/05_ROS系统安装/第二步_添加ROS的安装源.png" alt="添加ROS的安装源" style="zoom: 67%;" />
 
 - 官方给的链接是国外的链接，可以点击下方的**Mirrors**选择国内镜像；
 - 一共有四个镜像，这里选择中科大，把命令复制到终端执行即可；
 
-![添加中科大源](images/05_ROS系统安装/第二步_添加中科大源.png)
+<img src="images/05_ROS系统安装/第二步_添加中科大源.png" alt="添加中科大源" style="zoom: 67%;" />
 
 - 最终的运行效果如下：
 
@@ -246,7 +258,7 @@ Ubuntu系统的安装主要可以有以下几种选择：
 
 - 第三步是进行密钥安装，复制一下两行代码在终端运行即可，如下图所示：
 
-![第三步_添加安装密钥](images/05_ROS系统安装/第三步_添加安装密钥.png) 
+<img src="images/05_ROS系统安装/第三步_添加安装密钥.png" alt="第三步_添加安装密钥" style="zoom: 67%;" />
 
 - 方框中是两条指令：
   - 第一条是安装curl这个工具，复制#前面内容到终端执行；
@@ -254,6 +266,7 @@ Ubuntu系统的安装主要可以有以下几种选择：
     - 管道符前面是从ROS的Github仓库中下载GPG公钥；
     - 管道符后面是将该公钥添加到apt的系统可信密钥库中；
     - 主要是为了后续验证ROS软件包的合法性做准备，防止下载到被篡改的文件；
+
 - 运行两行代码后，若返回“OK”即代表成功安装了密钥。
 
 ---
@@ -277,22 +290,22 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
 
 - 接下来安装ROS，分别执行下面两句代码，安装完成即证明ROS安装成功。
 
-![安装ROS系统](images/05_ROS系统安装/第四步_安装ROS系统.png) 
+<img src="images/05_ROS系统安装/第四步_安装ROS系统.png" alt="安装ROS系统" style="zoom: 67%;" />
 
  
 
 ## 5.环境参数设置
 
-- 接下来需要将ROS的环境设置脚本添加到终端程序的初始化脚本里，即.bashrc文件；
+- 接下来需要将**ROS的环境设置脚本**添加到终端程序的初始化脚本里，即**~/.bashrc文件**；
 - 我们要做的就是在.bashrc文件中source一下ROS的环境设置脚本即可；
 - 这样每次打开终端它都会执行一遍ROS的环境参数设置，完成ROS的初始化；
 
-![设置环境参数](images/05_ROS系统安装/第五步_设置环境参数.png)
+<img src="images/05_ROS系统安装/第五步_设置环境参数.png" alt="设置环境参数" style="zoom: 67%;" />
 
 - 分别在终端执行这两句代码即可；
 - 如果要测试是否安装成功，可以在终端执行：roscore，出现下面信息表示成功启动了ROS的核心：
 
-![验证ROS是否安装成功](\images/05_ROS系统安装/第五步_验证ROS是否安装成功.png)
+<img src="\images/05_ROS系统安装/第五步_验证ROS是否安装成功.png" alt="验证ROS是否安装成功" style="zoom: 67%;" />
 
  
 
@@ -301,7 +314,9 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
 - 最后还需要对ROS的依赖包工具进行初始化，方便以后下载第三方的扩展软件包；
 - 在终端执行下面三条指令，即可完成rosdep的初始化，其中中间框的之前已经安装过了不需要再装；
 
-![初始化依赖包](images/05_ROS系统安装/第六步_初始化依赖包.png)
+<img src="images/05_ROS系统安装/第六步_初始化依赖包.png" alt="初始化依赖包" style="zoom:67%;" />
+
+---
 
 
 
@@ -319,7 +334,7 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
   - 我们可以通过编辑APT的源列表增加新的应用商店；
   - **前面添加的ROS的源，就是添加了ROS的应用商店（前面是中科大的源）**；
 
-![APT源列表](images/06_应用商店APT源/APT的源列表.png)
+<img src="images/06_应用商店APT源/APT的源列表.png" alt="APT源列表" style="zoom: 33%;" />
 
 
 
@@ -328,9 +343,9 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
 ### 2.1 应用商店长什么样
 
 - 应用商店是通俗的叫法，实际上是**存放ROS的各种包的源服务器**，就像**Github那样的托管平**台;
-- 网址为：[ROS应用商店网站](https://index.ros.org)
+- 网址为：[ROS应用商店网站](https://index.ros.org)；
 
-![ROS官方源列表](images/06_应用商店APT源/ROS官方源列表.png)
+<img src="images/06_应用商店APT源/ROS官方源列表.png" alt="ROS官方源列表" style="zoom: 33%;" />
 
 - 可点击**Package List**，网页将展示几乎**所有的ROS的资源，包括软件库、依赖包、源码**等等；
 
@@ -342,19 +357,19 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
     sudo apt install ros-[ros版本]-name
     ```
 
-![Noetic的PagageList](images/06_应用商店APT源/Noetic的PakageList.png)
+<img src="images/06_应用商店APT源/Noetic的PakageList.png" alt="Noetic的PagageList" style="zoom: 33%;" />
 
 ### 2.2 每个软件包长什么样
 
 - 我们选择里面的一个包：**rqt_robot_steering**，双击这个包进入它的界面；
   - 可以看到它们有关于这个包的**基本信息、包的源码信息以及对于这个包的关于作者等的介绍；**
   - **Website**界面有关于这个包的详细介绍；
+  
+  <img src="images/06_应用商店APT源/某个包的界面.png" alt="某个ROS包的界面" style="zoom: 33%;" />
 
-![某个ROS包的界面](images/06_应用商店APT源/某个包的界面.png) 
+-  点击右侧的**Website**，进入这个包的具体演示界面，它会详细的描述楚这个包的作用以及如何使用：
 
-- 点击右侧的**Website**，进入这个包的具体演示界面，它会详细的描述楚这个包的作用以及如何使用：
-
-![包的Website页面](images/06_应用商店APT源/包的Website页面.png)
+<img src="images/06_应用商店APT源/包的Website页面.png" alt="包的Website页面" style="zoom:50%;" />
 
 
 
@@ -380,7 +395,7 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
     roscore
     ```
 
-- **运行rqt_robot_steering软件包**
+- **运行rqt_robot_steering节点**
 
   - 在原来的终端中运行：
 
@@ -388,34 +403,34 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
     rosrun rqt_robot_steering rqt_robot_steering
     ```
 
-  - 两个rqt_robot_steering：
+  - 两个rqt_robot_steering：前面一个是包名称、后面一个是节点名称；
 
-    - 前面一个是包名称；
-    - 后面一个是节点名称；
+  
+  <img src="images/06_应用商店APT源/运行rqt_robot_steering实例.png" alt="运行rqt_robot_steering实例" style="zoom:67%;" />
 
-![运行rqt_robot_steering实例](images/06_应用商店APT源/运行rqt_robot_steering实例.png) 
-
-### 3.2 turtlesim实例
+ ### 3.2 turtlesim实例
 
 - **再开一个终端，输入指令安装小乌龟：**
 
-  - ```Bash
-    sudo apt install ros-noetic-turtlesim
-    ```
+```bash
+sudo apt install ros-noetic-turtlesim
+```
 
 - **接着在这一个终端运行小乌龟：**
 
-  - ```bash
-    rosrun turtlesim turtlesim_node
-    ```
+```bash
+rosrun turtlesim turtlesim_node
+```
 
-![运行turtlesim实例](images/06_应用商店APT源/运行turtlesim实例.png) 
+<img src="images/06_应用商店APT源/运行turtlesim实例.png" alt="运行turtlesim实例" style="zoom:67%;" />
 
-### 3.3 用rqt_robot_steering控制turtlesim
+ ### 3.3 用rqt_robot_steering控制turtlesim
 
 - 这样，小乌龟出来了，rqt_robot_steering软件包的控制界面也出来了；
 - 在软件包界面的输入栏前面加上turtle1（任意写，不然不会启动）；
 - 我们就可以用竖直杆控制速度，水平杆控制旋转的方向来完成仿真实验了；
+
+---
 
 
 
@@ -441,32 +456,32 @@ Linux中的下载可以分为：普通文件下载和APT包管理器安装软件
 ### 3.1 建立目录结构
 
 - 目录结构：**HOME——>catkin_ws——>src**；
-
 - 下载的源代码就需要放在src目录里才能正常编译，所以在终端分别执行：
 
-  ```bash
-  mkdir catkin_ws
-  
-  cd catkin_ws
-  
-  mkdir src
-  
-  cd src
-  ```
+```bash
+mkdir catkin_ws
+
+cd catkin_ws
+
+mkdir src
+
+cd src
+```
 
 - 这样就创建好工作空间了，后续我们自己写的源代码也会放在这个工作空间中；
 - **catkin是ROS1中的系统构工具，catkin_ws就是catkin workplace的意思**；
 
 ### 3.2 安装Git工具
 
-- 从GitHub下载或上传文件需要用到**git工具**，在终端执行：
-- 注意，这句终端执行目录需要在**src目录**下执行；
+- 从GitHub下载或上传文件需要用到**git工具**，在终端执行
 
 ```bash
 sudo apt install git
 ```
 
-![创建工作目录并安装Git工具](images/07_开源自由市场Github/创建工作空间并安装git工具.png)
+- 注意，这句终端执行目录需要在**src目录**下执行；
+
+<img src="images/07_开源自由市场Github/创建工作空间并安装git工具.png" alt="创建工作目录并安装Git工具" style="zoom:80%;" />
 
 
 
@@ -475,7 +490,7 @@ sudo apt install git
 - 完成上述工作后就可以进行源码的下载了；
 - 在GitHub搜索栏中搜索：**wpr_simulation**，找到**6-robot**这一项；
 - 点击进入选择**Code按钮**，复制弹出来的一串网址：https://github.com/6-robot/wpr_simulation.git；
-- 接着回到终端，执行命令：
+- 接着回到终端，执行命令
 
 ```bash
 git clone https://github.com/6-robot/wpr_simulation.git
@@ -483,7 +498,7 @@ git clone https://github.com/6-robot/wpr_simulation.git
 
 - 这样就可以把源代码下载到我们的**src文件夹下了（要保证在src文件夹执行）**；
 
-![Git克隆源代码](images/07_开源自由市场Github/克隆Github源代码.png)
+<img src="images/07_开源自由市场Github/克隆Github源代码.png" alt="Git克隆源代码" style="zoom:67%;" />
 
 
 
@@ -492,10 +507,11 @@ git clone https://github.com/6-robot/wpr_simulation.git
 ### 5.1 查看文件内容
 
 - **wpr_simulation目录：**
+  
   - 如下图所示即为我们从GitHub上clone下来的文件，全部文件在wpr_simulation文件夹下；
   
   <img src="images/07_开源自由市场Github/wpr_simulation结构目录.png" alt="包的结构目录" style="zoom:150%;" />
-
+  
 - **scripts文件夹：**
   - 先看**scripts**文件夹，可以看到它里面放了一些**脚本文件(.sh文件)和python程序**；
   - 这些文件主要是完成**依赖包的安装和为机器人映射端口**，这类操作一般进行**一次**即可；
@@ -527,9 +543,9 @@ git clone https://github.com/6-robot/wpr_simulation.git
 catkin_make
 ```
 
-- **注意：catkin_make命令必须要在catkin_ws目录下运行。而不是src子目录，编译后catkin_ws目录会多出几个文件夹，那是编译产生的文件**；
+- **注意：catkin_make命令必须要在catkin_ws目录下运行，而不是src子目录，编译后catkin_ws目录会多出几个文件夹，那是编译产生的文件**；
 
-![编译源代码](images/07_开源自由市场Github/编译源代码.png)
+<img src="images/07_开源自由市场Github/编译源代码.png" alt="编译源代码" style="zoom:67%;" />
 
 
 
@@ -554,14 +570,15 @@ roslaunch wpr_simulation wpb_simple.launch
 
 - 然后就会得到如下界面：
 
-![仿真器启动页面](images/07_开源自由市场Github/仿真器启动页面.png) 
+<img src="images/07_开源自由市场Github/仿真器启动页面.png" alt="仿真器启动页面" style="zoom: 80%;" />
 
 - 这就是我们后面会经常用到的**仿真环境Gazebo**；
+
 - 再次打开上一节课的**rqt_robot_steering**，删除前面的turtle1，就可以用这个工具控制机器人的运动了；
 
-![rqt控制仿真器](images/07_开源自由市场Github/用rqt_robot_steering控制wpr_simulation.png) 
+<img src="images/07_开源自由市场Github/用rqt_robot_steering控制wpr_simulation.png" alt="rqt控制仿真器" style="zoom:80%;" />
 
-
+ 
 
 ## 7 将环境参数初始化指令添加到终端初始化脚本中
 
@@ -579,7 +596,7 @@ gedit ~/.bashrc
 source ~/catkin_ws/devel/setup.bash
 ```
 
-- 这样，每次启动终端它就会自动帮我们初始化;
+- 这样，每次启动终端它就会自动帮我们初始化；
 
  
 
@@ -587,52 +604,60 @@ source ~/catkin_ws/devel/setup.bash
 
 以之前的小乌龟为例，讲解如何**从index.ros到GitHub再自己修改源代码并编译**。
 
-- 打开index.ros，并搜索turtlesim：
+### 8.1 下载源码
 
-![ros.index中寻找包](images/07_开源自由市场Github/ros.index中寻找包.png) 
+- 打开index.ros，并搜索turtlesim；
 
-- 点击第一个，然后点击它的GitHub链接：
+<img src="images/07_开源自由市场Github/ros.index中寻找包.png" alt="ros.index中寻找包" style="zoom:80%;" />
 
-![index跳转Github](images/07_开源自由市场Github/index跳转Github.png) 
+- 点击第一个，然后点击它的GitHub链接；
 
-- 进入Github，点击Code，复制链接：
+| <img src="images/07_开源自由市场Github/index跳转Github.png" alt="index跳转Github" style="zoom:80%;" /> | <img src="images/07_开源自由市场Github/复制Github链接.png" alt="img" style="zoom:80%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
 
-![img](images/07_开源自由市场Github/复制Github链接.png) 
+- 进入Github，点击Code，复制链接；
 
-- 打开终端，切换到src目录下，安装源码：
+- 打开终端，切换到src目录下，安装源码；
 
-<img src="images/07_开源自由市场Github/安装源码.png" alt="安装源码" style="zoom:150%;" />
+| <img src="images/07_开源自由市场Github/安装源码.png" alt="安装源码" style="zoom:150%;" /> | <img src="images/07_开源自由市场Github/切换版本.png" alt="切换版本" style="zoom:80%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
 
-- 切换版本
-  - 由于下载默认是ROS2的版本，需要将它切换为ROS1版本，否则会编译报错，依次进行如下操作：
-    - 先进入小海龟的文件夹：**cd ros_tutorials/**；
-    - 然后切换版本：**git checkout noetic-devel**；
-    
-    ![切换版本](images/07_开源自由市场Github/切换版本.png)
+### 8.2 切换版本并编译
 
-- 编译
-  - 切换版本后我们可以进行编译，同样的执行下面代码：
-    - 切换回入口：cd ~/catkin_ws；
-    - 编译：catkin_make；
+- **切换版本**：由于下载默认是ROS2的版本，需要将它切换为ROS1版本，否则会编译报错，依次进行如下操作
 
-- 把小海龟跑起来
-  - 编译完成后我们既可以运行这个小海龟了：
-    - 先是启动ros内核：**roscore**；
-    - 然后新开窗口，运行小海龟：**rosrun turtlesim turtlesim_node**；
-    
-    ![运行小乌龟](images/07_开源自由市场Github/运行小乌龟.png)
+```bash
+cd ros_tutorials
+git checkout noetic-devel
+```
 
-- 修改源代码
+- **编译**：切换版本后我们可以进行编译，同样的执行下面代码
 
-  - 打开**"~/catkin_ws/src/ros_tutorials/turtlesim/src/tutrle_frame.cpp"**文件；
-  - 修改如下几个地方：改变框的大小和名字还有背景颜色，再次编译并运行；
+```bash
+cd ~/catkin_ws
+catkin_make
+```
 
-  ![修改源码](images/07_开源自由市场Github/修改源码.png)
+- **运行**
 
-  - 可以看到它的框的大小、名字还有背景颜色都变了；
-  - **这就是ROS中修改源代码整个流程和逻辑；**
+```bash
+roscore
 
-  ![再次运行小乌龟](images/07_开源自由市场Github/再次运行小乌龟.png)
+# 打开新终端
+rosrun turtlesim turtlesim_node
+```
+
+<img src="images/07_开源自由市场Github/运行小乌龟.png" alt="运行小乌龟" style="zoom:80%;" />
+
+### 8.3 修改源码
+
+- 打开**"~/catkin_ws/src/ros_tutorials/turtlesim/src/tutrle_frame.cpp"**文件；
+- 修改如下几个地方：改变框的大小和名字还有背景颜色，再次编译并运行；
+- 可以看到它的框的大小、名字还有背景颜色都变了；
+- **这就是ROS中修改源代码整个流程和逻辑；**
+
+| <img src="images/07_开源自由市场Github/修改源码.png" alt="修改源码" style="zoom:80%;" /> | <img src="images/07_开源自由市场Github/再次运行小乌龟.png" alt="再次运行小乌龟" style="zoom:80%;" /> |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
 
 
 
@@ -641,6 +666,8 @@ source ~/catkin_ws/devel/setup.bash
 - 这节课讲了**如何从Github中下载源码并进行编译然后运行**；
 - 并展示了**如何修改源码增加自己想要的功能**；
 - 这就是真正实现工程时的开发逻辑和流程；
+
+---
 
 
 
@@ -664,7 +691,7 @@ source ~/catkin_ws/devel/setup.bash
 
   - 安装完成后，我们输入指令：**code**，它将运行VsCode，我们可以将其添加到收藏夹；
 
-  ![VsCode的安装与打开](images/08_代码神器Visual_Studio_Code/VsCode的安装与打开.png)
+  <img src="images/08_代码神器Visual_Studio_Code/VsCode的安装与打开.png" alt="VsCode的安装与打开" style="zoom:80%;" />
 
  
 
@@ -673,7 +700,7 @@ source ~/catkin_ws/devel/setup.bash
 - 点击File，然后选择“Add Folder to Workspace”；
 - 选择之前创建的**catkin_ws文件夹下的src目录**，即可完成工作空间的导入；
 
-![VsCode导入工作空间](images/08_代码神器Visual_Studio_Code/VsCode导入工作空间.png) 
+<img src="images/08_代码神器Visual_Studio_Code/VsCode导入工作空间.png" alt="VsCode导入工作空间" style="zoom:80%;" />
 
  
 
@@ -687,7 +714,7 @@ source ~/catkin_ws/devel/setup.bash
 - **作用：**
   - 该插件可以把VsCode的界面变成中文；
 
-![间体中文支持包](images/08_代码神器Visual_Studio_Code/VsCode的中文支持包.png)
+<img src="images/08_代码神器Visual_Studio_Code/VsCode的中文支持包.png" alt="间体中文支持包" style="zoom:80%;" />
 
 ### 3.2 安装ROS插件
 
@@ -724,21 +751,21 @@ source ~/catkin_ws/devel/setup.bash
 ### 4.1 设置编译快捷键Ctrl＋Shift＋B
 
 - **编译项目：**
+  
   - 按下：**Ctrl＋Shift＋B**，选择**catkin_make:Build**，它将帮我们编译整个文件夹；
-
-![img](images/08_代码神器Visual_Studio_Code/设置编译快捷键.png) 
+  
+  <img src="images/08_代码神器Visual_Studio_Code/设置编译快捷键.png" alt="img" style="zoom: 80%;" />
 
 - **将快捷键设置成默认的编译项：**
-
   - 接着我们再次按下Ctrl＋Shift＋B，然后点击小齿轮；
   - 它将在**.vscode**目录下生成**tasks.json**文件，在该文件中，我们在**group字段**增加内容：
 
-  ![配置编译快捷键文件](images/08_代码神器Visual_Studio_Code/配置编译快捷键文件.png)
+<img src="images/08_代码神器Visual_Studio_Code/配置编译快捷键文件.png" alt="配置编译快捷键文件"  />
 
-  -  第一个框的**type**表示我们这个快捷键执行的命令，与我们在终端输入的：**catkin_make**是一样的；
-  - 第二个框的内容表示**在哪个目录下进行操作**，即**catkin_ws**，与终端保持一致；
-  - 在group字段中，**增加isDefault字段，表示我们的这个快捷键默认为这个操作**；
-  - 这样下次我们再次按下快捷键它直接会进行编译，不需要再进行选择；
+-  第一个框的**type**表示我们这个快捷键执行的命令，与我们在终端输入的：**catkin_make**是一样的；
+- 第二个框的内容表示**在哪个目录下进行操作**，即**catkin_ws**，与终端保持一致；
+- 在group字段中，**增加isDefault字段，表示我们的这个快捷键默认为这个操作**；
+- 这样下次我们再次按下快捷键它直接会进行编译，不需要再进行选择；
 
 ### 4.2 设置拼写错误检查
 
@@ -750,7 +777,7 @@ source ~/catkin_ws/devel/setup.bash
   - 删除这个文件，关闭VsCode，重新打开，ROS插件会自动生成文件并找到头文件路径添加进去；
   - 但是有时候一些角落的文件也不一定能找到；
 
-  ![头文件路径文件](images/08_代码神器Visual_Studio_Code/头文件路径文件.png)
+  <img src="images/08_代码神器Visual_Studio_Code/头文件路径文件.png" alt="头文件路径文件" style="zoom:80%;" />
 
 - **修改设置**
 
@@ -764,6 +791,8 @@ source ~/catkin_ws/devel/setup.bash
   - 一般而言，不建议关闭；
 
   ![禁用错误提示文件](images/08_代码神器Visual_Studio_Code/禁用错误提示文件.png)
+
+---
 
 
 
@@ -792,8 +821,8 @@ source ~/catkin_ws/devel/setup.bash
 - **Terminator的使用**
   - Terminator可在同一个窗口上割开多个小窗口；
   - 我们要终止某个程序时直接在对应的窗口左键再**Ctrl＋C**既可以暂停了；
-
-![超级终端的使用](images/09_超级终端Terminator/超级终端使用.png) 
+  
+  <img src="images/09_超级终端Terminator/超级终端使用.png" alt="超级终端的使用" style="zoom:80%;" />
 
  
 
@@ -818,13 +847,15 @@ source ~/catkin_ws/devel/setup.bash
 
 - 在弹出窗口中选择**表情符号页**，把这个快捷键删除即可；
 
+---
+
 
 
 # 第十节课：Node节点和Package包
 
 ## 1.安卓系统的App
 
-- 安卓系统的组成：一个个App;
+- 安卓系统的组成：一个个App；
 - 打电话、发短信、玩游戏都是一个App；
 - 使用安卓系统的过程实际上就是使用App的过程；
 
@@ -852,11 +883,13 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
   - Package是Node的集合，调用Node节点时即调用某个Package中的Node节点；
   - 前面下载的三个工具都是Package；
 
-  ![Node和Package的关系](images/10_Node节点和Package包/Node和Package的关系.png)
+  <img src="images/10_Node节点和Package包/Node和Package的关系.png" alt="Node和Package的关系" style="zoom:80%;" />
 
 - **ROS的编译工具**
   - ROS使用**CMake**和**catkin**作为编译工具，可以引入包的概念；
   - 可以把散乱的Node节点组织起来得到一个个Package包，省去了一个个Node节点下载的繁琐操作；
+
+---
 
 
 
@@ -866,7 +899,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 - 本节课的内容：**创建一个处于ssr_pkg包下的超声波_Node节点。**
 
-![项目工程结构](images/11_年轻人的第一个Node节点/项目工程结构.png)
+<img src="images/11_年轻人的第一个Node节点/项目工程结构.png" alt="项目工程结构" style="zoom:80%;" />
 
 
 
@@ -876,7 +909,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 - 左下角点击**设置**搜索**cmake:config**，在得到的结果中关闭如下两个选项即可；
 - 然后再把工作空间的build文件夹删除即可，这样下次启动就不会自动编译了；
 
-![取消CMake每次启动都编译项目](images/11_年轻人的第一个Node节点/取消CMake的自动编译.png) 
+<img src="images/11_年轻人的第一个Node节点/取消CMake的自动编译.png" alt="取消CMake每次启动都编译项目" style="zoom:80%;" />
 
  
 
@@ -903,7 +936,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 - 执行完后就可以看到它在目录下创建了**两个文件、两个文件夹**；
 
-![创建包](images/11_年轻人的第一个Node节点/创建包.png)
+<img src="images/11_年轻人的第一个Node节点/创建包.png" alt="创建包" style="zoom:80%;" />
 
 ### 2.2 查看文件内容
 
@@ -921,13 +954,13 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
     - CMake生成Makefile；
     - make/g++使用Makefile进行实际编译；
 
-![CMakeList.txt文件](images/11_年轻人的第一个Node节点/CMakeList.txt文件.png)
+<img src="images/11_年轻人的第一个Node节点/CMakeList.txt文件.png" alt="CMakeList.txt文件" style="zoom:80%;" />
 
 - **package.xml文件**
   - 该文件包括包的名字、版本号、包的描述、包的作者、包的开源协议以及一些依赖库引用，可以认为这个是包的描述文件；
   - package.xml是catkin软件包的必备文件，当看到一个文件夹中有这个文件时很可能这个文件夹就是一个package；
 
-![packgae.xml文件](images/11_年轻人的第一个Node节点/package.xml文件.png)
+<img src="images/11_年轻人的第一个Node节点/package.xml文件.png" alt="packgae.xml文件" style="zoom:80%;" />
 
  
 
@@ -939,7 +972,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 - 查找软件包的地址：**roscd <软件包名字>**，这样终端会自动跳转到包的位置；
 
-![回访依赖项](images/11_年轻人的第一个Node节点/回访依赖项.png)
+<img src="images/11_年轻人的第一个Node节点/回访依赖项.png" alt="回访依赖项" style="zoom:80%;" />
 
 - 在该目录下也有package.xml文件，用VsCode打开这个文件，发现它与先前创建的包的package.xml文件内容差不多，所以这个文件夹是一个软件包文件夹；
 
@@ -959,7 +992,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 - 在先前的.bashrc文件中添加的两行，就是对应了我们上面的两个位置；
 - **在创建软件包时指定的依赖项要在这两个文件夹存在才行，否则编译报错**；
 
-![.bashrc文件内容回顾](images/11_年轻人的第一个Node节点/.bashrc文件内容回顾.png)
+<img src="images/11_年轻人的第一个Node节点/.bashrc文件内容回顾.png" alt=".bashrc文件内容回顾" style="zoom:80%;" />
 
 
 
@@ -969,13 +1002,13 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
   - 在软件包的文件夹的**src文件夹**下新建文件，起名**chao_node.cpp**，这是一个超声波传感器节点，然后在文件中添加源码；
 
-  ![chao_node.cpp源码](images/11_年轻人的第一个Node节点/chao_node.cpp源码.png)
+  <img src="images/11_年轻人的第一个Node节点/chao_node.cpp源码.png" alt="chao_node.cpp源码" style="zoom:80%;" />
 
 - **添加编译规则（重要）**
 
   - 打开CMakeLists.txt文件，找到**“build”**章节，再找到**add_executable()**函数，这相当于是一条示例代码；
 
-  ![修改CMakeList.txt编译规则](images/11_年轻人的第一个Node节点/修改CMakeList.txt文件的编译选项.png)
+  <img src="images/11_年轻人的第一个Node节点/修改CMakeList.txt文件的编译选项.png" alt="修改CMakeList.txt编译规则" style="zoom:80%;" />
 
   - 将它复制到最后，**第一个参数是设置这个可执行文件的名字，最好保持与包名字相同**；
   - 第二个参数是**指定从那个源文件编译，指定刚才写的源代码即可**；
@@ -989,10 +1022,9 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
   - 如果这里提示无法找到包，就需要先把工作空间的环境参数导入到终端，即指令：**source ~/catkin_ws/devel/setup.bash**；
   - 若之前已经添加到.bashrc文件中的话这里应该能正常运行；
 
-![运行Node节点](images/11_年轻人的第一个Node节点/运行超声波节点.png)
+<img src="images/11_年轻人的第一个Node节点/运行超声波节点.png" alt="运行Node节点" style="zoom:80%;" />
 
-- **总结**
-  - **Node节点的本质就是C/C++的程序，节点的运行本质就是执行一个C/C++文件；**
+- **总结**：Node节点的本质就是C/C++的程序，节点的运行本质就是执行一个C/C++文件；
 
 
 
@@ -1028,9 +1060,11 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 ## 6.总结——ROS开发框架
 
-- 在今后的所有的ROS包或节点的开发中都是按照这个框架进行的。
+- 在今后的所有的ROS包或节点的开发中都是按照这个框架进行的；
 
-![ROS开发框架](images/11_年轻人的第一个Node节点/ROS节点开发流程总结.png)
+<img src="images/11_年轻人的第一个Node节点/ROS节点开发流程总结.png" alt="ROS开发框架" style="zoom:80%;" />
+
+---
 
 
 
@@ -1072,7 +1106,7 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
 
 ## 2.Message消息的定义及其特点
 
-![Message消息包](images/12_Topic话题和Message包/Message消息包.png)
+<img src="images/12_Topic话题和Message包/Message消息包.png" alt="Message消息包" style="zoom:80%;" />
 
 - **消息的类型：**
   - 如上图所示，为满足不同传输的要求，消息会存在很多种类型，在生成消息包时需要指定消息的类型；
@@ -1086,7 +1120,9 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
   - 点击某些类型可以看到，它们内部存在一些嵌套关系，其实消息类型本质上就类似于C的结构体；
   - 若软件包中不存在想要的消息类型，后续可以通过自组装定义我们自己想要的消息类型；
 
-  ![std_msgs消息包页面](images/12_Topic话题和Message包/std_msgs消息包页面.png)
+  <img src="images/12_Topic话题和Message包/std_msgs消息包页面.png" alt="std_msgs消息包页面" style="zoom:80%;" />
+
+---
 
 
 
@@ -1215,7 +1251,7 @@ int main(int argc, char *argv[])
 
 ## 4.消息发送的步骤总结
 
-![消息发送步骤总结](images/13_Publisher发布者的C++实现/消息发送的步骤总结.png)
+<img src="images/13_Publisher发布者的C++实现/消息发送的步骤总结.png" alt="消息发送步骤总结" style="zoom:80%;" />
 
 
 
@@ -1268,7 +1304,9 @@ target_link_libraries(yao_node
 
 - **编译后在终端执行：**
 
-![运行效果](images/13_Publisher发布者的C++实现/终端运行效果.png)
+<img src="images/13_Publisher发布者的C++实现/终端运行效果.png" alt="运行效果" style="zoom: 50%;" />
+
+---
 
 
 
@@ -1370,7 +1408,7 @@ rosrun atr_pkg ma_node
 
 - 最后的运行效果如图所示：
 
-![运行效果1](images/14_Subscriber订阅者的C++实现/运行效果1.png)
+<img src="images/14_Subscriber订阅者的C++实现/运行效果1.png" alt="运行效果1" style="zoom: 80%;" />
 
 
 
@@ -1411,7 +1449,7 @@ int main(int argc, char *argv[])
 
 - 再次编译并运行，得到如下运行效果，其中前面的数字是时间戳：
 
-![运行效果2](images/14_Subscriber订阅者的C++实现/运行效果2.png)
+<img src="images/14_Subscriber订阅者的C++实现/运行效果2.png" alt="运行效果2" style="zoom:80%;" />
 
 
 
@@ -1457,7 +1495,7 @@ int main(int argc, char *argv[])
 
 - 编译后重新运行，得到效果图如下：
 
-![运行效果3](images/14_Subscriber订阅者的C++实现/运行效果3.png)
+<img src="images/14_Subscriber订阅者的C++实现/运行效果3.png" alt="运行效果3" style="zoom:80%;" />
 
 
 
@@ -1474,7 +1512,7 @@ rqt_graph
   - **横线上的是话题；**
   - **横线代表数据的流向；**
 
-![图形化话题通信](images/14_Subscriber订阅者的C++实现/图形化显示话题通信.png)
+<img src="images/14_Subscriber订阅者的C++实现/图形化显示话题通信.png" alt="图形化话题通信" style="zoom:80%;" />
 
 
 
@@ -1485,9 +1523,11 @@ rqt_graph
 - 话题不单单只是发布者或订阅者的话题；
 - 话题是ROS系统自己创建的，即使发布者没有在运行，如果有节点订阅了话题，这个话题就会自动被ROS系统创建；
 
-### 7.2 小节
+### 7.2 小结
 
-![话题的订阅总结](images/14_Subscriber订阅者的C++实现/话题的订阅总结.png)
+<img src="images/14_Subscriber订阅者的C++实现/话题的订阅总结.png" alt="话题的订阅总结" style="zoom: 50%;" />
+
+---
 
 
 
@@ -1509,11 +1549,11 @@ rqt_graph
 
 - **描述多层嵌套结构是XML语法的主要作用之一：**
 
-![XML语法解释](images/15_launch启动多个ROS节点/XML语法解释.png)
+<img src="images/15_launch启动多个ROS节点/XML语法解释.png" alt="XML语法解释" style="zoom: 50%;" />
 
 - 可以用一个王者荣耀的例子来解释XML语法的使用：
 
-![王者荣耀的XML描述](images/15_launch启动多个ROS节点/王者荣耀的XML描述.png)
+<img src="images/15_launch启动多个ROS节点/王者荣耀的XML描述.png" alt="王者荣耀的XML描述" style="zoom:50%;" />
 
 ### 1.2 如何用launch描述一个ROS启动
 
@@ -1521,7 +1561,7 @@ rqt_graph
 - 注意：**这里不需要单独为roscore添加描述，因为launch文件的机制是只要有一个节点就会启动ROS核心**；
 - 描述内容中的name用于解决**同名不同包**的问题；
 
-![XML语法描述launch文件](images/15_launch启动多个ROS节点/XML描述launch文件.png)
+<img src="images/15_launch启动多个ROS节点/XML描述launch文件.png" alt="XML语法描述launch文件" style="zoom: 50%;" />
 
 
 
@@ -1552,13 +1592,15 @@ roslaunch atr_pkg kai_hei.launch
 
 - 最终的效果如图所示：
 
-![最终效果](images/15_launch启动多个ROS节点/最终效果.png)
+<img src="images/15_launch启动多个ROS节点/最终效果.png" alt="最终效果" style="zoom: 67%;" />
 
 
 
 ## 3.总结
 
-![小结](images/15_launch启动多个ROS节点/小结.png)
+<img src="images/15_launch启动多个ROS节点/小结.png" alt="小结" style="zoom: 50%;" />
+
+---
 
 
 
@@ -1590,7 +1632,7 @@ catkin_create_pkg ssr_py_pkg rospy std_msgs
   - 这里的编译是为了让ROS在后续能够找到ROS节点；
   - 对于用Python开发的软件包而言，只需要编译一次即可；
 
-![创建软件包并编译](images/16_Publisher发布者的Python实现/创建软件包并编译.png)
+<img src="images/16_Publisher发布者的Python实现/创建软件包并编译.png" alt="创建软件包并编译" style="zoom:80%;" />
 
 ### 2.3 编辑节点
 
@@ -1603,7 +1645,7 @@ catkin_create_pkg ssr_py_pkg rospy std_msgs
   - 在scripts文件夹下新建文件**chao_node.py**文件；
   - python创建发布者节点的过程如下：
 
-  ![Python发布者节点的创建](images/16_Publisher发布者的Python实现/Python发布者节点.png)
+  <img src="images/16_Publisher发布者的Python实现/Python发布者节点.png" alt="Python发布者节点的创建" style="zoom:80%;" />
 
   - **文件编程：**
 
@@ -1641,11 +1683,11 @@ catkin_create_pkg ssr_py_pkg rospy std_msgs
     chmod +x chao_node.py
     ```
 
-    ![更改权限](images/16_Publisher发布者的Python实现/更改文件权限.png)
+    <img src="images/16_Publisher发布者的Python实现/更改文件权限.png" alt="更改权限" style="zoom: 80%;" />
 
     - 接着在终端中执行ROS初始化以及运行节点即可：
 
-    ![运行节点效果图](images/16_Publisher发布者的Python实现/运行效果.png)
+    <img src="images/16_Publisher发布者的Python实现/运行效果.png" alt="运行节点效果图" style="zoom:67%;" />
 
 - **yao_node.py节点编程：**
 
@@ -1681,7 +1723,9 @@ catkin_create_pkg ssr_py_pkg rospy std_msgs
 
     - 同样地按照前面的先初始化ROS然后再运行节点，即可成功运行：
 
-    ![运行效果2](images/16_Publisher发布者的Python实现/运行效果2.png)
+    <img src="images/16_Publisher发布者的Python实现/运行效果2.png" alt="运行效果2" style="zoom:67%;" />
+
+---
 
 
 
@@ -1713,7 +1757,7 @@ catkin_create_pkg atr_py_pkg rospy std_msgs
   - 这里的编译是为了让ROS在后续能够找到ROS节点；
   - 对于用Python开发的软件包而言，只需要编译一次即可；
 
-![创建软件包并编译](images/17_Subscriber订阅者的Python实现/创建软件包并编译.png)
+<img src="images/17_Subscriber订阅者的Python实现/创建软件包并编译.png" alt="创建软件包并编译" style="zoom: 80%;" />
 
 ### 2.3 编辑节点
 
@@ -1726,7 +1770,7 @@ catkin_create_pkg atr_py_pkg rospy std_msgs
   - 在scripts文件夹下新建文件**ma_node.py**文件；
   - python创建订阅者节点的过程如下：
 
-  ![Python订阅者节点的创建](images/17_Subscriber订阅者的Python实现/Python订阅者节点.png)
+  <img src="images/17_Subscriber订阅者的Python实现/Python订阅者节点.png" alt="Python订阅者节点的创建" style="zoom: 50%;" />
 
   - **文件编程：**
 
@@ -1767,7 +1811,7 @@ catkin_create_pkg atr_py_pkg rospy std_msgs
 
     - 接着在终端中执行ROS初始化以及运行节点即可：
 
-    ![运行节点效果图](images/17_Subscriber订阅者的Python实现/运行效果1.png)
+    <img src="images/17_Subscriber订阅者的Python实现/运行效果1.png" alt="运行节点效果图" style="zoom: 80%;" />
 
 
 
@@ -1797,7 +1841,9 @@ roslaunch atr_py_pkg kai_hei.launch
 
 - 最终的效果如图所示：
 
-![最终效果](images/17_Subscriber订阅者的Python实现/最终运行效果.png)
+<img src="images/17_Subscriber订阅者的Python实现/最终运行效果.png" alt="最终效果" style="zoom: 50%;" />
+
+---
 
 
 
@@ -1809,11 +1855,11 @@ roslaunch atr_py_pkg kai_hei.launch
   - **矢量运动**：包括前后、左右、上下的直线运动；
   - **旋转运动**：包括左右旋转运动、左右的倾倒运动（滚转运动）、前后倾倒（俯仰运动）；
 
-![机器人运动的分解](images/18_ROS机器人运动控制/运动的分解.png)
+<img src="images/18_ROS机器人运动控制/运动的分解.png" alt="机器人运动的分解" style="zoom:80%;" />
 
 - 所有的三维运动都可以由上面的矢量运动和旋转运动合成得到：
 
-![三维运动](images/18_ROS机器人运动控制/三维运动的示意图.png)
+<img src="images/18_ROS机器人运动控制/三维运动的示意图.png" alt="三维运动" style="zoom: 67%;" />
 
 
 
@@ -1824,7 +1870,7 @@ roslaunch atr_py_pkg kai_hei.launch
 - 右手做出打枪的手势，其中食指指向机器人运动的正前方，可以得到机器人平移运动的坐标系；
 - 机器人的任意平移运动，都可以通过这三个矢量表示；
 
-![平移运动的量化](images/18_ROS机器人运动控制/平移运动的量化.png)
+<img src="images/18_ROS机器人运动控制/平移运动的量化.png" alt="平移运动的量化" style="zoom: 50%;" />
 
 ### 2.2 旋转运动的量化
 
@@ -1832,12 +1878,11 @@ roslaunch atr_py_pkg kai_hei.launch
   - 拇指指向x轴正方向时，四指的旋转方向即滚转运动的正方向；
   - 拇指指向y轴正方向时，四指的旋转方向即俯仰运动的正方向；
   - 拇指指向z轴正方向时，四指的旋转方式即旋转运动的正方向；
+  
+  | <img src="images/18_ROS机器人运动控制/旋转运动的量化.png" alt="旋转运动" style="zoom: 33%;" /> | <img src="images/18_ROS机器人运动控制/旋转运动的示意图.png" alt="旋转运动的示意图" style="zoom:50%;" /> |
+  | ------------------------------------------------------------ | ------------------------------------------------------------ |
 
-![旋转运动](images/18_ROS机器人运动控制/旋转运动的量化.png)
-
-- 所有的三维旋转运动都可以由上面的三个方向合成得到：
-
-![旋转运动的示意图](images/18_ROS机器人运动控制/旋转运动的示意图.png)
+- 所有的三维旋转运动都可以由上面的三个方向合成得到；
 
 
 
@@ -1848,7 +1893,7 @@ roslaunch atr_py_pkg kai_hei.launch
   - 旋转运动的单位是rad/s；
 - ROS中的机器人运动控制，是通过消息包的方式来控制的，消息包的格式如下：
 
-![ROS的运动控制模式](images/18_ROS机器人运动控制/ROS中运动控制的结构.png)
+<img src="images/18_ROS机器人运动控制/ROS中运动控制的结构.png" alt="ROS的运动控制模式" style="zoom: 50%;" />
 
 
 
@@ -1860,7 +1905,7 @@ roslaunch atr_py_pkg kai_hei.launch
   - Twist里面包含了两个Vector3的变量，对应了平移运动和旋转运动；
   - 每个Vector3变量内部又有x、y、z三个变量描述；
 
-![geometry_msgs软件包](images/18_ROS机器人运动控制/geometry_msgs消息包格式.png)
+<img src="images/18_ROS机器人运动控制/geometry_msgs消息包格式.png" alt="geometry_msgs软件包" style="zoom: 33%;" />
 
 
 
@@ -1870,7 +1915,9 @@ roslaunch atr_py_pkg kai_hei.launch
 - 机器人核心节点会向上订阅一个话题，这个话题叫cmd_vel；
 - 我们在开发过程中，就只需要写一个速度控制节点，并往cmd_vel话题中发布消息即可，这个消息的格式就是前面的Twist；
 
-![运动控制话题消息架构](images/18_ROS机器人运动控制/ROS中运动控制的话题订阅关系.png)
+<img src="images/18_ROS机器人运动控制/ROS中运动控制的话题订阅关系.png" alt="运动控制话题消息架构" style="zoom:67%;" />
+
+---
 
 
 
@@ -1888,7 +1935,7 @@ roslaunch atr_py_pkg kai_hei.launch
   - 执行**git pull**完成软件包的更新；
   - 回退到**catkin_ws**下，执行**catkin_make**进行编译；
 
-  ![环境搭建](images/19_机器人运动控制的C++实现/环境搭建.png)
+  <img src="images/19_机器人运动控制的C++实现/环境搭建.png" alt="环境搭建" style="zoom:80%;" />
 
   - 编译完成后，可以选择启动该仿真程序（在主目录下执行）：
 
@@ -1911,7 +1958,7 @@ roslaunch atr_py_pkg kai_hei.launch
 - 整体思路如下：
   - **我们完全不需要去操作底层的控制，只需要完成上层的速度控制节点即可**；
 
-![整体框架](images/19_机器人运动控制的C++实现/整体思路.png)
+<img src="images/19_机器人运动控制的C++实现/整体思路.png" alt="整体框架" style="zoom: 50%;" />
 
 ### 2.2 软件包开发
 
@@ -2013,13 +2060,15 @@ rosrun vel_pkg vel_node
 - 我们在写完节点后不启动demo_vel_ctrl，而是启动了我们自己的节点，机器人也能正常的跑起来；
 - 这证明了我们的节点是工作正常的；
 
+---
+
 
 
 # 第二十节课：机器人运动控制的Python实现
 
 ## 1.项目思路
 
-![Python实现的整体思路](images/20_机器人运动控制的Python实现/整体思路.png)
+<img src="images/20_机器人运动控制的Python实现/整体思路.png" alt="Python实现的整体思路" style="zoom: 50%;" />
 
 
 
@@ -2081,7 +2130,9 @@ roslaunch wpr_simulation wpb_simple.launch
 rosrun vel_py_pkg vel_node.py
 ```
 
-![运行结果](images/20_机器人运动控制的Python实现/运行仿真.gif)
+<img src="images/20_机器人运动控制的Python实现/运行仿真.gif" alt="运行结果" style="zoom: 33%;" />
+
+---
 
 
 
@@ -2108,9 +2159,9 @@ rosrun vel_py_pkg vel_node.py
 
 - 不断的按如下方式进行扫描即可得到周围环境的点阵图；
 
-![激光雷达工作原理](images/21_激光雷达工作原理/激光雷达工作原理.png)
+<img src="images/21_激光雷达工作原理/激光雷达工作原理.png" alt="激光雷达工作原理" style="zoom:50%;" />
 
-
+---
 
 
 
@@ -2151,21 +2202,21 @@ rviz
   - 视角位置数值调整窗口，一般不用，而是直接手动调整视角；
   - 状态栏；
 
-![启动RViz](images/22_使用RViz观测传感器数据/启动RViz工具.png)
+<img src="images/22_使用RViz观测传感器数据/启动RViz工具.png" alt="启动RViz" style="zoom: 50%;" />
 
 ### 2.2 RViz的使用
 
 - **修改Fixed Frame并添加机器人模型：**
 
-![添加机器人模型](images/22_使用RViz观测传感器数据/添加机器人模型.gif)
+<img src="images/22_使用RViz观测传感器数据/添加机器人模型.gif" alt="添加机器人模型" style="zoom: 33%;" />
 
 - **添加激光雷达并选择订阅话题：**
 
-![添加激光雷达并选择订阅话题](images/22_使用RViz观测传感器数据/添加激光雷达并订阅话题.gif)
+<img src="images/22_使用RViz观测传感器数据/添加激光雷达并订阅话题.gif" alt="添加激光雷达并选择订阅话题" style="zoom:33%;" />
 
 - **在仿真环境中添加障碍物，RViz将实时显示点阵：**
 
-![场景交互](images/22_使用RViz观测传感器数据/场景交互.gif)
+<img src="images/22_使用RViz观测传感器数据/场景交互.gif" alt="场景交互" style="zoom:33%;" />
 
 ### 2.3 RViz配置文件的保存
 
@@ -2191,6 +2242,8 @@ roslaunch wpr_simulation wpb_rviz.launch
   - 是接收传感器数据并进行显示的工具，即它显示的是机器人实际能检测的环境状况；
   - 在实际的机器人开发中，RViz可能还存在，它仍然可以接收实际机器人的传感器数据并显示；
 
+---
+
 
 
 # 第二十三节课：激光雷达消息包格式
@@ -2207,7 +2260,7 @@ roslaunch wpr_simulation wpb_rviz.launch
 
 - 然后在机器人周围放上障碍物，即可得到点阵图；
 
-![启动仿真环境](images/23_激光雷达数据包格式/启动仿真环境.png)
+<img src="images/23_激光雷达数据包格式/启动仿真环境.png" alt="启动仿真环境" style="zoom: 33%;" />
 
 
 
@@ -2217,11 +2270,11 @@ roslaunch wpr_simulation wpb_rviz.launch
 - 然后在搜索框中搜索：**sensor_msgs**；
 - 进去后点击**Website**进入其描述网址，然后选择**LaserScan Message**：
 
-![激光雷达数据格式](images/23_激光雷达数据包格式/激光雷达数据格式.png)
+<img src="images/23_激光雷达数据包格式/激光雷达数据格式.png" alt="激光雷达数据格式" style="zoom:50%;" />
 
 - 中文翻译如下：
 
-![中文翻译版](images/23_激光雷达数据包格式/激光雷达数据格式中文翻译.png)
+<img src="images/23_激光雷达数据包格式/激光雷达数据格式中文翻译.png" alt="中文翻译版" style="zoom:50%;" />
 
 
 
@@ -2235,7 +2288,7 @@ rostopic echo /scan --noarr
 
 - 得到如下结果：
 
-![终端显示的激光雷达数据](images/23_激光雷达数据包格式/终端显示的激光雷达数据.png)
+<img src="images/23_激光雷达数据包格式/终端显示的激光雷达数据.png" alt="终端显示的激光雷达数据" style="zoom: 80%;" />
 
 - **数据格式剖析：**
   - header：主要是存储时间戳和坐标系ID
@@ -2251,6 +2304,8 @@ rostopic echo /scan --noarr
     - 数据的排序跟扫描的起始角度和终止角度对应，就是360个值；
     - 若测量距离过大，数据就是INF；
   - intensities：360个float32数据，与ranges对应，是测距返回的信号强度；
+
+---
 
 
 
@@ -2280,7 +2335,7 @@ roslaunch wpr_simulation wpb_simple.launch
 rosrun wpr_simulation demo_lidar_data
 ```
 
-![例子程序](images/24_获取激光雷达数据的C++节点/wpr_simulation的获取雷达数据例子程序.png)
+<img src="images/24_获取激光雷达数据的C++节点/wpr_simulation的获取雷达数据例子程序.png" alt="例子程序" style="zoom: 80%;" />
 
 
 
@@ -2290,11 +2345,11 @@ rosrun wpr_simulation demo_lidar_data
 - 这个节点会发布一个话题，消息的格式就是之前的sensor_msgs::LaserScan，话题的名称是约定的/scan；
 - 我们只需要完成数据获取节点，订阅/scan话题即可得到数据；
 
-![项目框架](images/24_获取激光雷达数据的C++节点/项目框架.png)
+<img src="images/24_获取激光雷达数据的C++节点/项目框架.png" alt="项目框架" style="zoom:80%;" />
 
 - **最后总结一下实现步骤如下：**
 
-![实现步骤](images/24_获取激光雷达数据的C++节点/实现步骤.png)
+<img src="images/24_获取激光雷达数据的C++节点/实现步骤.png" alt="实现步骤" style="zoom:80%;" />
 
 
 
@@ -2369,6 +2424,8 @@ rosrun lidar_pkg lidar_node
 
 ![运行效果](images/24_获取激光雷达数据的C++节点/运行效果.png)
 
+---
+
 
 
 # 第二十五节课：获取激光雷达数据的Python节点
@@ -2377,7 +2434,7 @@ rosrun lidar_pkg lidar_node
 
 - 在我的开发中，为了区分前面的lidar_pkg，我改为了lidar_py_pkg；
 
-![项目整体结构](images/25_获取激光雷达数据的Python节点/实现步骤.png)
+<img src="images/25_获取激光雷达数据的Python节点/实现步骤.png" alt="项目整体结构" style="zoom:50%;" />
 
 
 
@@ -2438,6 +2495,8 @@ rosrun lidar_py_pkg lidar_node.py
 
 ![运行结果](images/25_获取激光雷达数据的Python节点/效果图.png)
 
+---
+
 
 
 # 第二十六节课：激光雷达避障的C++节点
@@ -2446,11 +2505,11 @@ rosrun lidar_py_pkg lidar_node.py
 
 - 在前面的基础上，使节点订阅雷达数据的同时，发布速度控制话题；
 
-![项目框架](images/26_激光雷达避障的C++节点/项目框架.png)
+<img src="images/26_激光雷达避障的C++节点/项目框架.png" alt="项目框架" style="zoom: 50%;" />
 
 - 实现步骤：
 
-![实现步骤](images/26_激光雷达避障的C++节点/实现步骤.png)
+<img src="images/26_激光雷达避障的C++节点/实现步骤.png" alt="实现步骤" style="zoom:50%;" />
 
 
 
@@ -2526,7 +2585,9 @@ rosrun lidar_pkg lidar_node
 
 - 效果如下：
 
-![运行效果](images/26_激光雷达避障的C++节点/场景交互.gif)
+<img src="images/26_激光雷达避障的C++节点/场景交互.gif" alt="运行效果" style="zoom: 33%;" />
+
+---
 
 
 
@@ -2598,6 +2659,8 @@ rosrun lidar_pkg lidar_node
 
 ![运行效果](images/27_激光雷达避障的Python节点/场景交互.gif)
 
+---
+
 
 
 # 第二十八节课：ROS中的IMU惯性测量单元的消息包
@@ -2609,11 +2672,13 @@ rosrun lidar_pkg lidar_node
   - linear_acceleration是三轴加速度；
   - 该数据包中还包含了各自的协方差矩阵，协方差矩阵有特殊用途；
 
-![IMU数据格式](images/28_ROS中IMU惯性测量单元消息包/官网中的IMU数据格式.png)
+<img src="images/28_ROS中IMU惯性测量单元消息包/官网中的IMU数据格式.png" alt="IMU数据格式" style="zoom:50%;" />
 
 - 中文翻译版如下：
 
-![中文翻译版](images/28_ROS中IMU惯性测量单元消息包/中文翻译版.png)
+<img src="images/28_ROS中IMU惯性测量单元消息包/中文翻译版.png" alt="中文翻译版" style="zoom: 67%;" />
+
+---
 
 
 
@@ -2731,6 +2796,8 @@ target_link_libraries(imu_node
 
 ![运行效果](images/29_获取IMU数据的C++节点/场景交互.gif)
 
+---
+
 
 
 # 第三十节课：获取IMU数据的Python节点
@@ -2841,6 +2908,8 @@ rosrun imu_py_pkg imu_node.py
 
 ![效果图](images/30_获取IMU数据的Python节点/场景交互.gif)
 
+---
+
 
 
 # 第三十一节课：IMU航向锁定的C++节点
@@ -2942,6 +3011,8 @@ int main(int argc, char *argv[])
 
   ![效果](images/31_IMU航向锁定的C++节点/运行效果.gif)
 
+---
+
 
 
 # 第三十二节课：IMU航向锁定的Python节点
@@ -3021,6 +3092,8 @@ if __name__ == "__main__":
 
   ![运行效果](images/32_IMU航向锁定的Python节点/场景交互.gif)
 
+---
+
 
 
 # 第三十三节课：标准消息包std_msgs
@@ -3037,6 +3110,8 @@ if __name__ == "__main__":
 - 也可以被其他消息包包含，构建更复杂的数据类型；
 
 ![标准消息包的类型](images/33_标准消息包std_msgs/std_msgs消息包.png)
+
+---
 
 
 
@@ -3066,6 +3141,8 @@ if __name__ == "__main__":
 ## 3.sensor_msgs传感器消息包
 
 ![sensor_msgs消息包](images/34_几何消息包geometry_msgs和传感器消息包sensor_msgs/sensor_msgs消息包.png)
+
+---
 
 
 
@@ -3156,6 +3233,8 @@ rosmsg show qq_msgs/Carry
 - 总结生成自定义消息类型的步骤如下：
 
 ![生成自消息类型的步骤](images/35_自定义消息类型/生成自定义消息的步骤.png)
+
+---
 
 
 
@@ -3360,6 +3439,8 @@ rosrun atr_pkg ma_node
 
 ![C++节点中应用新消息类型的步骤](images/36_自定义消息类型在C++节点中的应用/步骤总结.png)
 
+---
+
 
 
 # 第三十七节课：自定义消息类型在Python节点中的应用
@@ -3530,6 +3611,8 @@ rosrun atr_py_pkg ma_node.py
 
 ![总结](images/37_自定义消息类型在Python节点中的应用/自消息类型在Python节点中应用的总结.png)
 
+---
+
 
 
 # 第三十八节课：栅格地图格式
@@ -3570,6 +3653,8 @@ rosrun atr_py_pkg ma_node.py
   - **data：8位整型的数组，栅格位置的（0, 0）指的是左下角的位置；**
 
 ![消息类型的内容](images/38_栅格地图格式/消息类型的内容.png)
+
+---
 
 
 
@@ -3706,6 +3791,8 @@ catkin_create_pkg map_pkg roscpp rospy nav_msgs
   - 在上一节介绍消息类型时，info数据的最后一个内容是地图远点和世界坐标系的偏移量；
   - 在程序中设置的是0、0，所以在仿真结果中世界坐标系的原点和我们的栅格地图的左下角是重合的；
 
+---
+
 
 
 # 第四十节课：Python节点发布地图
@@ -3836,6 +3923,8 @@ catkin_make
   - 在上一节介绍消息类型时，info数据的最后一个内容是地图远点和世界坐标系的偏移量；
   - 在程序中设置的是0、0，所以在仿真结果中世界坐标系的原点和我们的栅格地图的左下角是重合的；
 
+---
+
 
 
 # 第四十一节课：什么是SLAM
@@ -3880,6 +3969,8 @@ catkin_make
 - 不断进行激光雷达扫描，最后得到整个地图，其中探明的区域为0、障碍物区域为100、未知区域为-1：
 
 ![建图效果](images/41_什么是SLAM/建图效果.png)
+
+---
 
 
 
@@ -3968,6 +4059,8 @@ catkin_make
 - **最终运行效果如图所示：**
 
 ![运行效果](images/42_Hector_Mapping初体验/场景交互.gif)
+
+---
 
 
 
@@ -4083,6 +4176,8 @@ catkin_make
   - **在后续的开发中，如果机器人变成了真实机器人，只需要将launch文件的第一句修改为启动实体机器人激光雷达和底盘控制的launch文件即可；**
   - **或者只启动激光雷达，然后自己手动推着机器人建图也是可以的；**
 
+---
+
 
 
 # 第四十四节课：Hector_Mapping的参数设置
@@ -4136,6 +4231,8 @@ roslaunch wpr_simulation wpb_hector_comparison.launch
 ```
 
 ![两台机器人](images/44_Hector_Mapping的参数设置/hector的两台机器程序.png)
+
+---
 
 
 
@@ -4266,6 +4363,8 @@ rostopic echo /tf
   
   ![TF_Tree](images/45_初始ROS的TF系统/tf_tree.png)
 
+---
+
 
 
 
@@ -4355,6 +4454,8 @@ rostopic echo /tf
 - 它输出的里程计信息是真实利用的，而不是Hector中的只是让两个坐标系重合；
 
 ![Gmapping建图](images/46_里程计在激光雷达SLAM中的作用/坐标演示2.gif)
+
+---
 
 
 
@@ -4454,6 +4555,8 @@ rosrun wpr_simulation keyboard_vel_ctrl
 
 ![Gmapping建图效果](images/47_Gmapping的使用/建图效果.gif)
 
+---
+
 
 
 # 第四十八节课：launch启动Gmapping建图
@@ -4532,6 +4635,8 @@ roslaunch slam_gmapping_pkg gmapping.launch
 
 ![仿真页面](images/48_launch启动Gmapping建图/仿真页面.png)
 
+---
+
 
 
 # 第四十九节课：Gmapping的参数设置
@@ -4578,6 +4683,8 @@ roslaunch slam_gmapping_pkg gmapping.launch
     
 </launch>
 ```
+
+---
 
 
 
@@ -4656,6 +4763,8 @@ rosrun rviz rviz
 - **然后在RViz中添加map并订阅话题map即可得到地图：**
 
 ![加载地图](images/50_地图的保存和加载/加载地图.png)
+
+---
 
 ---
 
