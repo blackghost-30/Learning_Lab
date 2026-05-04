@@ -1,0 +1,38 @@
+# CMake generated Testfile for 
+# Source directory: /home/blackghost/catkin_ws/src
+# Build directory: /home/blackghost/catkin_ws/build
+# 
+# This file includes the relevant testing commands required for 
+# testing this directory and lists subdirectories to be tested as well.
+subdirs("gtest")
+subdirs("ros_tutorials/ros_tutorials")
+subdirs("wpb_home/wpb_home_bringup")
+subdirs("wpb_home/wpb_home_remote")
+subdirs("map_pkg")
+subdirs("map_py_pkg")
+subdirs("qq_msgs")
+subdirs("atr_pkg")
+subdirs("atr_py_pkg")
+subdirs("ros_tutorials/roscpp_tutorials")
+subdirs("ros_tutorials/rospy_tutorials")
+subdirs("slam_gmapping_pkg")
+subdirs("slam_pkg")
+subdirs("ssr_pkg")
+subdirs("ssr_py_pkg")
+subdirs("nav_pkg")
+subdirs("cv_pkg")
+subdirs("cv_py_pkg")
+subdirs("imu_pkg")
+subdirs("imu_py_pkg")
+subdirs("lidar_pkg")
+subdirs("lidar_py_pkg")
+subdirs("ros_tutorials/turtlesim")
+subdirs("vel_pkg")
+subdirs("vel_py_pkg")
+subdirs("waterplus_map_tools")
+subdirs("wpb_home/wpb_home_behaviors")
+subdirs("wpb_home/wpb_home_python")
+subdirs("wpb_home/wpb_home_python3")
+subdirs("wpb_home/wpb_home_tutorials")
+subdirs("wpb_home/wpbh_local_planner")
+subdirs("wpr_simulation")

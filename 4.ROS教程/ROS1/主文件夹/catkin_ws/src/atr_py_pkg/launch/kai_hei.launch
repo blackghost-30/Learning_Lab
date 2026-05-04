@@ -1,0 +1,9 @@
+<launch>
+
+    <node pkg="ssr_py_pkg" type="chao_node.py" name="chao_node"/>
+
+    <node pkg="ssr_py_pkg" type="yao_node.py" name="yao_node"/>
+
+    <node pkg="atr_py_pkg" type="ma_node.py" name="ma_node" launch-prefix="gnome-terminal -e"/>
+
+</launch>

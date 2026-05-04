@@ -1,0 +1,6 @@
+# CMake generated Testfile for 
+# Source directory: /home/blackghost/catkin_ws/src/ssr_py_pkg
+# Build directory: /home/blackghost/catkin_ws/build/ssr_py_pkg
+# 
+# This file includes the relevant testing commands required for 
+# testing this directory and lists subdirectories to be tested as well.

@@ -1,0 +1,24 @@
+<launch>
+
+    <node pkg="move_base" type="move_base" name="move_base">
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/local_costmap_params.yaml" command="load" />
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" /> 
+        <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+        <rosparam file="$(find wpb_home_tutorials)/nav_lidar/teb_local_planner_params.yaml" command="load" />
+        <param name="controller_frequency" value="10" type="double" />
+    </node>
+
+    <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
+
+    <node pkg="amcl" type="amcl" name="amcl"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find nav_pkg)/rviz/map_tool.rviz"/>
+
+    <node pkg="waterplus_map_tools" type="wp_navi_server" name="wp_navi_server" output="screen" />
+
+    <node pkg="waterplus_map_tools" type="wp_manager" name="wp_manager" output="screen" />
+
+</launch>
