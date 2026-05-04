@@ -1112,8 +1112,9 @@ ROS系统由一个个Node节点组成，Node节点的特征如下：
   - 如上图所示，为满足不同传输的要求，消息会存在很多种类型，在生成消息包时需要指定消息的类型；
 
 - **类型的来源：**
+  
   - 上一节课创建的软件包中，有一个依赖项：**std_msgs**，这个软件包中就包含了很多的消息类型；
-
+  
 - **std_msgs消息类型：**
 
   - 打开index网站，搜索**std_msgs**，然后点击Msg API，就可以看到这个软件包中存在的消息类型；
@@ -3979,7 +3980,7 @@ catkin_make
 ## 1.项目结构
 
 - 在前面已经实现了**激光雷达数据话题/scan的订阅**；
-- 在前面中也实现了**栅格地图话题/map的订阅**；
+- 在前面中也实现了**栅格地图话题/map的发布**；
 - 现在要做的就是在原来的节点上添加上**SLAM算法**，将激光雷达数据通过算法转换为栅格地图即可；
 - 从零编写一套SLAM算法是困难的，我们可以利用开源的SLAM算法完成项目，那就是**Hector_Mapping**；
 
@@ -7519,7 +7520,7 @@ cd ~/catkin_ws/src
 catkin_create_pkg cv_py_pkg rospy sensor_msgs cv_bridge
 ```
 
-- 然后打开VsCode，在cv_py_pkg下，新=新建文件夹scripts，并在文件夹下新建文件image_node.py；
+- 然后打开VsCode，在cv_py_pkg下，新=新建文件夹scripts，并在文件夹下新建文件cv_image_node.py；
 - 在文件中写入如下内容
 
 ```python
@@ -7565,7 +7566,7 @@ if __name__ == "__main__":
 ```bash
 cd ~/catkin_ws/src/cv_py_pkg/scripts
 
-chmod +x image_node.py
+chmod +x cv_image_node.py
 ```
 
 - 由于该软件包是新建的，需要再编译一下
@@ -7583,7 +7584,7 @@ catkin_make
 ```bash
 roslaunch wpr_simulation wpb_balls.launch
 
-rosrun cv_py_pkg image_node.py
+rosrun cv_py_pkg cv_image_node.py
 
 rosrun wpr_simulation ball_random_move
 ```
