@@ -7502,7 +7502,171 @@ static void Car3Task(void *params)
 
 # 10-3 事件组实验_改进姿态控制
 
+## 1.内容介绍
 
+### 1.1 项目移植
+
+- 本节源码在`"25_Chapter14_Eventgroup_And"`的基础上，改出`"26_Chapter14_Eventgroup_MPU6050"`；
+- 本节课的主要内容是改进先前的MPU6050驱动的低效率问题；
+
+### 1.2 项目框架回顾
+
+- 在先前的姿态控制的程序框架中，用任务来执行I2C操作，每隔50ms就去读一次I2C数据；
+- 但是I2C是很慢的，这必然带来了很大的CPU资源的浪费；
+- **现在改进程序框架：用中断来实现事件组，让任务等待事件，而不是vTaskDelay()，这样就可以大大的节省了CPU的资源；**
+
+![项目框架](3.images/10-3事件组实验_改进姿态控制/改进后的程序框架.png)
+
+
+
+## 2.编程实现
+
+### 2.1 创建事件组
+
+- 先在初始化函数中创建事件组，这样项目一上电瞬间就会创建事件组；
+
+```c
+#include "event_groups.h"/* MPU6050事件组 */
+
+static EventGroupHandle_t g_xEventMPU6050;
+
+int MPU6050_Init(void)
+{
+	MPU6050_WriteRegister(MPU6050_PWR_MGMT_1, 0x00);	//解除休眠状态
+	MPU6050_WriteRegister(MPU6050_PWR_MGMT_2, 0x00);
+	MPU6050_WriteRegister(MPU6050_SMPLRT_DIV, 0x09);
+	MPU6050_WriteRegister(MPU6050_CONFIG, 0x06);
+	MPU6050_WriteRegister(MPU6050_GYRO_CONFIG, 0x18);
+	MPU6050_WriteRegister(MPU6050_ACCEL_CONFIG, 0x18);
+    return 0;
+	
+	g_xQueueMPU6050 = xQueueCreate(MPU6050_QUEUE_LEN, sizeof(struct mpu6050_data));
+	g_xEventMPU6050 = xEventGroupCreate();
+}
+```
+
+### 2.2 MPU6050任务函数等待事件组
+
+- 在while循环进去之后，调用等待事件组让它等待事件；
+- 每当这个事件组的bit0设为1时，它将读取I2C数据，如果等待不到事件组就阻塞，提高CPU效率；
+- 防止中断产生得太频繁，将原来的延时改为20；
+
+```c
+/* MPU6050任务函数 */
+void MPU6050_Task(void *params)
+{
+	// ...
+	while(1)
+	{
+		/* 等待事件组 */
+		xEventGroupWaitBits(g_xEventMPU6050, (1<<0), pdTRUE, pdFALSE, portMAX_DELAY);
+		
+	// ...
+        
+		/* Delay */
+		vTaskDelay(20);
+	}
+}
+```
+
+### 2.3 设置写事件组
+
+按照先前的程序框架思想，我们需要在MPU6050的中断函数中去写事件组。
+
+- **配置中断引脚**
+
+  - 在硬件上，MPU6050的中断引脚是**PB5**，所以需要先到CubeMX配置中断引脚；
+  - 先设置引脚为中断引脚，因为MPU6050的中断引脚在产生中断时为高电平，所以再将中断引脚设置为上升沿触发；
+  - **最后点击NVIC使能整个中断，即点击NVIC，然后将EXTI line[9:5] interru勾选；**
+
+  | ![原理图设计](3.images/10-3事件组实验_改进姿态控制/MPU6050的中断引脚.png) | <img src="3.images/10-3事件组实验_改进姿态控制/初始化设置.png" alt="初始化设置" style="zoom: 50%;" /> |
+  | ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+- **写中断函数让它写事件组**
+
+  - 完成上面配置后CubeMX将自动为我们生成**中断函数**，这个中断函数在文件**stm32f1xx_it.c**中；
+  - 当中断引脚出现指定电平跳变时，中断函数被调用，它的内部调用**HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_5)**这个中断任务处理函数；
+  - 该函数在文件**stm32f1xx_hal_gpio.c**中，而在函数内部，它又会调用**HAL_GPIO_EXTI_Callback()**回调函数；
+  - 所以我们可以提供**HAL_GPIO_EXTI_Callback()**函数，这个函数内部写事件组即可；
+
+  | ![CubeMX始化生成的中断函数](3.images/10-3事件组实验_改进姿态控制/CubeMX初始化生成的中断函数.png) | ![中断任务处理函数](3.images/10-3事件组实验_改进姿态控制/中断任务处理函数.png) |
+  | ------------------------------------------------------------ | ------------------------------------------------------------ |
+
+  - 这个函数老师在**driver_irq.c**文件中已经提供了，只需如左下图所示的拓展即可；
+  - 内部执行的**MPU6050_Callback()**函数在**driver_mpu6050.c**文件中定义，它就是一个设置事件组的函数；
+
+  ```c
+  /* driver_irq.c文件 */
+  extern void MPU6050_Callback(void);
+  void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+  {
+      switch (GPIO_Pin)
+      {
+  		case GPIO_PIN_5:
+          {
+              MPU6050_Callback();
+              break;
+          }
+  
+          case GPIO_PIN_10:
+          {
+              IRReceiver_IRQ_Callback();
+              break;
+          }
+  
+          case GPIO_PIN_12:
+          {
+              RotaryEncoder_IRQ_Callback();
+              break;
+          }
+  
+          default:
+          {
+              break;
+          }
+      }
+  }
+  
+  /* driver_mpu6050.c文件 */
+  void MPU6050_Callback(void)
+  {
+  	/* 设置事件组 */
+  	xEventGroupSetBitsFromISR(g_xEventMPU6050, (1<<0), NULL);
+  }
+  
+  ```
+
+### 2.4 使能MPU6050的中断
+
+- 在初始化函数中配置中断引脚并使能中断，这样就改造完成了；
+- 这里完全是MPU6050这个外设的知识，可先不理；
+- **要记得把freertos.c文件中的game1打开，并注释掉game2；**
+
+```c
+#define MPU6050_INT_PIN_CFG		0x37
+#define MPU6050_INT_ENABLE		0x38
+
+int MPU6050_Init(void)
+{
+	MPU6050_WriteRegister(MPU6050_PWR_MGMT_1, 0x00);	//解除休眠状态
+	MPU6050_WriteRegister(MPU6050_PWR_MGMT_2, 0x00);
+	MPU6050_WriteRegister(MPU6050_SMPLRT_DIV, 0x09);
+	MPU6050_WriteRegister(MPU6050_CONFIG, 0x06);
+	MPU6050_WriteRegister(MPU6050_GYRO_CONFIG, 0x18);
+	MPU6050_WriteRegister(MPU6050_ACCEL_CONFIG, 0x18);
+    return 0;
+	
+	/* 配置中断引脚 */
+	MPU6050_WriteRegister(MPU6050_INT_PIN_CFG, 0);
+	
+	/* 使能中断 */
+	MPU6050_WriteRegister(MPU6050_INT_ENABLE, 0xff);
+	
+	/* 初始化时创建队列和事件组 */
+	g_xQueueMPU6050 = xQueueCreate(MPU6050_QUEUE_LEN, sizeof(struct mpu6050_data));
+	g_xEventMPU6050 = xEventGroupCreate();
+}
+```
 
 ---
 
