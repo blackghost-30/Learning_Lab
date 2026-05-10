@@ -7674,9 +7674,348 @@ int MPU6050_Init(void)
 
 # 11-1 任务通知的本质
 
+## 1.内容介绍
+
+- 本节内容讲解任务通知的本质，不涉及项目工程开发；
+- 本节内容对应的课程资料为——`第15章 任务通知(Task Notifications)`；
+
+
+
+## 2.前面内容回顾
+
+如图所示即为前面三种手段的相同点：
+
+- 对于它们三者而言，任务 / 中断都可以通过它们来实现同步/互斥的操作；
+- 但是双方不知道谁是谁，它只知道去链表里面唤醒第一个任务，但这个第一个任务是谁它是不知道的；
+- 这三种手段只是一个盲盒或者是邮局，我们只知道存在了就可以做了，但是不知道是谁让我做的；
+
+![队列信号量及事件组的共同点](3.images/11-1任务通知的本质/队列信号量及事件组的共同点.png)
+
+
+
+## 3.任务通知的介绍
+
+### 3.1 任务通知的概述
+
+- 如下图所示中，任务 / 中断知道对象任务B的存在，它们可以直接给任务B发信息；
+
+- 即直接修改任务B的TCB结构体里面的值和状态等，这样就实现了任务通知；
+
+- 它与前面的区别就是任务通知无需再跨越中间的一层，即无需创建其他结构体，即它是**任务间的直接通信**；
+
+<img src="3.images/11-1任务通知的本质/任务通知的概述.png" alt="任务通知的概述" style="zoom: 67%;" />
+
+### 3.2 任务通知的内部机制
+
+- **任务的TCB结构体**
+
+  - 任何一个任务创建后都会有**TCB结构体**；
+  - 这个结构体包含两个与任务通知直接关联的成员，**一个是通知状态、一个是通知值**；
+  - TCB结构体定义：两个成员都是数组，数组大小的宏定义为1，故它们是只含有一个数值的数组
+
+  ```c
+  typedef struct tskTaskControlBlock
+  {
+      ......
+      /* configTASK_NOTIFICATION_ARRAY_ENTRIES = 1 */
+      volatile uint32_t ulNotifiedValue[ configTASK_NOTIFICATION_ARRAY_ENTRIES ];
+      volatile uint8_t ucNotifyState[ configTASK_NOTIFICATION_ARRAY_ENTRIES ];
+      ......
+  } tskTCB;
+  ```
+
+  - **通知状态**：三种取值：没有等待通知（默认状态）、等待通知和接收到了通知；
+
+  ```c
+  ##define taskNOT_WAITING_NOTIFICATION              ( ( uint8_t ) 0 )  /* 也是初始状态 */
+  ##define taskWAITING_NOTIFICATION                  ( ( uint8_t ) 1 )
+  ##define taskNOTIFICATION_RECEIVED                 ( ( uint8_t ) 2 )
+  ```
+
+  - **通知值**：可有计数值、位（类似于事件组）、任意数值三种类型；
+
+- **两个例子**
+
+  - **场景一**
+    - 前半部分，B不是因为等待A的通知而阻塞，无论A发什么过来，都无法影响B的运行状态；
+    - 任务A只会把B的通知状态改为接收到了通知而已，但是B不会去处理这个通知；
+    - 后半部分，B调用等待任务A通知的函数；
+    - 前面它的通知状态是收到通知了，故后面调用函数去等待通知它的状态会马上变为不等待通知；
+
+  ![场景1](3.images/11-1任务通知的本质/场景1.png)
+
+  - **场景二**
+    - 任务B调用等待任务A的函数，因为一开始没有任务通知，所以进入阻塞状态，状态值为等待通知；
+    - 任务A发来通知，任务B的状态值变为收到通知，并被唤醒；
+    - 当任务B从就绪态变为运行时，它的状态值会变为不等待通知；
+
+  ![场景2](3.images/11-1任务通知的本质/场景2.png)
+
+
+
+## 4.任务通知的两套函数
+
+任务通知有如下两套函数，分别为简化版和专业版。
+
+### 4.1 普通函数与中断函数
+
+- **在中断中用的函数**
+
+  - 中断中不能阻塞，所以中断中只有发出通知的函数；
+
+  |          | 简化版                   | 专业版               |
+  | -------- | ------------------------ | -------------------- |
+  | 发出通知 | vTaskNotifyGiveFromISR() | xTaskNotifyFromISR() |
+
+- **在一般情况下用的函数**
+
+  - 一般情况下，发出通知和取出通知都有函数；
+
+  |          | 简化版             | 专业版            |
+  | -------- | ------------------ | ----------------- |
+  | 发出通知 | xTaskNotifyGive()  | xTaskNotify()     |
+  | 取出通知 | ulTaskNotifyTake() | xTaskNotifyWait() |
+
+### 4.2 简化版
+
+只看一般情况下用的简化版的函数，**它相当于是实现了一个简单的计数型信号量模型**：
+
+- 调用xTaskNotifyGive()会让指定的任务的TCB中的cnt++，无论对象是否在等待通知，且一定会改变对象的通知状态为接收到了通知；
+- 调用ulTaskNotifyTake()会让自身等待通知，若被唤醒则cnt--；
+- 简化版的函数也是通过专业版函数实现的，只是限制了专业版函数的参数；
+
+<img src="3.images/11-1任务通知的本质/简化版函数操作过程.png" alt="简化版函数操作过程" style="zoom: 67%;" />
+
+### 4.3 专业版
+
+只看一般情况下用的专业版的函数，**它可以实现复杂的事件＋数据＋位操作模型**：
+
+- **xTaskNotify()函数的操作过程**
+
+  - **函数原型**
+
+  ```c
+  BaseType_t xTaskNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction );
+  ```
+
+  - **参数说明**
+
+  |   **参数**    | **说明**                                                     |
+  | :-----------: | ------------------------------------------------------------ |
+  | xTaskToNotify | 任务句柄(创建任务时得到)，给哪个任务发通知                   |
+  |    ulValue    | 怎么使用ulValue，由eAction参数决定                           |
+  |    eAction    | 见下表                                                       |
+  |    返回值     | pdPASS：成功，大部分调用都会成功 pdFAIL：只有一种情况会失败，当eAction为eSetValueWithoutOverwrite， 并且通知状态为"pending"(表示有新数据未读)，这时就会失败。 |
+
+  - **eAction参数说明**
+
+  |   **eNotifyAction取值**   | **说明**                                                     |
+  | :-----------------------: | ------------------------------------------------------------ |
+  |         eNoAction         | 仅仅是更新通知状态为"pending"，未使用ulValue。 这个选项相当于轻量级的、更高效的二进制信号量。 |
+  |         eSetBits          | 通知值 = 原来的通知值 \| ulValue，按位或。 相当于轻量级的、更高效的事件组。 |
+  |        eIncrement         | 通知值 = 原来的通知值 + 1，未使用ulValue。 相当于轻量级的、更高效的二进制信号量、计数型信号量。 相当于**xTaskNotifyGive()**函数。 |
+  | eSetValueWithoutOverwrite | 不覆盖。 如果通知状态为"pending"(表示有数据未读)， 则此次调用xTaskNotify不做任何事，返回pdFAIL。 如果通知状态不是"pending"(表示没有新数据)， 则：通知值 = ulValue。 |
+  |  eSetValueWithOverwrite   | 覆盖。 无论如何，不管通知状态是否为"pendng"， 通知值 = ulValue。 |
+
+  - **实例操作**
+
+<img src="3.images/11-1任务通知的本质/专业版的发出通知的函数.png" alt="专业版的发出通知的函数" style="zoom: 80%;" />
+
+- **xTaskNotifyWait()函数的操作过程**
+
+  - **函数原型**
+
+  ```c
+  BaseType_t xTaskNotifyWait( uint32_t ulBitsToClearOnEntry, 
+                              uint32_t ulBitsToClearOnExit, 
+                              uint32_t *pulNotificationValue, 
+                              TickType_t xTicksToWait );
+  ```
+
+  - **参数说明**
+
+  |       **参数**       | **说明**                                                     |
+  | :------------------: | ------------------------------------------------------------ |
+  | ulBitsToClearOnEntry | 在xTaskNotifyWait入口处，要清除通知值的哪些位？ 通知状态不是"pending"的情况下，才会清除。 它的本意是：我想等待某些事件发生，所以先把"旧数据"的某些位清零。 能清零的话：通知值 = 通知值 & ~(ulBitsToClearOnEntry)。 比如传入0x01，表示清除通知值的bit0； 传入0xffffffff即ULONG_MAX，表示清除所有位，即把值设置为0 |
+  | ulBitsToClearOnExit  | 在xTaskNotifyWait出口处，如果不是因为超时推出，而是因为得到了数据而退出时： 通知值 = 通知值 & ~(ulBitsToClearOnExit)。 在清除某些位之前，通知值先被赋给"*pulNotificationValue"。 比如入0x03，表示清除通知值的bit0、bit1； 传入0xffffffff即ULONG_MAX，表示清除所有位，即把值设置为0 |
+  | pulNotificationValue | 用来取出通知值。 在函数退出时，使用ulBitsToClearOnExit清除之前，把通知值赋给"*pulNotificationValue"。 如果不需要取出通知值，可以设为NULL。 |
+  |     xTicksToWait     | 任务进入阻塞态的超时时间，它在等待通知状态变为"pending"。 0：不等待，即刻返回； portMAX_DELAY：一直等待，直到通知状态变为"pending"； 其他值：Tick Count，可以用*pdMS_TO_TICKS()*把ms转换为Tick Count |
+  |        返回值        | 1. pdPASS：成功 这表示xTaskNotifyWait成功获得了通知： 可能是调用函数之前，通知状态就是"pending"； 也可能是在阻塞期间，通知状态变为了"pending"。 2. pdFAIL：没有得到通知。 |
+
+  - **实例操作**
+
+<img src="3.images/11-1任务通知的本质/专业版的取出通知的函数.png" alt="专业版的取出通知函数" style="zoom:67%;" />
+
+---
+
 
 
 # 11-2 任务通知实验_通知车辆运行
+
+## 1.项目移植
+
+- 本节源码在`26_Chapter14_Eventgroup_MPU6050`的基础上，改出`27_Chapter15_TaskNotification_Car_Game`；
+- 本节课要解决的主要是把原来的通信方式用任务通知来实现；
+
+- 最终实现的效果是，第一辆车到达终点后，发送任务通知给第二辆车和第三辆车，让它们开始运行；
+
+
+
+## 2.项目开发
+
+### 2.1 游戏项目更改
+
+- 打开工程的freertos.c文件，上一节课注释了汽车游戏打开了挡球板游戏；
+- 这节课需要打开汽车游戏注释挡球板游戏；
+
+```c
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
+  extern void car_test(void);
+
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* 创建游戏任务 */
+  //xTaskCreate(game1_task, "GameTask", 128, NULL, osPriorityNormal, NULL);
+  extern void car_game(void);
+  car_game();
+
+}
+```
+
+### 2.2 更改优先级
+
+- 在game2.c文件中将car2和car3的优先级改为一样，这样任务通知后两辆车可以同时跑；
+- 同时后面任务通知需要得到任务2和任务3的句柄，所以需要在前面定义句柄并传入函数中；
+
+```c
+/* 汽车任务的句柄 */
+static TaskHandle_t g_TaskHandleCar2;
+static TaskHandle_t g_TaskHandleCar3;
+
+/* 创建3辆汽车的任务 */
+xTaskCreate(Car1Task, "car1", 128, &g_cars[0], osPriorityNormal, NULL);
+xTaskCreate(Car2Task, "car2", 128, &g_cars[1], osPriorityNormal + 2, g_TaskHandleCar2);
+xTaskCreate(Car3Task, "car3", 128, &g_cars[2], osPriorityNormal + 2, g_TaskHandleCar3);
+```
+
+### 2.3 修改car1的任务函数
+
+- 将原来的设置事件组注释，改为任务通知；
+- 分别使用简化版和高级版，熟练任务通知的API用法；
+
+```c
+/* 汽车1任务函数 */
+static void Car1Task(void *params)
+{
+	// ...
+	
+	while(1)
+	{
+		// ...
+		{
+			if (pcar->x < g_xres - CAR_LENGTH)
+			{
+				// ...
+				
+				if (pcar->x == g_xres - CAR_LENGTH)
+				{
+					/* 到达最右边后释放信号量 */
+					//xSemaphoreGive(g_xSemTicks);
+					
+					/* 设置事件组：bit0 */
+					//xEventGroupSetBits(g_xEventCar, (1<<0));
+					
+					/* 发出任务通知给car2和car3 */
+					/* 简化版本通知car2 */
+					xTaskNotifyGive(g_TaskHandleCar2);
+					/* 复杂版本通知car3，让100覆盖原来的值 */
+					xTaskNotify(g_TaskHandleCar3, 100, eSetValueWithoutOverwrite);
+					
+					vTaskDelete(NULL);
+				}
+			}
+		}
+	}
+}
+```
+
+### 2.4 修改car2的任务函数
+
+- 修改car2的任务函数，将原来的等待事件组注释，改为等待任务通知；
+
+```c
+/* 汽车2任务函数 */
+static void Car2Task(void *params)
+{
+	// ...
+	
+	/* 等待事件组：bit0 */
+	//xEventGroupWaitBits(g_xEventCar, (1<<0), pdTRUE, pdFALSE, portMAX_DELAY);	/* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+	
+	/* 等待任务通知，得到通知清零否则永远等待 */
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+	
+	while(1)
+	{
+		
+        if (pcar->x < g_xres - CAR_LENGTH)
+        {
+            // ...
+
+            if (pcar->x == g_xres - CAR_LENGTH)
+            {
+                /* 到达最右边后释放信号量 */
+                //xSemaphoreGive(g_xSemTicks);
+
+                /* 设置事件组：bit0 */
+                //xEventGroupSetBits(g_xEventCar, (1<<1));
+
+                vTaskDelete(NULL);
+            }
+		}
+	}
+}
+```
+
+### 2.5 修改car3的任务函数
+
+- 修改car3的任务函数，注释原来的等待事件组，改为判断任务通知的值 ；
+
+```c
+/* 汽车3任务函数 */
+static void Car3Task(void *params)
+{
+	// ...
+	uint32_t val;	// 通知值
+	
+	// ...
+	
+	/* 等待事件组：bit0 and bit1 */
+	/* pdTRUE表示读后清除，pdFALSE表示或的关系 */
+	//xEventGroupWaitBits(g_xEventCar, (1<<0) | (1<<1), pdTRUE, pdTRUE, portMAX_DELAY);
+	
+	/* 等待任务通知，入口处和出口处都清0 */
+	do
+	{
+		xTaskNotifyWait(~0, ~0, &val, portMAX_DELAY);
+	}
+	while (val != 100);
+	
+	// ...
+}
+```
+
+
+
+## 3.编译运行
+
+- 在完成上面的项目移植后，直接编译并烧录即可；
+- 最终的程序现象如下：
+
+<img src="3.images/11-2任务通知实验_通知车辆运行/运行效果.gif" alt="程序现象" style="zoom:67%;" />
+
+---
 
 
 
