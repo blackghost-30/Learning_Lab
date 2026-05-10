@@ -154,9 +154,9 @@ void MX_FREERTOS_Init(void) {
   /* 创建任务: 声 */
   //extern void PlayMusic(void *params);
   /* 创建游戏任务 */
-  //xTaskCreate(game1_task, "GameTask", 128, NULL, osPriorityNormal, NULL);
+  xTaskCreate(game1_task, "GameTask", 128, NULL, osPriorityNormal, NULL);
   extern void car_game(void);
-  car_game();
+  //car_game();
 
   /* 创建任务: 光 */
   //xLightTaskHandle = xTaskCreateStatic(Led_Test, "LightTask", 128, NULL, osPriorityNormal, g_pucStackOfLightTask, &g_TCBofLightTask);
