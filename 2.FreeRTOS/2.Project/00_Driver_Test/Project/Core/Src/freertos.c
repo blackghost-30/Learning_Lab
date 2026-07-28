@@ -147,9 +147,9 @@ void StartDefaultTask(void *argument)
 	//DHT11_Test();
 	//ActiveBuzzer_Test();
 	//PassiveBuzzer_Test();
-	ColorLED_Test();
+	//ColorLED_Test();
 	//IRReceiver_Test();
-	//IRSender_Test();
+	IRSender_Test();
 	//LightSensor_Test();
 	//IRObstacle_Test();
 	//SR04_Test();

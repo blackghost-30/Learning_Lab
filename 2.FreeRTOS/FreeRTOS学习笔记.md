@@ -2061,7 +2061,136 @@ TaskHandle_t xTaskCreateStatic (
 | pxTaskBuffer   | 静态分配的StaticTask_t结构体的指针，**即TCB结构体的指针**    |
 | 返回值         | 成功：返回任务句柄； 失败：NULL                              |
 
- 
+ ### 2.3 用上层的函数创建任务
+
+- 上面的方式都是FreeRTOS提供的API，除了这些API还可以用**osThreadNew()**创建任务；
+
+- 默认任务的创建
+
+  - 在生成的工程中，一般会有一个默认任务，它的创建过程如下
+
+  ```c
+  /* Definitions for defaultTask */
+  osThreadId_t defaultTaskHandle;
+  const osThreadAttr_t defaultTask_attributes = {
+    .name = "defaultTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
+  };
+  
+  /* USER CODE END FunctionPrototypes */
+  
+  void StartDefaultTask(void *argument);
+  
+  void MX_FREERTOS_Init(void) {
+    /* USER CODE BEGIN Init */
+  
+    /* Create the thread(s) */
+    /* creation of defaultTask */
+    defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  }
+  ```
+
+  - 即先定义任务句柄，在定义属性结构体，最后在MX_FreeRTOS_Init()函数中用osThreadNew进行任务创建；
+
+- 二维云台中FOC软件的任务创建
+
+  - 在二维云台的任务创建中，也使用了这种方法，举例如下
+
+  ```c
+  /* USER CODE END Variables */
+  /* Definitions for DebugTask */
+  osThreadId_t DebugTaskHandle;
+  const osThreadAttr_t DebugTask_attributes = {
+    .name = "DebugTask",
+    .priority = (osPriority_t) osPriorityNormal,
+    .stack_size = 128 * 4
+  };
+  /* Definitions for FOCTask */
+  osThreadId_t FOCTaskHandle;
+  const osThreadAttr_t FOCTask_attributes = {
+    .name = "FOCTask",
+    .priority = (osPriority_t) osPriorityRealtime,
+    .stack_size = 256 * 4
+  };
+  /* Definitions for CommunicateTask */
+  osThreadId_t CommunicateTaskHandle;
+  const osThreadAttr_t CommunicateTask_attributes = {
+    .name = "CommunicateTask",
+    .priority = (osPriority_t) osPriorityAboveNormal,
+    .stack_size = 256 * 4
+  };
+  /* Definitions for StartShell */
+  osThreadId_t StartShellHandle;
+  const osThreadAttr_t StartShell_attributes = {
+    .name = "StartShell",
+    .priority = (osPriority_t) osPriorityNormal,
+    .stack_size = 128 * 4
+  };
+  
+  /* Private function prototypes -----------------------------------------------*/
+  /* USER CODE BEGIN FunctionPrototypes */
+  
+  /* USER CODE END FunctionPrototypes */
+  
+  void StartDebugTask(void *argument);
+  extern void StartFOCTask(void *argument);
+  extern void StartCommunicateTask(void *argument);
+  extern void StartStartShell(void *argument);
+  
+  void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+  
+  /**
+    * @brief  FreeRTOS initialization
+    * @param  None
+    * @retval None
+    */
+  void MX_FREERTOS_Init(void) {
+    /* USER CODE BEGIN Init */
+  
+    /* USER CODE END Init */
+  
+    /* USER CODE BEGIN RTOS_MUTEX */
+      /* add mutexes, ... */
+    /* USER CODE END RTOS_MUTEX */
+  
+    /* USER CODE BEGIN RTOS_SEMAPHORES */
+      /* add semaphores, ... */
+    /* USER CODE END RTOS_SEMAPHORES */
+  
+    /* USER CODE BEGIN RTOS_TIMERS */
+      /* start timers, add new ones, ... */
+    /* USER CODE END RTOS_TIMERS */
+  
+    /* USER CODE BEGIN RTOS_QUEUES */
+      /* add queues, ... */
+    /* USER CODE END RTOS_QUEUES */
+  
+    /* Create the thread(s) */
+    /* creation of DebugTask */
+    DebugTaskHandle = osThreadNew(StartDebugTask, NULL, &DebugTask_attributes);
+  
+    /* creation of FOCTask */
+    FOCTaskHandle = osThreadNew(StartFOCTask, NULL, &FOCTask_attributes);
+  
+    /* creation of CommunicateTask */
+    CommunicateTaskHandle = osThreadNew(StartCommunicateTask, NULL, &CommunicateTask_attributes);
+  
+    /* creation of StartShell */
+    StartShellHandle = osThreadNew(StartStartShell, NULL, &StartShell_attributes);
+  
+    /* USER CODE BEGIN RTOS_THREADS */
+      /* add threads, ... */
+    /* USER CODE END RTOS_THREADS */
+  
+    /* USER CODE BEGIN RTOS_EVENTS */
+      /* add events, ... */
+    /* USER CODE END RTOS_EVENTS */
+  
+  }
+  ```
+
+  
 
 ## 3.项目的开发
 
