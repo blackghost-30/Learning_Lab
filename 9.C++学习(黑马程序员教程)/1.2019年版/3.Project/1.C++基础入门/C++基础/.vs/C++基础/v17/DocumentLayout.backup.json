@@ -1,0 +1,58 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E0D6D991-B6E6-4600-BF08-D025F7D091DC}|C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840.vcxproj|E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840\\06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{E0D6D991-B6E6-4600-BF08-D025F7D091DC}|C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840.vcxproj|solutionrelative:C\u002B\u002B\u57FA\u7840\\06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E0D6D991-B6E6-4600-BF08-D025F7D091DC}|C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840.vcxproj|E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840\\05_\u5173\u952E\u5B57.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{E0D6D991-B6E6-4600-BF08-D025F7D091DC}|C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840.vcxproj|solutionrelative:C\u002B\u002B\u57FA\u7840\\05_\u5173\u952E\u5B57.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp",
+              "DocumentMoniker": "E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840\\06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp",
+              "RelativeDocumentMoniker": "C\u002B\u002B\u57FA\u7840\\06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp",
+              "ToolTip": "E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840\\06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp",
+              "RelativeToolTip": "C\u002B\u002B\u57FA\u7840\\06_\u6807\u8BC6\u7B26\u547D\u540D\u89C4\u5219.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2026-09-03T12:24:15.419Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "05_\u5173\u952E\u5B57.cpp",
+              "DocumentMoniker": "E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840\\05_\u5173\u952E\u5B57.cpp",
+              "RelativeDocumentMoniker": "C\u002B\u002B\u57FA\u7840\\05_\u5173\u952E\u5B57.cpp",
+              "ToolTip": "E:\\Github_Repo\\Learning_Lab\\9.C\u002B\u002B\u5B66\u4E60(\u9ED1\u9A6C\u7A0B\u5E8F\u5458\u6559\u7A0B)\\1.2019\u5E74\u7248\\3.Project\\1.C\u002B\u002B\u57FA\u7840\u5165\u95E8\\C\u002B\u002B\u57FA\u7840\\C\u002B\u002B\u57FA\u7840\\05_\u5173\u952E\u5B57.cpp",
+              "RelativeToolTip": "C\u002B\u002B\u57FA\u7840\\05_\u5173\u952E\u5B57.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2026-09-03T12:20:48.302Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
