@@ -146,6 +146,9 @@
     <ClCompile Include="21_全局函数做友元.cpp" />
     <ClCompile Include="22_类做友元.cpp" />
     <ClCompile Include="23_成员函数做友元.cpp" />
+    <ClCompile Include="24_加号运算符重载.cpp" />
+    <ClCompile Include="25_左移运算符重载.cpp" />
+    <ClCompile Include="26_递增运算符重载.cpp" />
     <ClCompile Include="circle.cpp" />
     <ClCompile Include="point.cpp" />
   </ItemGroup>

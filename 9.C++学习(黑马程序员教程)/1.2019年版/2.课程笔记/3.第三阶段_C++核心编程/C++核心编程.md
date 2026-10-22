@@ -2733,40 +2733,53 @@ int main()
 
 #### 4.5.1 加号运算符重载
 
-- 示例：实现两个自定义数据类型相加的运算
+- 示例：实现两个**自定义数据类型**相加的运算
 
 ```C++
-class Person {
-public:
-	Person() {};
-	Person(int a, int b)
-	{
-		this->m_A = a;
-		this->m_B = b;
-	}
-	//成员函数实现 + 号运算符重载
-	Person operator+(const Person& p) {
-		Person temp;
-		temp.m_A = this->m_A + p.m_A;
-		temp.m_B = this->m_B + p.m_B;
-		return temp;
-	}
+#include <iostream>
+#include <string>
+using namespace std;
 
+class Person
+{
+	public:
+    	// 无参构造
+        Person()
+        {
+            
+        };
+    	
+    	// 有参构造
+        Person(int a, int b)
+        {
+            this->m_A = a;
+            this->m_B = b;
+        }
+    
+        // 1.成员函数实现 + 号运算符重载
+        Person operator+(const Person & p)
+        {
+            Person temp;
+            temp.m_A = this->m_A + p.m_A;
+            temp.m_B = this->m_B + p.m_B;
+            return temp;
+        }
 
-public:
-	int m_A;
-	int m_B;
+	public:
+        int m_A;
+        int m_B;
 };
 
-//全局函数实现 + 号运算符重载
-//Person operator+(const Person& p1, const Person& p2) {
+// 2.全局函数实现 + 号运算符重载
+//Person operator+(const Person& p1, const Person& p2)
+//{
 //	Person temp(0, 0);
 //	temp.m_A = p1.m_A + p2.m_A;
 //	temp.m_B = p1.m_B + p2.m_B;
 //	return temp;
 //}
 
-//运算符重载 可以发生函数重载 
+// 运算符重载 可以发生函数重载 
 Person operator+(const Person& p2, int val)  
 {
 	Person temp;
@@ -2775,23 +2788,21 @@ Person operator+(const Person& p2, int val)
 	return temp;
 }
 
-void test() {
-
+void test()
+{
 	Person p1(10, 10);
 	Person p2(20, 20);
 
-	//成员函数方式
-	Person p3 = p2 + p1;  //相当于 p2.operaor+(p1)
+	// 1.成员函数方式
+	Person p3 = p2 + p1;	//相当于 p2.operaor+(p1)
 	cout << "mA:" << p3.m_A << " mB:" << p3.m_B << endl;
 
-
-	Person p4 = p3 + 10; //相当于 operator+(p3,10)
+	Person p4 = p3 + 10;	//相当于 operator+(p3,10)
 	cout << "mA:" << p4.m_A << " mB:" << p4.m_B << endl;
-
 }
 
-int main() {
-
+int main()
+{
 	test();
 
 	system("pause");
@@ -2809,42 +2820,52 @@ int main() {
 - 示例：可以输出自定义数据类型
 
 ```C++
-class Person {
+#include <iostream>
+#include <string>
+using namespace std;
+
+class Person
+{
+    // 全局函数做友元
 	friend ostream& operator<<(ostream& out, Person& p);
 
-public:
+	public:
+    	// 有参构造函数
+        Person(int a, int b)
+        {
+            this->m_A = a;
+            this->m_B = b;
+        }
 
-	Person(int a, int b)
-	{
-		this->m_A = a;
-		this->m_B = b;
-	}
+        // 成员函数实现不了p << cout,不是我们想要的效果
+        //void operator<<(Person& p)
+    	//{
+    	//
+        //}
 
-	//成员函数 实现不了  p << cout 不是我们想要的效果
-	//void operator<<(Person& p){
-	//}
-
-private:
-	int m_A;
-	int m_B;
+	private:
+        int m_A;
+        int m_B;
 };
 
-//全局函数实现左移重载
-//ostream对象只能有一个
-ostream& operator<<(ostream& out, Person& p) {
+// 全局函数实现左移重载
+// ostream对象只能有一个，故用引用方式
+// 以ostream类型返回是为了后面的链式编程
+ostream& operator<<(ostream& out, Person& p)
+{
 	out << "a:" << p.m_A << " b:" << p.m_B;
 	return out;
 }
 
-void test() {
-
+void test()
+{
 	Person p1(10, 20);
 
-	cout << p1 << "hello world" << endl; //链式编程
+	cout << p1 << "hello world" << endl;	//链式编程
 }
 
-int main() {
-
+int main()
+{
 	test();
 
 	system("pause");
@@ -2857,62 +2878,76 @@ int main() {
 
 #### 4.5.3 递增运算符重载
 
-- 示例： 通过重载递增运算符，实现自己的整型数据
+- 示例： 通过重载递增运算符，**实现自己的整型数据**
 
 ```C++
+#include <iostream>
+#include <string>
+using namespace std;
 
-class MyInteger {
-
+// 自己定义的整形数据类
+class MyInteger
+{
+    // 左移运算符的重载友元
 	friend ostream& operator<<(ostream& out, MyInteger myint);
 
-public:
-	MyInteger() {
-		m_Num = 0;
-	}
-	//前置++
-	MyInteger& operator++() {
-		//先++
-		m_Num++;
-		//再返回
-		return *this;
-	}
+	public:
+    	// 无参构造函数
+        MyInteger()
+        {
+            m_Num = 0;
+        }
+    
+        // 前置++的重载
+    	// 需要返回引用，否则后续链式运算时就不是对原来的对象操作了
+        MyInteger& operator++()
+        {
+            // 先++
+            m_Num++;
+            // 再返回
+            return *this;
+        }
 
-	//后置++
-	MyInteger operator++(int) {
-		//先返回
-		MyInteger temp = *this; //记录当前本身的值，然后让本身的值加1，但是返回的是以前的值，达到先返回后++；
-		m_Num++;
-		return temp;
-	}
+        // 后置++的重载
+    	// 需要返回值，因为是局部变量不能返回引用
+        MyInteger operator++(int)
+        {
+            // 先返回
+            // 记录当前本身的值，然后让本身的值加1，但是返回的是以前的值，达到先返回后++；
+            MyInteger temp = *this;
+            m_Num++;
+            return temp;
+        }
 
-private:
-	int m_Num;
+	private:
+		int m_Num;
 };
 
-
-ostream& operator<<(ostream& out, MyInteger myint) {
+// 左移运算符的重载
+ostream& operator<<(ostream& out, MyInteger myint)
+{
 	out << myint.m_Num;
 	return out;
 }
 
-
-//前置++ 先++ 再返回
-void test01() {
+// 前置++ 先++ 再返回
+void test01()
+{
 	MyInteger myInt;
 	cout << ++myInt << endl;
 	cout << myInt << endl;
 }
 
-//后置++ 先返回 再++
-void test02() {
-
+// 后置++ 先返回 再++
+void test02()
+{
 	MyInteger myInt;
 	cout << myInt++ << endl;
 	cout << myInt << endl;
 }
 
-int main() {
-
+int main()
+{
 	test01();
 	//test02();
 
@@ -2922,7 +2957,11 @@ int main() {
 }
 ```
 
-> 总结： 前置递增返回引用，后置递增返回值
+> 总结1： 前置递增返回引用，后置递增返回值；
+>
+> 总结2：区分前置还是后置的形式是由C++的语法规定的，即形参中有int占位时就是后置，而且必须为int类型；
+>
+> 总结3：实际上，++的重载在C++中是由语法规定的了，是比较固定的写法；
 
 #### 4.5.4 赋值运算符重载
 
@@ -2932,54 +2971,55 @@ int main() {
   - 默认拷贝构造函数，对属性进行值拷贝；
   - 赋值运算符 operator=, 对属性进行值拷贝；
 
-- 如果类中有属性指向堆区，做赋值操作时也会出现深浅拷贝问题
+- 如果类中有属性指向堆区，做赋值操作时也会出现**深浅拷贝问题**，所以需要重载解决深浅拷贝问题；
 
-- **示例：**
+- **示例**
 
 ```C++
+#include <iostream>
+#include <string>
+using namespace std;
+
 class Person
 {
-public:
+	public:
+        Person(int age)
+        {
+            // 将年龄数据开辟到堆区
+            m_Age = new int(age);
+        }
 
-	Person(int age)
-	{
-		//将年龄数据开辟到堆区
-		m_Age = new int(age);
-	}
+        // 重载赋值运算符 
+        Person& operator=(Person &p)
+        {
+            if (m_Age != NULL)
+            {
+                delete m_Age;
+                m_Age = NULL;
+            }
+            // 编译器提供的代码是浅拷贝
+            //m_Age = p.m_Age;
 
-	//重载赋值运算符 
-	Person& operator=(Person &p)
-	{
-		if (m_Age != NULL)
-		{
-			delete m_Age;
-			m_Age = NULL;
-		}
-		//编译器提供的代码是浅拷贝
-		//m_Age = p.m_Age;
+            // 提供深拷贝 解决浅拷贝的问题
+            m_Age = new int(*p.m_Age);
 
-		//提供深拷贝 解决浅拷贝的问题
-		m_Age = new int(*p.m_Age);
+            // 返回自身
+            return *this;
+        }
 
-		//返回自身
-		return *this;
-	}
+        ~Person()
+        {
+            if (m_Age != NULL)
+            {
+                delete m_Age;
+                m_Age = NULL;
+            }
+        }
 
-
-	~Person()
-	{
-		if (m_Age != NULL)
-		{
-			delete m_Age;
-			m_Age = NULL;
-		}
-	}
-
-	//年龄的指针
-	int *m_Age;
+        // 年龄的指针
+        int *m_Age;
 
 };
-
 
 void test01()
 {
@@ -2998,8 +3038,8 @@ void test01()
 	cout << "p3的年龄为：" << *p3.m_Age << endl;
 }
 
-int main() {
-
+int main()
+{
 	test01();
 
 	//int a = 10;
@@ -3026,39 +3066,39 @@ int main() {
 ```C++
 class Person
 {
-public:
-	Person(string name, int age)
-	{
-		this->m_Name = name;
-		this->m_Age = age;
-	};
+	public:
+        Person(string name, int age)
+        {
+            this->m_Name = name;
+            this->m_Age = age;
+        };
 
-	bool operator==(Person & p)
-	{
-		if (this->m_Name == p.m_Name && this->m_Age == p.m_Age)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
+        bool operator==(Person & p)
+        {
+            if (this->m_Name == p.m_Name && this->m_Age == p.m_Age)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
-	bool operator!=(Person & p)
-	{
-		if (this->m_Name == p.m_Name && this->m_Age == p.m_Age)
-		{
-			return false;
-		}
-		else
-		{
-			return true;
-		}
-	}
+        bool operator!=(Person & p)
+        {
+            if (this->m_Name == p.m_Name && this->m_Age == p.m_Age)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
 
-	string m_Name;
-	int m_Age;
+        string m_Name;
+        int m_Age;
 };
 
 void test01()
@@ -3089,8 +3129,8 @@ void test01()
 }
 
 
-int main() {
-
+int main()
+{
 	test01();
 
 	system("pause");
@@ -3110,28 +3150,27 @@ int main() {
 ```C++
 class MyPrint
 {
-public:
-	void operator()(string text)
-	{
-		cout << text << endl;
-	}
-
+	public:
+        void operator()(string text)
+        {
+            cout << text << endl;
+        }
 };
+
 void test01()
 {
-	//重载的（）操作符 也称为仿函数
+	// 重载的（）操作符 也称为仿函数
 	MyPrint myFunc;
 	myFunc("hello world");
 }
 
-
 class MyAdd
 {
-public:
-	int operator()(int v1, int v2)
-	{
-		return v1 + v2;
-	}
+	public:
+        int operator()(int v1, int v2)
+        {
+            return v1 + v2;
+        }
 };
 
 void test02()
@@ -3144,8 +3183,8 @@ void test02()
 	cout << "MyAdd()(100,100) = " << MyAdd()(100, 100) << endl;
 }
 
-int main() {
-
+int main()
+{
 	test01();
 	test02();
 
@@ -3161,93 +3200,90 @@ int main() {
 
 ### 4.6  继承
 
-**继承是面向对象三大特性之一**
+- **继承是面向对象三大特性之一**；
 
-有些类与类之间存在特殊的关系，例如下图中：
+- **情景概要**
 
-![1544861202252](assets/1544861202252.png)
+  - 有些类与类之间存在特殊的关系，例如下图所示
 
-我们发现，定义这些类时，下级别的成员除了拥有上一级的共性，还有自己的特性。
+  ![继承](images\45_类和对象_继承_基本语法\继承.png)
 
-这个时候我们就可以考虑利用继承的技术，减少重复代码
-
-
+  - 我们发现，定义这些类时，下级别的成员**除了拥有上一级的共性，还有自己的特性**；
+  - 这个时候我们就可以考虑利用**继承的技术**，减少重复代码；
 
 #### 4.6.1 继承的基本语法
 
+- 例如我们看到很多网站中，都有公共的头部，公共的底部，甚至公共的左侧列表，只有中心内容不同；
 
+- 接下来我们分别利用普通写法和继承的写法来实现网页中的内容，看一下继承存在的意义以及好处；
 
-例如我们看到很多网站中，都有公共的头部，公共的底部，甚至公共的左侧列表，只有中心内容不同
-
-接下来我们分别利用普通写法和继承的写法来实现网页中的内容，看一下继承存在的意义以及好处
-
-
-
-**普通实现：**
+- **普通实现**
 
 ```C++
 //Java页面
 class Java 
 {
-public:
-	void header()
-	{
-		cout << "首页、公开课、登录、注册...（公共头部）" << endl;
-	}
-	void footer()
-	{
-		cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
-	}
-	void left()
-	{
-		cout << "Java,Python,C++...(公共分类列表)" << endl;
-	}
-	void content()
-	{
-		cout << "JAVA学科视频" << endl;
-	}
+	public:
+        void header()
+        {
+            cout << "首页、公开课、登录、注册...（公共头部）" << endl;
+        }
+        void footer()
+        {
+            cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
+        }
+        void left()
+        {
+            cout << "Java,Python,C++...(公共分类列表)" << endl;
+        }
+        void content()
+        {
+            cout << "JAVA学科视频" << endl;
+        }
 };
+
 //Python页面
 class Python
 {
-public:
-	void header()
-	{
-		cout << "首页、公开课、登录、注册...（公共头部）" << endl;
-	}
-	void footer()
-	{
-		cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
-	}
-	void left()
-	{
-		cout << "Java,Python,C++...(公共分类列表)" << endl;
-	}
-	void content()
-	{
-		cout << "Python学科视频" << endl;
-	}
+	public:
+        void header()
+        {
+            cout << "首页、公开课、登录、注册...（公共头部）" << endl;
+        }
+        void footer()
+        {
+            cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
+        }
+        void left()
+        {
+            cout << "Java,Python,C++...(公共分类列表)" << endl;
+        }
+        void content()
+        {
+            cout << "Python学科视频" << endl;
+        }
 };
+
 //C++页面
 class CPP 
 {
-public:
-	void header()
-	{
-		cout << "首页、公开课、登录、注册...（公共头部）" << endl;
-	}
-	void footer()
-	{
-		cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
-	}
-	void left()
-	{
-		cout << "Java,Python,C++...(公共分类列表)" << endl;
-	}
-	void content()
-	{
-		cout << "C++学科视频" << endl;
-	}
+	public:
+        void header()
+        {
+            cout << "首页、公开课、登录、注册...（公共头部）" << endl;
+        }
+        void footer()
+        {
+            cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
+        }
+        void left()
+        {
+            cout << "Java,Python,C++...(公共分类列表)" << endl;
+        }
+        void content()
+        {
+            cout << "C++学科视频" << endl;
+        }
 };
 
 void test01()
@@ -3280,8 +3316,8 @@ void test01()
 
 }
 
-int main() {
-
+int main()
+{
 	test01();
 
 	system("pause");
@@ -3290,57 +3326,56 @@ int main() {
 }
 ```
 
-
-
-**继承实现：**
+- **继承实现**
 
 ```C++
 //公共页面
 class BasePage
 {
-public:
-	void header()
-	{
-		cout << "首页、公开课、登录、注册...（公共头部）" << endl;
-	}
+	public:
+        void header()
+        {
+            cout << "首页、公开课、登录、注册...（公共头部）" << endl;
+        }
 
-	void footer()
-	{
-		cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
-	}
-	void left()
-	{
-		cout << "Java,Python,C++...(公共分类列表)" << endl;
-	}
-
+        void footer()
+        {
+            cout << "帮助中心、交流合作、站内地图...(公共底部)" << endl;
+        }
+        void left()
+        {
+            cout << "Java,Python,C++...(公共分类列表)" << endl;
+        }
 };
 
 //Java页面
 class Java : public BasePage
 {
-public:
-	void content()
-	{
-		cout << "JAVA学科视频" << endl;
-	}
+	public:
+        void content()
+        {
+            cout << "JAVA学科视频" << endl;
+        }
 };
+
 //Python页面
 class Python : public BasePage
 {
-public:
-	void content()
-	{
-		cout << "Python学科视频" << endl;
-	}
+	public:
+        void content()
+        {
+            cout << "Python学科视频" << endl;
+        }
 };
+
 //C++页面
 class CPP : public BasePage
 {
-public:
-	void content()
-	{
-		cout << "C++学科视频" << endl;
-	}
+	public:
+        void content()
+        {
+            cout << "C++学科视频" << endl;
+        }
 };
 
 void test01()
@@ -3370,12 +3405,10 @@ void test01()
 	cp.footer();
 	cp.left();
 	cp.content();
-
-
 }
 
-int main() {
-
+int main()
+{
 	test01();
 
 	system("pause");
@@ -3384,81 +3417,54 @@ int main() {
 }
 ```
 
-
-
-**总结：**
-
-继承的好处：==可以减少重复的代码==
-
-class A : public B; 
-
-A 类称为子类 或 派生类
-
-B 类称为父类 或 基类
-
-
-
-**派生类中的成员，包含两大部分**：
-
-一类是从基类继承过来的，一类是自己增加的成员。
-
-从基类继承过过来的表现其共性，而新增的成员体现了其个性。
-
-
-
-
-
-
-
-
+- **总结**
+  - 继承的好处：可以减少重复的代码；
+  - class A : public B; 
+    - A类称为子类或派生类；
+    - B类称为父类或基类；
+  - **派生类中的成员包含两大部分**
+    - 一类是从基类继承过来的，一类是自己增加的成员；
+    - 从基类继承过过来的表现其共性，而新增的成员体现了其个性；
 
 #### 4.6.2 继承方式
 
+- **继承的语法**
 
+```cpp
+class 子类 : 继承方式 父类
+```
 
-继承的语法：`class 子类 : 继承方式  父类`
+- **继承方式**
 
+  - 公共继承；
+  - 保护继承；
+  - 私有继承；
 
+  ![继承方式](images\46_类和对象_继承_继承方式\继承方式.png)
 
-**继承方式一共有三种：**
-
-* 公共继承
-* 保护继承
-* 私有继承
-
-
-
-
-
-![img](assets/clip_image002.png)
-
-
-
-
-
-**示例：**
+- **示例**
 
 ```C++
 class Base1
 {
-public: 
-	int m_A;
-protected:
-	int m_B;
-private:
-	int m_C;
+	public: 
+		int m_A;
+	protected:
+		int m_B;
+	private:
+		int m_C;
 };
 
-//公共继承
+// 公共继承
 class Son1 :public Base1
 {
-public:
-	void func()
-	{
-		m_A; //可访问 public权限
-		m_B; //可访问 protected权限
-		//m_C; //不可访问
-	}
+	public:
+        void func()
+        {
+            m_A; //可访问 public权限
+            m_B; //可访问 protected权限
+            //m_C; //不可访问
+        }
 };
 
 void myClass()
@@ -3470,22 +3476,23 @@ void myClass()
 //保护继承
 class Base2
 {
-public:
-	int m_A;
-protected:
-	int m_B;
-private:
-	int m_C;
+	public:
+		int m_A;
+	protected:
+		int m_B;
+	private:
+		int m_C;
 };
+
 class Son2:protected Base2
 {
-public:
-	void func()
-	{
-		m_A; //可访问 protected权限
-		m_B; //可访问 protected权限
-		//m_C; //不可访问
-	}
+	public:
+        void func()
+        {
+            m_A; //可访问 protected权限
+            m_B; //可访问 protected权限
+            //m_C; //不可访问
+        }
 };
 void myClass2()
 {
@@ -3496,43 +3503,37 @@ void myClass2()
 //私有继承
 class Base3
 {
-public:
-	int m_A;
-protected:
-	int m_B;
-private:
-	int m_C;
+	public:
+		int m_A;
+	protected:
+		int m_B;
+	private:
+		int m_C;
 };
+
 class Son3:private Base3
 {
-public:
-	void func()
-	{
-		m_A; //可访问 private权限
-		m_B; //可访问 private权限
-		//m_C; //不可访问
-	}
+	public:
+        void func()
+        {
+            m_A; //可访问 private权限
+            m_B; //可访问 private权限
+            //m_C; //不可访问
+        }
 };
+
 class GrandSon3 :public Son3
 {
-public:
-	void func()
-	{
-		//Son3是私有继承，所以继承Son3的属性在GrandSon3中都无法访问到
-		//m_A;
-		//m_B;
-		//m_C;
-	}
+	public:
+        void func()
+        {
+            //Son3是私有继承，所以继承Son3的属性在GrandSon3中都无法访问到
+            //m_A;
+            //m_B;
+            //m_C;
+        }
 };
 ```
-
-
-
-
-
-
-
-
 
 #### 4.6.3 继承中的对象模型
 
